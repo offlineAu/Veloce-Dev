@@ -1,0 +1,13 @@
+node_modules
+.next
+.env
+.env.local
+.dev-db
+src/generated
+*.tsbuildinfo
+next-env.d.ts
+test-results
+playwright-report
+.dev-db.log
+.next-dev.log
+.next-start.log

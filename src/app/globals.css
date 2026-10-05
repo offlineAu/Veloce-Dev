@@ -1,0 +1,239 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* motion-reduce: applies only when the device asks for reduced motion AND the visitor has not chosen "Always animate". */
+@custom-variant motion-reduce {
+  @media (prefers-reduced-motion: reduce) {
+    &:where(:root:not([data-motion="full"]) *) {
+      @slot;
+    }
+  }
+}
+
+/*
+ * Design tokens. Values derive from the supplied "Organic" design system
+ * (cream ground, terracotta + sage accents, pill shapes). Retune the brand here only.
+ * Text pairings are checked in tests/unit/contrast.test.ts.
+ */
+@theme {
+  --color-bg: #f5ead8;
+  --color-surface: #ebddc5;
+  --color-ink: #201e1d;
+  --color-muted: #4a443c; /* body copy on bg/surface (>= 4.5:1) */
+  --color-line: #d8c9ae;
+
+  --color-neutral-100: #f9f4ed;
+  --color-neutral-200: #eee7db;
+  --color-neutral-300: #dcd3c4;
+  --color-neutral-700: #645c50;
+
+  --color-accent: #c67139; /* fills, large shapes, icons */
+  --color-accent-100: #fff2eb;
+  --color-accent-200: #ffe1d0;
+  --color-accent-300: #ffc6a5;
+  --color-accent-600: #a8582a; /* button fill with white text */
+  --color-accent-700: #8c491a; /* accent text on light grounds */
+  --color-accent-800: #643312;
+  --color-accent-hover: #8c491a; /* button hover fill (keeps on-accent text readable) */
+
+  --color-sage: #7a8a5e;
+  --color-sage-100: #f0fae1;
+  --color-sage-200: #e1eecc;
+  --color-sage-300: #ccdbb2;
+  --color-sage-700: #56633f;
+  --color-sage-800: #3d472b;
+
+  --color-danger: #9b2c1d;
+  --color-on-accent: #ffffff; /* text on accent-600 fills */
+  --color-on-sage: #ffffff; /* text on sage / sage-700 fills */
+  --color-on-danger: #ffffff; /* text on danger fills */
+
+  /*
+   * shadcn/ui aliases. Components under src/components/ui use these names; they point at the brand tokens above,
+   * so the per-page theme (src/lib/themes.ts) flows through. Note: shadcn's "accent" and "muted" are hover/background
+   * tints, while ours are a brand fill and a text colour, so the generated components avoid bg-accent / bg-muted.
+   */
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-ink);
+  --color-card: var(--color-neutral-100);
+  --color-card-foreground: var(--color-ink);
+  --color-popover: var(--color-bg);
+  --color-popover-foreground: var(--color-ink);
+  --color-primary: var(--color-accent-600);
+  --color-primary-foreground: var(--color-on-accent);
+  --color-secondary: var(--color-neutral-200);
+  --color-secondary-foreground: var(--color-ink);
+  --color-muted-foreground: var(--color-muted);
+  --color-destructive: var(--color-danger);
+  --color-border: var(--color-line);
+  --color-input: var(--color-line);
+  --color-ring: var(--color-accent);
+
+  --font-heading: var(--font-caprasimo), ui-serif, Georgia, serif;
+  --font-body: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 28px;
+  --radius-xl: 40px;
+
+  --shadow-sm: 0 1px 2px color-mix(in srgb, #2e2b25 14%, transparent);
+  --shadow-md: 0 3px 10px color-mix(in srgb, #2e2b25 16%, transparent);
+  --shadow-lg: 0 12px 32px color-mix(in srgb, #2e2b25 22%, transparent);
+
+  --container-page: 80rem;
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-line);
+  }
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+  }
+  /* "Always animate" (data-motion="full", set from the palette panel) overrides the device's reduce-motion setting. */
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) {
+      scroll-behavior: auto;
+    }
+    :root:not([data-motion="full"]) *,
+    :root:not([data-motion="full"]) *::before,
+    :root:not([data-motion="full"]) *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+  body {
+    background: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    text-wrap: pretty;
+    overflow-x: clip;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-heading);
+    font-weight: 400;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-accent-700);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--color-accent-200);
+  }
+}
+
+/* Gentle entrance for dialogs and menus. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-rise {
+  animation: rise 0.25s ease both;
+}
+
+/* ---- Motion ---- */
+
+@keyframes border-beam {
+  100% {
+    offset-distance: 100%;
+  }
+}
+
+@keyframes aura-drift-a {
+  to { transform: translate3d(90px, 40px, 0) scale(1.08); }
+}
+@keyframes aura-drift-b {
+  to { transform: translate3d(-80px, 50px, 0) scale(0.94); }
+}
+@keyframes aura-drift-c {
+  to { transform: translate3d(-40px, -50px, 0) scale(1.1); }
+}
+.aura-a { animation: aura-drift-a 22s ease-in-out infinite alternate; }
+.aura-b { animation: aura-drift-b 26s ease-in-out infinite alternate; }
+.aura-c { animation: aura-drift-c 30s ease-in-out infinite alternate; }
+
+.scroll-progress { display: none; }
+@keyframes scroll-grow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .scroll-progress {
+      display: block;
+      position: fixed;
+      inset: 0 0 auto 0;
+      z-index: 60;
+      height: 3px;
+      transform-origin: 0 50%;
+      background: linear-gradient(90deg, var(--color-accent), var(--color-sage));
+      animation: scroll-grow linear both;
+      animation-timeline: scroll(root block);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion="full"]) .aura-blob,
+  :root:not([data-motion="full"]) .border-beam::after {
+    animation: none !important;
+  }
+}
+
+/* Perspective grid tiles (hero): light up under the pointer, fade out slowly */
+.tile { pointer-events: auto; transition: background-color 1500ms ease-out; }
+.tile.lit, .tile:hover { background-color: color-mix(in srgb, var(--color-accent) 55%, transparent); transition-duration: 0s; }
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion="full"]) .tile { transition-duration: 350ms; }
+  :root:not([data-motion="full"]) .tile.lit, :root:not([data-motion="full"]) .tile:hover { transition-duration: 0s; }
+}
+
+/* Hero headline word rise */
+.hero-word {
+  animation: hero-rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes hero-rise {
+  from { transform: translateY(110%); }
+  to { transform: translateY(0); }
+}
+
+.shimmer {
+  background: linear-gradient(100deg, var(--color-accent-700) 30%, var(--color-sage-800) 50%, var(--color-accent-700) 70%) 0 0 / 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 5s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0%, 100% { background-position: 100% 0; }
+  50% { background-position: 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion="full"]) .hero-word, :root:not([data-motion="full"]) .shimmer { animation: none !important; }
+  :root:not([data-motion="full"]) .shimmer { color: var(--color-accent-700); background: none; }
+}
+
+/* Themed scrollbar for scrolling modals: slim thumb, inset from the rounded corners. */
+.modal-scroll { scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: var(--color-neutral-700, #8a8798) transparent; }
+@supports selector(::-webkit-scrollbar) {
+  .modal-scroll { scrollbar-width: auto; scrollbar-color: auto; }
+  .modal-scroll::-webkit-scrollbar { width: 10px; }
+  .modal-scroll::-webkit-scrollbar-track { background: transparent; margin-block: 1.25rem; }
+  .modal-scroll::-webkit-scrollbar-thumb { background: color-mix(in srgb, currentColor 28%, transparent); border-radius: 9999px; border: 2px solid transparent; background-clip: content-box; }
+  .modal-scroll::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, currentColor 45%, transparent); }
+}
