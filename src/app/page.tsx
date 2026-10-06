@@ -66,7 +66,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       <Aura />
       <PerspectiveGrid />
       <main id="main" className="mx-auto max-w-page px-5 sm:px-10 lg:px-16">
-        <section className="relative grid items-center gap-16 py-14 md:grid-cols-2 md:py-24" aria-labelledby="hero-title">
+        <section className="hero-grid relative py-14 md:py-24" aria-labelledby="hero-title">
           <div className="flex flex-col items-start gap-6">
             {offer ? (
               <a href="#offer" className="inline-flex items-center gap-2.5 rounded-full bg-neutral-100 py-1.5 pl-2 pr-4 text-[13.5px] text-muted hover:bg-neutral-200">
@@ -222,7 +222,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </section>
 
         <section className="py-12 md:py-20" aria-labelledby="cta-title">
-          <div className="relative flex flex-col items-start gap-5 overflow-hidden rounded-xl bg-sage-100 p-8 sm:p-14">
+          <div data-contact-cta className="relative flex flex-col items-start gap-5 overflow-hidden rounded-xl bg-sage-100 p-8 sm:p-14">
             <BorderBeam />
             <h2 id="cta-title" className="max-w-[20ch] text-[clamp(32px,4.4vw,56px)] leading-[1.06]">
               {brand.message}
@@ -239,7 +239,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               <OpenInquiryButton size="lg">Start a conversation</OpenInquiryButton>
               <OpenInquiryButton size="lg" variant="outline" intent="CONSULTATION">Request a consultation</OpenInquiryButton>
             </div>
-            <div className="mt-2 flex flex-col gap-3 border-t border-sage-200 pt-6">
+            <div className="mt-2 flex min-w-0 max-w-full flex-col gap-3 border-t border-sage-200 pt-6">
               <p className="text-sm font-semibold uppercase tracking-[0.08em] text-sage-800">Or reach us directly</p>
               <SocialFlipButton items={company.channels} />
             </div>

@@ -237,3 +237,16 @@
   .modal-scroll::-webkit-scrollbar-thumb { background: color-mix(in srgb, currentColor 28%, transparent); border-radius: 9999px; border: 2px solid transparent; background-clip: content-box; }
   .modal-scroll::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, currentColor 45%, transparent); }
 }
+
+/* Home hero: text beside the dashboard image from 768px up, stacked below. */
+.hero-grid {
+  display: grid;
+  align-items: center;
+  gap: 3rem;
+}
+@media (min-width: 768px) {
+  .hero-grid {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    gap: 2rem;
+  }
+}

@@ -46,7 +46,7 @@ export default function SocialFlipButton({ items, word = "VELOCE", className }: 
 
   return (
     <div
-      className={cn("relative inline-flex items-center gap-2 rounded-2xl border border-line bg-neutral-100 p-3 shadow-sm", className)}
+      className={cn("relative grid w-fit max-w-full grid-cols-3 items-center gap-2 rounded-2xl border border-line bg-neutral-100 p-3 shadow-sm sm:inline-flex sm:flex-wrap", className)}
       onMouseEnter={() => setFlipped(true)}
       onMouseLeave={() => {
         setFlipped(false);
@@ -86,7 +86,7 @@ export default function SocialFlipButton({ items, word = "VELOCE", className }: 
             key={item.kind}
             {...(live ? { href: item.href, "aria-label": item.label } : { role: "img", "aria-label": `${item.label} (not set up yet)` })}
             {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-            className="relative block size-11 rounded-lg [perspective:1000px]"
+            className="relative block size-11 shrink-0 rounded-lg [perspective:1000px]"
             onMouseEnter={() => setTip(i)}
             onMouseLeave={() => setTip(null)}
             onFocus={() => setTip(i)}

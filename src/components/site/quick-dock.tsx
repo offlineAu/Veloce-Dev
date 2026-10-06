@@ -140,7 +140,7 @@ export function QuickDock({
           {open ? <X aria-hidden className="size-4" /> : <Menu aria-hidden className="size-4" />}
           <span>{open ? "Close" : moreLabel}</span>
         </button>
-        <div className="flex min-w-0 flex-1 gap-1.5">
+        <div className="hidden min-w-0 flex-1 gap-1.5 sm:flex">
           {shortcuts.map((s) => (
             <a
               key={s.href}

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { CreditCard, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -50,38 +51,19 @@ export function BrowserMock({ className }: { className?: string }) {
   );
 }
 
-/** Sales-page hero visual: browser + code card + phone, as in the original. */
+/** Home hero visual: an illustrative dashboard on a transparent background (replaces the old browser + code + phone mock). */
 export function HeroComposition() {
   return (
-    <div aria-hidden className="relative mx-auto min-h-[420px] w-full max-w-lg">
-      <div className="absolute -top-8 right-0 size-72 rounded-full bg-sage-200 sm:-right-10" />
-      <BrowserMock className="absolute inset-x-0 right-10 top-0 animate-rise" />
-      <div className="absolute -left-3 bottom-0 w-[min(300px,72%)] animate-rise rounded-lg border border-line bg-[#0d0808] px-5 py-4 font-mono text-[12.5px] leading-[1.75] text-[#f3eae6] shadow-lg">
-        <div>
-          <span className="text-[#b5baff]">export</span> <span className="text-[#aee2ff]">function</span> Booking() {"{"}
-        </div>
-        <div className="pl-4">
-          <span className="text-[#b5baff]">const</span> slots = useAvailability(
-        </div>
-        <div className="pl-8 text-[#bdb1ab]">yourBusinessRules</div>
-        <div className="pl-4">);</div>
-        <div className="pl-4">
-          <span className="text-[#b5baff]">return</span> &lt;Calendar slots={"{slots}"} /&gt;
-          <span className="ml-1 inline-block h-3.5 w-[7px] translate-y-0.5 animate-pulse bg-accent motion-reduce:animate-none" />
-        </div>
-        <div>{"}"}</div>
-      </div>
-      <div className="absolute bottom-6 right-0 w-32 animate-rise rounded-lg bg-surface p-2 shadow-lg">
-        <div className="flex min-h-[200px] flex-col gap-2 rounded-md bg-bg px-2.5 py-3">
-          <span className={cn(bar, "h-1.5 w-8 self-center bg-neutral-300")} />
-          <span className={cn(bar, "mt-1.5 h-2 w-[90%] bg-ink")} />
-          <span className={cn(bar, "h-2 w-[70%] bg-ink")} />
-          <span className="mt-1 h-16 rounded-md bg-accent-200" />
-          <span className={cn(bar, "h-1 w-4/5 bg-neutral-300")} />
-          <span className={cn(bar, "mt-auto h-5 bg-accent")} />
-        </div>
-      </div>
-    </div>
+    <Image
+      src="/images/hero-dashboard.webp"
+      alt=""
+      width={1123}
+      height={916}
+      sizes="(min-width: 1280px) 760px, (min-width: 768px) 60vw, 100vw"
+      loading="eager"
+      fetchPriority="high"
+      className="h-auto w-full animate-rise drop-shadow-xl"
+    />
   );
 }
 

@@ -11,8 +11,8 @@ import { cn } from "@/lib/utils";
 /*
  * Floating action button for the page's main call to action. The button itself is passed in (it needs the form
  * provider); this wrapper reveals chat and site search above a hoverable launcher:
- *  - hidden (inert, so not focusable) while the hero's own call to action ([data-hero-cta]) is on screen, then it
- *    fades in once the visitor scrolls past; it never covers the hero button
+ *  - hidden (inert, so not focusable) while the hero call to action or closing contact card is on screen, then it
+ *    fades in once the visitor scrolls past; it never covers those controls
  *  - on phone/tablet it sits above the quick dock, on desktop in the bottom-right corner
  *  - clicking it grows an accent wash out of the button while the form rises (skipped under reduced motion)
  * Hover opens the controls; tapping or pressing Enter toggles them. Escape closes them.
@@ -26,7 +26,7 @@ export function ConversationFab({ children, search = [] }: { children: React.Rea
   const [ripple, setRipple] = React.useState<{ x: number; y: number; id: number } | null>(null);
 
   React.useEffect(() => {
-    const els = [...document.querySelectorAll("[data-hero-cta]")];
+    const els = [...document.querySelectorAll("[data-hero-cta], [data-contact-cta]")];
     if (!els.length || typeof IntersectionObserver === "undefined") {
       const id = requestAnimationFrame(() => setHeroVisible(false));
       return () => cancelAnimationFrame(id);
