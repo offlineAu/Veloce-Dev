@@ -62,6 +62,50 @@ function useAlwaysAnimate() {
   return { on, set };
 }
 
+/** The palette radio cards. Shared by the palette side panel and the mobile menu (`compact` = swatches only, side by side). */
+export function PaletteChoices({ theme, onSelect, className, compact = false }: { theme: ThemeName; onSelect: (t: ThemeName) => void; className?: string; compact?: boolean }) {
+  return (
+    <div role="radiogroup" aria-label="Colour palette" className={cn("flex gap-3", compact ? "flex-row" : "flex-col", className)}>
+      {THEME_NAMES.map((name) => {
+        const m = themeMeta[name];
+        const on = theme === name;
+        return (
+          <button
+            key={name}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => onSelect(name)}
+            className={cn(
+              "flex rounded-xl border text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+              compact ? "min-w-0 flex-1 flex-col gap-2 p-2.5" : "flex-col gap-3 p-4",
+              on ? "border-accent-700 bg-accent-100" : "border-line bg-neutral-100 hover:bg-neutral-200",
+            )}
+          >
+            <span aria-hidden className={cn("flex overflow-hidden rounded-lg border border-line", compact ? "h-9" : "h-12")}>
+              {m.swatches.map((c) => (
+                <span key={c} className="flex-1" style={{ background: c }} />
+              ))}
+            </span>
+            <span className="flex items-center justify-between gap-2">
+              <span className={cn("font-semibold text-ink", compact && "truncate text-[14px]")}>
+                {m.label}
+                {!compact && name === DEFAULT_THEME ? <span className="ml-2 text-[13px] font-medium text-muted">Site default</span> : null}
+              </span>
+              {on ? <Check aria-hidden className="size-4 shrink-0 text-accent-700" strokeWidth={3} /> : null}
+            </span>
+            {compact ? null : <span className="text-[14.5px] leading-snug text-muted">{m.description}</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function useThemeChoice() {
+  return useTheme();
+}
+
 export function ThemeManager({ variant = "icon", className }: { variant?: "icon" | "text"; className?: string }) {
   const { theme, set, reset } = useTheme();
   const motion = useAlwaysAnimate();
@@ -85,39 +129,7 @@ export function ThemeManager({ variant = "icon", className }: { variant?: "icon"
           <SheetTitle className="font-heading text-xl">Colour palette</SheetTitle>
           <SheetDescription className="text-[15px] text-muted">Pick the look you prefer. It is remembered in this browser.</SheetDescription>
         </SheetHeader>
-        <div role="radiogroup" aria-label="Colour palette" className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
-          {THEME_NAMES.map((name) => {
-            const m = themeMeta[name];
-            const on = theme === name;
-            return (
-              <button
-                key={name}
-                type="button"
-                role="radio"
-                aria-checked={on}
-                onClick={() => set(name)}
-                className={cn(
-                  "flex flex-col gap-3 rounded-xl border p-4 text-left transition-colors",
-                  on ? "border-accent-700 bg-accent-100" : "border-line bg-neutral-100 hover:bg-neutral-200",
-                )}
-              >
-                <span aria-hidden className="flex h-12 overflow-hidden rounded-lg border border-line">
-                  {m.swatches.map((c) => (
-                    <span key={c} className="flex-1" style={{ background: c }} />
-                  ))}
-                </span>
-                <span className="flex items-center justify-between gap-3">
-                  <span className="font-semibold text-ink">
-                    {m.label}
-                    {name === DEFAULT_THEME ? <span className="ml-2 text-[13px] font-medium text-muted">Site default</span> : null}
-                  </span>
-                  {on ? <Check aria-hidden className="size-5 text-accent-700" strokeWidth={3} /> : null}
-                </span>
-                <span className="text-[14.5px] leading-snug text-muted">{m.description}</span>
-              </button>
-            );
-          })}
-        </div>
+        <PaletteChoices theme={theme} onSelect={set} className="flex-1 overflow-y-auto p-4" />
         <div className="border-t border-line p-4">
           <button
             type="button"

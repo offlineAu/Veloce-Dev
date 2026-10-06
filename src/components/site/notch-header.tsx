@@ -2,11 +2,11 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Menu } from "lucide-react";
+import { ArrowUpRight, Menu, Palette, X } from "lucide-react";
 import { LogoBadge } from "@/components/brand/logo";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { ThemeManager } from "./theme-manager";
+import { PaletteChoices, ThemeManager, useThemeChoice } from "./theme-manager";
 
 /*
  * Notched header. Shape after VengeanceUI "notch-navbar": two thin side bars joined by a taller centre "notch"
@@ -14,7 +14,8 @@ import { ThemeManager } from "./theme-manager";
  *  - themed with the page tokens instead of zinc/black, no theme toggle, no login/sign-up
  *  - scroll-spy: the link for the section in view is marked (aria-current="location")
  *  - mobile menu is a shadcn Sheet; the conversation call to action is a floating button (ConversationFab), not part of the bar
- *  - below lg, once the quick dock is on screen the bar keeps only the logo
+ *  - below lg, once the quick dock is on screen the bar drops its inline links but keeps the logo and the menu button
+ *  - the menu holds the section links, the colour palette picker and the conversation call to action
  *  - fixed to the top with a spacer so layout does not jump; shadow only under the bar
  */
 export interface NavLink {
@@ -103,6 +104,7 @@ export function NotchHeader({
   menuCta?: React.ReactNode;
 }) {
   const active = useActiveSection(links);
+  const palette = useThemeChoice();
   const [menu, setMenu] = React.useState(false);
   // Same threshold as the quick dock: once it is on screen, the header keeps only the logo and the conversation button.
   const [compact, setCompact] = React.useState(false);
@@ -158,7 +160,7 @@ export function NotchHeader({
             <div className="absolute inset-0 bg-neutral-100">
               <Rules y1={63.5} y2={63.5} />
             </div>
-            <div ref={barRef} className={cn("relative flex h-full items-center justify-between gap-3 px-2 pb-2 md:px-6", compact && "max-lg:justify-center")}>
+            <div ref={barRef} className="relative flex h-full items-center justify-between gap-3 px-2 pb-2 md:px-6">
               <span
                 aria-hidden
                 className={cn(
@@ -180,27 +182,62 @@ export function NotchHeader({
 
               <Sheet open={menu} onOpenChange={setMenu}>
                 <SheetTrigger asChild>
-                  <button type="button" className={cn("grid size-11 place-items-center rounded-full hover:bg-ink/5 md:hidden", compact && "hidden")}>
+                  <button
+                    type="button"
+                    className={cn(
+                      "grid size-11 place-items-center rounded-full text-ink transition-colors hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+                      compact ? "lg:hidden" : "md:hidden",
+                    )}
+                  >
                     <span className="sr-only">Open menu</span>
                     <Menu aria-hidden className="size-6" />
                   </button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-[min(86vw,360px)] gap-0 bg-bg p-0">
-                  <SheetHeader className="border-b border-line p-5">
-                    <SheetTitle className="font-heading text-xl">Menu</SheetTitle>
-                    <SheetDescription className="sr-only">Site navigation</SheetDescription>
+                <SheetContent side="left" showCloseButton={false} className="w-[min(86vw,360px)] gap-0 border-line bg-bg p-0">
+                  <SheetHeader className="flex-row items-center gap-3 border-b border-line p-4 pr-3">
+                    <LogoBadge className="size-10" />
+                    <div className="min-w-0 flex-1">
+                      <SheetTitle className="truncate font-heading text-xl">{companyName}</SheetTitle>
+                      <SheetDescription className="sr-only">Site navigation, colour palette and contact</SheetDescription>
+                    </div>
+                    <SheetClose className="grid size-11 shrink-0 place-items-center rounded-full text-muted hover:bg-ink/5 hover:text-ink focus-visible:outline-2 focus-visible:outline-accent">
+                      <X aria-hidden className="size-5" />
+                      <span className="sr-only">Close menu</span>
+                    </SheetClose>
                   </SheetHeader>
-                  <nav aria-label="Mobile" className="flex flex-1 flex-col gap-1 p-3">
-                    {links.map((l) => (
-                      <SheetClose asChild key={l.href}>
-                        <a href={l.href} className="flex min-h-12 items-center rounded-xl px-3 text-base font-medium hover:bg-ink/5">
-                          {l.label}
-                        </a>
-                      </SheetClose>
-                    ))}
-                  </nav>
+                  <div className="flex flex-1 flex-col overflow-y-auto">
+                    <nav aria-label="Mobile" className="flex flex-col gap-1 p-3">
+                      <p className="flex items-center gap-2 px-3 pb-1.5 pt-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
+                        <span aria-hidden className="size-1.5 rounded-full bg-accent" />
+                        Explore
+                      </p>
+                      {links.map((l) => (
+                        <SheetClose asChild key={l.href}>
+                          <a
+                            href={l.href}
+                            aria-current={active === l.href ? "location" : undefined}
+                            className={cn(
+                              "group flex min-h-12 items-center justify-between rounded-xl border px-3 text-base font-medium transition-colors",
+                              active === l.href ? "border-accent/40 bg-accent/10 text-ink" : "border-transparent text-ink hover:bg-ink/5",
+                            )}
+                          >
+                            {l.label}
+                            <ArrowUpRight aria-hidden className="size-4 text-muted transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                          </a>
+                        </SheetClose>
+                      ))}
+                    </nav>
+                    <section aria-labelledby="menu-palette" className="mx-3 mt-1 rounded-2xl border border-line bg-neutral-100 p-3">
+                      <h2 id="menu-palette" className="mb-3 flex items-center gap-2 px-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
+                        <Palette aria-hidden className="size-4" />
+                        Colour palette
+                      </h2>
+                      <PaletteChoices compact theme={palette.theme} onSelect={palette.set} />
+                      <p className="mt-2.5 px-1 text-[13px] text-muted">Remembered in this browser.</p>
+                    </section>
+                  </div>
                   {menuCta ? (
-                    <div className="border-t border-line p-4" onClick={() => setMenu(false)}>
+                    <div className="border-t border-line bg-bg p-4 pb-[max(1rem,env(safe-area-inset-bottom))]" onClick={() => setMenu(false)}>
                       {menuCta}
                     </div>
                   ) : null}

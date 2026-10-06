@@ -15,8 +15,14 @@ import { cn } from "@/lib/utils";
  *    fades in once the visitor scrolls past; it never covers those controls
  *  - on phone/tablet it sits above the quick dock, on desktop in the bottom-right corner
  *  - clicking it grows an accent wash out of the button while the form rises (skipped under reduced motion)
- * Hover opens the controls; tapping or pressing Enter toggles them. Escape closes them.
+ * On a hover-capable desktop (lg and up) hovering opens the controls; everywhere else (phones, tablets, narrow windows,
+ * touch) only a tap, click or Enter toggles them. Hover must not apply there: a mouse hover would open the panel and the
+ * click that follows would shut it again, and touch fires pointerleave on release, which collapsed the panel before
+ * taps on its buttons landed. Escape closes them.
  */
+const HOVER_QUERY = "(hover: hover) and (pointer: fine) and (min-width: 1024px)";
+const hoverCapable = (event: React.PointerEvent) => event.pointerType === "mouse" && window.matchMedia(HOVER_QUERY).matches;
+
 export function ConversationFab({ children, search = [] }: { children: React.ReactNode; search?: SearchEntry[] }) {
   const reduce = useReducedMotion();
   const [heroVisible, setHeroVisible] = React.useState(true);
@@ -61,8 +67,8 @@ export function ConversationFab({ children, search = [] }: { children: React.Rea
       data-conversation-fab
       aria-hidden={heroVisible}
       {...(heroVisible ? { inert: true } : {})}
-      onPointerEnter={(event) => { if (event.pointerType === "mouse") setExpanded(true); }}
-      onPointerLeave={() => { if (!rootRef.current?.contains(document.activeElement)) setExpanded(false); }}
+      onPointerEnter={(event) => { if (hoverCapable(event)) setExpanded(true); }}
+      onPointerLeave={(event) => { if (hoverCapable(event) && !rootRef.current?.contains(document.activeElement)) setExpanded(false); }}
       onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setExpanded(false); }}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
