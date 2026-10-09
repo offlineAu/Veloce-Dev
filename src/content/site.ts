@@ -201,6 +201,26 @@ export const referralSteps = [
   { title: "Build", body: "Our team reviews it and follows up about their needs." },
 ];
 
+/** The "What we offer" walkthrough for the site builder at /build. Template ids match src/components/builder/templates.ts. */
+export const builderGuide = {
+  heading: "Design it yourself. We build it for real.",
+  lead: "Not sure how to describe the website you want? Sketch it in our builder. No account, no code, nothing to install. When it looks right, send it to us and we'll turn it into a fast, finished site.",
+  steps: [
+    { title: "Pick a template", body: "Start from a business, restaurant, portfolio, product or shop layout, or a blank page." },
+    { title: "Drag in blocks", body: "Add heroes, features, pricing, FAQs and more. Click any text to edit it in place." },
+    { title: "Make it yours", body: "Change colours and fonts, save sections you like, or paste your own HTML." },
+    { title: "Send it to us", body: "We review your design and reply with questions, a scope and an honest estimate." },
+  ],
+  templates: [
+    { id: "business", label: "Business" },
+    { id: "restaurant", label: "Restaurant" },
+    { id: "portfolio", label: "Portfolio" },
+    { id: "saas", label: "Product" },
+    { id: "shop", label: "Shop" },
+  ],
+  note: "Your draft is saved in this browser as you work. Nothing is shared until you choose to send it.",
+};
+
 /** What the inquiry dialog adapts to when it is opened from a service card. */
 export interface ServiceInquiry {
   projectType: string;

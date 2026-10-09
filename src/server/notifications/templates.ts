@@ -154,6 +154,9 @@ export interface LeadEmailData {
   intent: string;
   source: string;
   campaignName?: string;
+  /** Read-only preview of a page the visitor designed in the site builder. */
+  draftUrl?: string;
+  draftPages?: number;
 }
 
 export function leadTeamEmail(d: LeadEmailData): Message {
@@ -180,6 +183,7 @@ export function leadTeamEmail(d: LeadEmailData): Message {
     ["Request", d.intent === "CONSULTATION" ? "Consultation" : "Conversation"],
     ["Source", d.source],
     ["Campaign", d.campaignName],
+    ["Site design", d.draftUrl ? `${d.draftPages && d.draftPages > 1 ? `${d.draftPages} pages: ` : ""}${d.draftUrl}` : undefined],
   ]);
   const first = d.name.split(" ")[0] ?? d.name;
   return {
@@ -190,7 +194,7 @@ export function leadTeamEmail(d: LeadEmailData): Message {
       title: `${d.name} wants to ${consultation ? "book a consultation" : "start a project"}`,
       subtitle: `A new ${request} was submitted via your website form. ${consultation ? "Reply to clarify the question and confirm the consultation scope and any cost." : "Reply directly to start the conversation."}`,
       preheader: `${d.projectType}: ${d.goals}`.slice(0, 110),
-      bodyHtml: `${t.html}${button(`Reply to ${first}`, `mailto:${d.email}`)}`,
+      bodyHtml: `${t.html}${d.draftUrl ? button("View their site design", d.draftUrl) : ""}${button(`Reply to ${first}`, `mailto:${d.email}`)}`,
     }),
   };
 }

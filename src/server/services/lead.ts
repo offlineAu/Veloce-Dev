@@ -4,14 +4,19 @@ import { env } from "@/config/env";
 import { db } from "@/server/db";
 import { dispatch } from "@/server/notifications/dispatch";
 import { leadAckEmail, leadTeamEmail } from "@/server/notifications/templates";
-import { hmac } from "@/server/security/hash";
+import { hmac, newPublicToken } from "@/server/security/hash";
 import { allow } from "@/server/security/rate-limit";
 import { looksLikeBot } from "@/server/security/request";
 import { CONSULTATION_TOPICS, PROJECT_TYPES, WEBSITE_TYPES, inquirySchema } from "@/schemas/inquiry";
+import { siteDraftSchema, type SiteDraftData } from "@/schemas/site-draft";
+import type { Prisma } from "@/generated/prisma/client";
 import { defaultServices } from "@/content/site";
 import { findCampaign } from "./campaign";
 import { ensureCompanyId, getCompanyProfile } from "./company";
 import { RATE_LIMITED, UNAVAILABLE, type ActionResult } from "./result";
+
+/** Which template a design came from: an imported template's exact version ("noir-needle@v1") or a starter id. */
+const draftLabel = ({ templateId, data }: SiteDraftData) => (data.templateRef ? `${data.templateRef.slug}@v${data.templateRef.version}` : templateId);
 
 const label = (list: readonly (readonly [string, string])[], v?: string) => list.find((x) => x[0] === v)?.[1];
 
@@ -21,6 +26,12 @@ export async function submitInquiry(raw: unknown, ctx: { clientKey: string }): P
     return { ok: false, code: "VALIDATION", fieldErrors: z.flattenError(parsed.error).fieldErrors };
   }
   const input = parsed.data;
+  // A page designed in the /build editor. Validated on its own so the inquiry form never bundles the HTML sanitiser.
+  const draftRaw = (raw as { siteDraft?: unknown } | null)?.siteDraft;
+  const draft = draftRaw === undefined ? undefined : siteDraftSchema.safeParse(draftRaw);
+  if (draft && !draft.success) {
+    return { ok: false, code: "VALIDATION", fieldErrors: { siteDraft: [draft.error.issues[0]?.message ?? "We couldn't read your design."] } };
+  }
 
   // Looks like a bot: pretend success, store nothing, give no signal.
   if (looksLikeBot(input)) return { ok: true };
@@ -41,6 +52,7 @@ export async function submitInquiry(raw: unknown, ctx: { clientKey: string }): P
     const companyId = await ensureCompanyId();
 
     let leadId: string;
+    let draftToken: string | undefined;
     try {
       const lead = await db.lead.create({
         data: {
@@ -67,10 +79,14 @@ export async function submitInquiry(raw: unknown, ctx: { clientKey: string }): P
               utmCampaign: input.utmCampaign,
             },
           },
+          ...(draft?.success
+            ? { siteDraft: { create: { token: newPublicToken(), templateId: draftLabel(draft.data), data: draft.data.data as unknown as Prisma.InputJsonValue } } }
+            : {}),
         },
-        select: { id: true },
+        select: { id: true, siteDraft: { select: { token: true } } },
       });
       leadId = lead.id;
+      draftToken = lead.siteDraft?.token;
     } catch (err) {
       if ((err as { code?: string }).code === "P2002") return { ok: true }; // concurrent duplicate
       throw err;
@@ -97,6 +113,8 @@ export async function submitInquiry(raw: unknown, ctx: { clientKey: string }): P
           intent: input.intent,
           source: source === "DIRECT" ? "Direct" : source === "REFERRAL_VERIFIED" ? "Referral (verified)" : "Referral (claimed, unverified)",
           campaignName: campaign?.name,
+          draftUrl: draftToken ? new URL(`/build/preview/${draftToken}`, e.NEXT_PUBLIC_SITE_URL).toString() : undefined,
+          draftPages: draft?.success ? draft.data.data.pages.length : undefined,
         }),
       }),
       dispatch({

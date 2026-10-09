@@ -166,10 +166,25 @@ model Lead {
   attribution   LeadAttribution?
   notifications NotificationLog[]
   appointments  Appointment[]
+  siteDraft     SiteDraft?
 
   @@index([status, createdAt])
   @@index([referralCampaignId])
   @@index([email])
+}
+
+/// A page the visitor designed in the /build editor and sent with their inquiry.
+model SiteDraft {
+  id         String   @id @default(cuid())
+  leadId     String   @unique
+  /// Public, unguessable token for the read-only preview at /build/preview/[token].
+  token      String   @unique
+  templateId String?
+  /// Puck editor data (sanitised and size-capped on the server).
+  data       Json
+  createdAt  DateTime @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
 }
 
 model LeadAttribution {

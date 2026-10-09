@@ -18,6 +18,7 @@ import { SectionBackdrop } from "@/components/site/section-backdrop";
 import { SiteFooter, SiteHeader } from "@/components/site/site-chrome";
 import { InquiryProvider, OpenInquiryButton } from "@/components/forms/inquiry";
 import { OfferSplit, ReferralBadge, SectionHeading } from "@/components/marketing/cards";
+import { BuilderGuide } from "@/components/marketing/builder-guide";
 import { ServicesExplorer } from "@/components/marketing/services-explorer";
 import { ApproachWorkbench } from "@/components/marketing/approach-workbench";
 import { HeroComposition } from "@/components/marketing/mockups";
@@ -223,17 +224,7 @@ async function HomeContent({ searchParams }: HomePageProps) {
               <OpenInquiryButton className="self-start">Start a conversation</OpenInquiryButton>
             </OfferSplit>
           ) : (
-            <OfferSplit
-              badge="What we offer"
-              cardLabel="Your first step"
-              heading="A clear way to start."
-              lead="Every project begins the same way: a conversation about the idea, then a proposed scope you can accept, change or walk away from."
-              title="Start with a conversation"
-              description="Tell us what you want to build or fix. We come back with questions, a proposed scope, and an honest discussion of timing and cost."
-              lines={["No price list or discount is advertised on this page.", "You are free to say no after we have talked."]}
-            >
-              <OpenInquiryButton className="self-start">Start a conversation</OpenInquiryButton>
-            </OfferSplit>
+            <BuilderGuide refToken={campaign?.token} />
           )}
         </section>
 

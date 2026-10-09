@@ -5,6 +5,7 @@ import { brand } from "@/content/site";
 import { ThemeScope } from "@/components/site/theme-scope";
 import { Providers } from "@/components/providers";
 import { ScrollProgress } from "@/components/motion/scroll-progress";
+import { MarketingOnly } from "@/components/site/marketing-only";
 import "./globals.css";
 
 const heading = Caprasimo({ subsets: ["latin"], weight: "400", variable: "--font-caprasimo", display: "swap" });
@@ -37,7 +38,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <style>{"[data-reveal]{opacity:1!important;transform:none!important}"}</style>
         </noscript>
         <ThemeScope />
-        <ScrollProgress />
+        <MarketingOnly>
+          <ScrollProgress />
+        </MarketingOnly>
         <Providers>{children}</Providers>
       </body>
     </html>

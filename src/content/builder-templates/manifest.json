@@ -1,0 +1,38 @@
+[
+  {
+    "slug": "noir-needle",
+    "name": "Tattoo studio",
+    "description": "Dark, editorial four-page site for a studio or atelier: portfolio, artists, booking and flash gallery.",
+    "websiteType": "BUSINESS",
+    "scheme": "dark",
+    "versions": [
+      1
+    ],
+    "published": [],
+    "pages": [
+      {
+        "key": "",
+        "title": "Portfolio"
+      },
+      {
+        "key": "resident-artists",
+        "title": "Resident Artists"
+      },
+      {
+        "key": "flash-and-custom",
+        "title": "Flash & Custom"
+      },
+      {
+        "key": "booking-consultation",
+        "title": "Booking consultation"
+      }
+    ],
+    "thumbnails": [
+      "thumb-home.webp",
+      "thumb-resident-artists.webp",
+      "thumb-flash-and-custom.webp",
+      "thumb-booking-consultation.webp"
+    ],
+    "importedAt": "2026-10-09T17:59:53.765Z"
+  }
+]

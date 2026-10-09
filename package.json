@@ -15,18 +15,22 @@
     "db:dev": "node scripts/dev-db.mjs",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "template:import": "tsx scripts/import-template.ts",
+    "template:publish": "tsx scripts/publish-template.ts"
   },
   "dependencies": {
     "@calcom/embed-react": "^1.5.3",
     "@hookform/resolvers": "^5.9.1",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
+    "@puckeditor/core": "0.23.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "dotenv": "^18.0.5",
     "framer-motion": "^13.5.0",
+    "isomorphic-dompurify": "4.3.0",
     "lucide-react": "^1.49.0",
     "next": "^16.3.8",
     "pg": "^8.23.1",
@@ -44,6 +48,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.63.0",
+    "@tailwindcss/node": "4.3.3",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^26.6.4",
     "@types/pg": "^8.23.1",
@@ -52,11 +57,15 @@
     "embedded-postgres": "^18.4.0-beta.17",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.3.8",
+    "fflate": "0.8.3",
+    "json5": "2.2.3",
+    "parse5": "8.0.1",
     "postcss": "^8.5.28",
     "prisma": "^7.10.0",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.3",
+    "yaml": "2.9.1"
   }
 }
