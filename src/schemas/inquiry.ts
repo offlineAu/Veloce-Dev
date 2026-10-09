@@ -49,7 +49,7 @@ const inquiryShape = {
   serviceSlug: z.string().regex(/^[a-z0-9-]{1,60}$/).optional(),
   projectGoals: text(1000, "A sentence is enough."),
   additionalDetails: optionalText(2000, true),
-  intent: z.enum(["CONVERSATION", "CONSULTATION"]).default("CONVERSATION"),
+  intent: z.enum(["CONVERSATION", "CONSULTATION", "MEETING"]).default("CONVERSATION"),
   referralClaimed: z.boolean().default(false),
   privacyConsent: z.literal(true, { error: "Please confirm you agree to the privacy notice." }),
   refToken,

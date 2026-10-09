@@ -9,7 +9,7 @@ test("services can be explored by need without losing the catalogue or inquiry a
   await expect(services.getByRole("heading", { name: "Business websites" })).toHaveCount(0);
   await services.getByRole("button", { name: "Internal business systems", exact: true }).click();
   await services.getByRole("button", { name: "Ask about Internal business systems" }).click();
-  await expect(page.getByRole("dialog", { name: "Tell us about your project" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Ask about Internal business systems" })).toBeVisible();
   await page.keyboard.press("Escape");
   await services.getByRole("button", { name: /Improve what exists/ }).click();
   await expect(services.getByRole("heading", { level: 3 })).toHaveCount(3);
@@ -56,7 +56,7 @@ test("changing the first scope changes the working example and a new workflow re
   await expect(workbench.getByRole("status")).toContainText("Ready for your input");
   await workbench.getByRole("button", { name: "Request changes", exact: true }).click();
   await expect(workbench.getByRole("status")).toContainText("Review action: Request changes");
-  await expect(workbench).toContainText("No real booking or request is created.");
+  await expect(workbench).toContainText("These example choices do not create a booking.");
 });
 
 test("reduced motion keeps the whole interactive journey available without horizontal overflow", async ({ page }) => {

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -24,7 +24,7 @@ export function Reveal({
   /** Mark as a HighlightGrid cell. */
   cell?: boolean;
 }) {
-  const Comp = motion[as];
+  const Comp = m[as];
   return (
     <Comp
       data-reveal

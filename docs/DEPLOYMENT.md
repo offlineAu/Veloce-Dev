@@ -10,6 +10,10 @@ The app is a standard Node server (`next start`). Any Node host works (Vercel, a
 
 ## 2. Environment variables
 
+Use `.env.production.example` as the production variable list. Copy it to ignored `.env.production.local` for a local release build, or set its values in the hosting project's **Production** environment. Fill in the public HTTPS origin and production database URL and copy the existing hosted Cal credentials from `.env`. The example contains no credentials. `.env.development.local` contains the local scheduler overrides and Next.js excludes it from production builds.
+
+Run `npm run check:production` before releasing. It fails for a local database or origin, disabled booking, local Cal settings, or incomplete booking credentials. This checks configuration; it does not register the Cal webhook, test a connected calendar, or install a maintenance schedule. Those must be verified on the target host. A local `.env` is not uploaded to managed hosting automatically.
+
 | Variable | Required | Notes |
 |---|---|---|
 | `DATABASE_URL` | yes | `postgresql://user:pass@host:5432/db` (add `?sslmode=require` if the host needs TLS) |
@@ -28,8 +32,10 @@ Secrets are server-only. Only `NEXT_PUBLIC_SITE_URL` is public.
 
 ```bash
 npm ci
-npm run db:deploy        # prisma migrate deploy: applies prisma/migrations
-npm run db:seed          # creates company + default services; demo campaigns are NOT created when NODE_ENV=production
+# On the host, DATABASE_URL must already be set to production.
+# For local administration, explicitly load the production file for Prisma:
+NODE_ENV=production node --env-file=.env.production.local node_modules/prisma/build/index.js migrate deploy
+NODE_ENV=production node --env-file=.env.production.local --import tsx prisma/seed.ts
 ```
 
 Never run `db:migrate` (dev) against production. Create real campaigns with `scripts/create-campaign.ts` (needs `DATABASE_URL`) until the admin UI exists.
@@ -54,9 +60,13 @@ On Vercel, set the env vars, use `npm run build`, and run `npm run db:deploy` fr
 ## 6. Operations notes
 
 - Rate-limit counters live in the `RateLimit` table and self-clean.
-- `NotificationLog` stores hashed recipients; failed rows keep `lastError`. There is **no automatic retry job yet**.
+- `NotificationLog` stores hashed recipients; failed rows keep `lastError`. Booking notifications retry through the authenticated booking maintenance endpoint; schedule it every five minutes as described in the meeting guide.
 - Backups, retention and deletion of old leads are the operator's responsibility; no purge job exists yet.
 
 ## Optional footer channels
 
 Set any of `COMPANY_WHATSAPP`, `SOCIAL_FACEBOOK_URL`, `SOCIAL_INSTAGRAM_URL`, `SOCIAL_LINKEDIN_URL`, `SOCIAL_GITHUB_URL`. Unset channels are not shown. Email is always shown.
+
+## Meeting appointments
+
+Follow [Meeting booking setup and operation](./MEETING_BOOKING.md) for the Cal.com event, environment variables, webhook, calendar acceptance check and five-minute maintenance schedule. Scheduling is disabled by default; meeting requests remain available. Rebuild/restart when enabling the calendar and restart after generating the updated Prisma client.

@@ -22,6 +22,18 @@ const schema = z.object({
   EMAILJS_PUBLIC_KEY: optionalString,
   EMAILJS_PRIVATE_KEY: optionalString,
   NOTIFY_REFERRER: z.enum(["true", "false"]).default("false"),
+  BOOKING_ENABLED: z.enum(["true", "false"]).default("false"),
+  CAL_BOOKING_URL: optionalString,
+  CAL_LOCAL_MODE: z.enum(["true", "false"]).default("false"),
+  CAL_API_BASE_URL: optionalString,
+  CAL_EVENT_TYPE_ID: optionalString,
+  CAL_HOST_ID: optionalString,
+  CAL_API_KEY: optionalString,
+  CAL_WEBHOOK_SECRET: optionalString,
+  BOOKING_DURATION_MINUTES: optionalString,
+  BOOKING_FORMAT: optionalString,
+  BOOKING_COST_LABEL: optionalString,
+  BOOKING_CRON_SECRET: optionalString,
   // Optional public channels shown in the footer. Any that are unset are simply not shown.
   COMPANY_WHATSAPP: optionalString, // international number; digits only are used
   SOCIAL_FACEBOOK_URL: optionalString,

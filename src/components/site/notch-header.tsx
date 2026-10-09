@@ -14,7 +14,7 @@ import { PaletteChoices, ThemeManager, useThemeChoice } from "./theme-manager";
  *  - themed with the page tokens instead of zinc/black, no theme toggle, no login/sign-up
  *  - scroll-spy: the link for the section in view is marked (aria-current="location")
  *  - mobile menu is a shadcn Sheet; the conversation call to action is a floating button (ConversationFab), not part of the bar
- *  - below lg, once the quick dock is on screen the bar drops its inline links but keeps the logo and the menu button
+ *  - below lg, once the quick dock is on screen the bar keeps only the logo (the dock then owns links and palette, so there is one menu, not two)
  *  - the menu holds the section links, the colour palette picker and the conversation call to action
  *  - fixed to the top with a spacer so layout does not jump; shadow only under the bar
  */
@@ -141,8 +141,10 @@ export function NotchHeader({
   }, [measure]);
   // Skip the glide for the very first placement so the pill does not fly in from the corner.
   React.useEffect(() => {
-    if (pill) setPillReady(true);
-  }, [pill]);
+    if (!pill || pillReady) return;
+    const frame = requestAnimationFrame(() => setPillReady(true));
+    return () => cancelAnimationFrame(frame);
+  }, [pill, pillReady]);
   const half = Math.ceil(links.length / 2);
   const left = links.slice(0, half);
   const right = links.slice(half);
@@ -160,7 +162,7 @@ export function NotchHeader({
             <div className="absolute inset-0 bg-neutral-100">
               <Rules y1={63.5} y2={63.5} />
             </div>
-            <div ref={barRef} className="relative flex h-full items-center justify-between gap-3 px-2 pb-2 md:px-6">
+            <div ref={barRef} className={cn("relative flex h-full items-center justify-between gap-3 px-2 pb-2 md:px-6", compact && "max-lg:justify-center")}>
               <span
                 aria-hidden
                 className={cn(
@@ -186,7 +188,8 @@ export function NotchHeader({
                     type="button"
                     className={cn(
                       "grid size-11 place-items-center rounded-full text-ink transition-colors hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
-                      compact ? "lg:hidden" : "md:hidden",
+                      "md:hidden",
+                      compact && "hidden",
                     )}
                   >
                     <span className="sr-only">Open menu</span>

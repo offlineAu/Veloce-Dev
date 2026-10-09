@@ -1,24 +1,21 @@
 "use client";
 
-import { motion } from "framer-motion";
-
-import { useReducedMotion } from "@/lib/use-reduced-motion";
+import { m } from "framer-motion";
 
 /*
  * Word-by-word rise for section headings. Adapted from VengeanceUI "stagger-text" (MIT).
  * Changes: the full text is exposed once to assistive tech (sr-only) and the animated copy is aria-hidden;
- * plain text under prefers-reduced-motion; only used below the fold so the hero is never held back.
+ * under reduced motion the words are simply shown (CSS, see .stagger-word in globals.css; the markup never changes, so switching
+ * the setting does not remount or flicker the heading); only used below the fold so the hero is never held back.
  */
 const EASE = [0.22, 1, 0.36, 1] as const;
 
 export function StaggerText({ text, delay = 0 }: { text: string; delay?: number }) {
-  const reduce = useReducedMotion();
-  if (reduce) return <>{text}</>;
   const words = text.split(" ");
   return (
     <>
       <span className="sr-only">{text}</span>
-      <motion.span
+      <m.span
         aria-hidden
         data-reveal
         className="inline"
@@ -29,16 +26,16 @@ export function StaggerText({ text, delay = 0 }: { text: string; delay?: number 
       >
         {words.map((w, i) => (
           <span key={i} className="-mb-[0.12em] inline-block overflow-hidden pb-[0.12em] align-top">
-            <motion.span
-              className="inline-block will-change-transform"
+            <m.span
+              className="stagger-word inline-block"
               variants={{ hidden: { y: "110%" }, show: { y: "0%", transition: { duration: 0.6, ease: EASE } } }}
             >
               {w}
               {i < words.length - 1 ? " " : ""}
-            </motion.span>
+            </m.span>
           </span>
         ))}
-      </motion.span>
+      </m.span>
     </>
   );
 }

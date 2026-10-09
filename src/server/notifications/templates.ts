@@ -157,6 +157,14 @@ export interface LeadEmailData {
 }
 
 export function leadTeamEmail(d: LeadEmailData): Message {
+  if (d.intent === "MEETING") {
+    const t = details([["Name", d.name], ["Email", d.email], ["Discussion", d.goals], ["Source", d.source], ["Campaign", d.campaignName]]);
+    return {
+      subject: `Meeting request from ${d.name}`,
+      text: `A meeting was requested. No time has been reserved. Reply to arrange a time.\n\n${t.text}`,
+      html: wrap(d.company, { eyebrow: "Meeting request", title: `${d.name} would like to meet`, subtitle: "No time has been reserved. Reply to arrange a meeting.", preheader: "A new meeting request needs a reply.", bodyHtml: `${t.html}${button("Reply to arrange a meeting", `mailto:${d.email}`)}` }),
+    };
+  }
   const consultation = d.intent === "CONSULTATION";
   const request = consultation ? "consultation request" : "project inquiry";
   const t = details([
@@ -189,6 +197,13 @@ export function leadTeamEmail(d: LeadEmailData): Message {
 
 export function leadAckEmail(d: { company: string; name: string; intent?: string }): Message {
   const first = d.name.split(" ")[0] ?? d.name;
+  if (d.intent === "MEETING") {
+    return {
+      subject: "We received your meeting request",
+      text: `Hi ${first},\n\n${d.company} received your meeting request. No appointment time has been reserved. Our team will reply to arrange a time and confirm the meeting details.`,
+      html: wrap(d.company, { eyebrow: "Meeting request received", title: `Thanks, ${first}.`, preheader: "We'll reply to arrange a meeting time.", bodyHtml: `<p>${h(d.company)} received your meeting request. No appointment time has been reserved. Our team will reply to arrange a time and confirm the meeting details.</p>` }),
+    };
+  }
   if (d.intent === "CONSULTATION") {
     const next = [
       "We review your question and the background you shared.",

@@ -1,8 +1,14 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* motion-reduce: applies only when the device asks for reduced motion AND the visitor has not chosen "Always animate". */
+/*
+ * Motion preference, stored on <html> as data-motion: "full" (always play), "reduced" (always reduce), unset (match the device).
+ * motion-reduce: applies when the visitor chose "reduced", or the device asks for reduced motion and they did not choose "full".
+ */
 @custom-variant motion-reduce {
+  &:where(:root[data-motion="reduced"] *) {
+    @slot;
+  }
   @media (prefers-reduced-motion: reduce) {
     &:where(:root:not([data-motion="full"]) *) {
       @slot;
@@ -94,14 +100,25 @@
     scroll-behavior: smooth;
     scroll-padding-top: 5rem;
   }
-  /* "Always animate" (data-motion="full", set from the palette panel) overrides the device's reduce-motion setting. */
+  /* Reduced motion: chosen in the palette panel (data-motion="reduced"), or asked for by the device unless the visitor chose "full". */
+  :root[data-motion="reduced"] {
+    scroll-behavior: auto;
+  }
+  /* The aura and shimmer are frozen where they are (below) instead of being snapped to their end state, so switching is not a visible jump. */
+  :root[data-motion="reduced"] :not(.aura-blob, .shimmer, .border-beam),
+  :root[data-motion="reduced"] :not(.aura-blob, .shimmer, .border-beam)::before,
+  :root[data-motion="reduced"] :not(.aura-blob, .shimmer, .border-beam)::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
   @media (prefers-reduced-motion: reduce) {
     :root:not([data-motion="full"]) {
       scroll-behavior: auto;
     }
-    :root:not([data-motion="full"]) *,
-    :root:not([data-motion="full"]) *::before,
-    :root:not([data-motion="full"]) *::after {
+    :root:not([data-motion="full"]) :not(.aura-blob, .shimmer, .border-beam),
+    :root:not([data-motion="full"]) :not(.aura-blob, .shimmer, .border-beam)::before,
+    :root:not([data-motion="full"]) :not(.aura-blob, .shimmer, .border-beam)::after {
       animation-duration: 0.001ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.001ms !important;
@@ -172,34 +189,89 @@
   to { transform: scaleX(1); }
 }
 @supports (animation-timeline: scroll()) {
-  @media (prefers-reduced-motion: no-preference) {
-    .scroll-progress {
-      display: block;
-      position: fixed;
-      inset: 0 0 auto 0;
-      z-index: 60;
-      height: 3px;
-      transform-origin: 0 50%;
-      background: linear-gradient(90deg, var(--color-accent), var(--color-sage));
-      animation: scroll-grow linear both;
-      animation-timeline: scroll(root block);
-    }
+  .scroll-progress {
+    display: block;
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: 60;
+    height: 3px;
+    transform-origin: 0 50%;
+    background: linear-gradient(90deg, var(--color-accent), var(--color-sage));
+    animation: scroll-grow linear both;
+    animation-timeline: scroll(root block);
+  }
+  :root[data-motion="reduced"] .scroll-progress { display: none; }
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .scroll-progress { display: none; }
   }
 }
 
+:root[data-motion="reduced"] .aura-blob,
+:root[data-motion="reduced"] .shimmer {
+  animation-play-state: paused !important;
+}
+:root[data-motion="reduced"] .border-beam::after {
+  animation: none !important;
+}
 @media (prefers-reduced-motion: reduce) {
   :root:not([data-motion="full"]) .aura-blob,
+  :root:not([data-motion="full"]) .shimmer {
+    animation-play-state: paused !important;
+  }
   :root:not([data-motion="full"]) .border-beam::after {
     animation: none !important;
   }
 }
 
-/* Perspective grid tiles (hero): light up under the pointer, fade out slowly */
-.tile { pointer-events: auto; transition: background-color 1500ms ease-out; }
-.tile.lit, .tile:hover { background-color: color-mix(in srgb, var(--color-accent) 55%, transparent); transition-duration: 0s; }
+/*
+ * Reduced motion and text/blocks that reveal on scroll (Reveal, StaggerText): show them as they are, in place. This is done in
+ * CSS (not by changing the React tree) so switching the setting never remounts or flickers them, and content is never held
+ * back waiting for JavaScript. Same three states as above: chosen "reduced", device asks (unless "full"), or lite (unless "full").
+ */
+:root[data-motion="reduced"] [data-reveal],
+:root[data-perf="lite"]:not([data-motion="full"]) [data-reveal] { opacity: 1 !important; transform: none !important; }
+:root[data-motion="reduced"] .stagger-word,
+:root[data-perf="lite"]:not([data-motion="full"]) .stagger-word { transform: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion="full"]) [data-reveal] { opacity: 1 !important; transform: none !important; }
+  :root:not([data-motion="full"]) .stagger-word { transform: none !important; }
+}
+
+/* Pause looping animations nobody can see: off-screen sections (data-offscreen, see PauseOffscreen) and background tabs. */
+[data-offscreen],
+[data-offscreen]::before,
+[data-offscreen]::after,
+[data-offscreen] * {
+  animation-play-state: paused !important;
+}
+:root[data-tab-hidden] *,
+:root[data-tab-hidden] *::before,
+:root[data-tab-hidden] *::after {
+  animation-play-state: paused !important;
+}
+
+/*
+ * Low-power devices (data-perf="lite": set before paint by themeInitScript, or at runtime by PerfMonitor when frames run slow):
+ * drop the costly decoration. Aura and shimmer freeze where they are (no jump), the beam is removed, and the film-grain
+ * overlays (SVG turbulence + blend modes) are removed. "Always play" keeps the motion.
+ */
+:root[data-perf="lite"]:not([data-motion="full"]) .aura-blob,
+:root[data-perf="lite"]:not([data-motion="full"]) .shimmer {
+  animation-play-state: paused !important;
+}
+:root[data-perf="lite"]:not([data-motion="full"]) .border-beam::after {
+  animation: none !important;
+}
+:root[data-perf="lite"] .grain { display: none; }
+
+/* Perspective grid glow cells (hero): light up under the pointer, fade out slowly */
+.tile { transition: background-color 1500ms ease-out; }
+.tile.lit { background-color: color-mix(in srgb, var(--color-accent) 55%, transparent); transition-duration: 0s; }
+:root[data-motion="reduced"] .tile { transition-duration: 350ms; }
+:root[data-motion="reduced"] .tile.lit { transition-duration: 0s; }
 @media (prefers-reduced-motion: reduce) {
   :root:not([data-motion="full"]) .tile { transition-duration: 350ms; }
-  :root:not([data-motion="full"]) .tile.lit, :root:not([data-motion="full"]) .tile:hover { transition-duration: 0s; }
+  :root:not([data-motion="full"]) .tile.lit { transition-duration: 0s; }
 }
 
 /* Hero headline word rise */
@@ -223,9 +295,9 @@
   50% { background-position: 0 0; }
 }
 
+:root[data-motion="reduced"] .hero-word { animation: none !important; }
 @media (prefers-reduced-motion: reduce) {
-  :root:not([data-motion="full"]) .hero-word, :root:not([data-motion="full"]) .shimmer { animation: none !important; }
-  :root:not([data-motion="full"]) .shimmer { color: var(--color-accent-700); background: none; }
+  :root:not([data-motion="full"]) .hero-word { animation: none !important; }
 }
 
 /* Themed scrollbar for scrolling modals: slim thumb, inset from the rounded corners. */
@@ -236,6 +308,38 @@
   .modal-scroll::-webkit-scrollbar-track { background: transparent; margin-block: 1.25rem; }
   .modal-scroll::-webkit-scrollbar-thumb { background: color-mix(in srgb, currentColor 28%, transparent); border-radius: 9999px; border: 2px solid transparent; background-clip: content-box; }
   .modal-scroll::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, currentColor 45%, transparent); }
+}
+
+/* Section backdrops: a soft colour glow (+ optional faint dots) bleeding to the viewport edges behind a section. */
+.section-backdrop {
+  --bd-x: 15%;
+  --bd-tone: var(--color-accent);
+  position: absolute;
+  inset-block: 0;
+  left: 50%;
+  width: 100vw;
+  translate: -50% 0;
+  z-index: -10;
+  pointer-events: none;
+  overflow: hidden;
+  /* feather the top and bottom so neighbouring sections (and the hero grid) blend instead of meeting at a hard edge */
+  mask-image: linear-gradient(to bottom, transparent, black 160px, black calc(100% - 160px), transparent);
+}
+.section-backdrop[data-tone="sage"] { --bd-tone: var(--color-sage); }
+.section-backdrop[data-side="center"] { --bd-x: 50%; }
+.section-backdrop[data-side="right"] { --bd-x: 85%; }
+.section-backdrop::before,
+.section-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.section-backdrop::before {
+  background: radial-gradient(60% 75% at var(--bd-x) 35%, color-mix(in srgb, var(--bd-tone) 24%, transparent), transparent 72%);
+}
+.section-backdrop[data-dots]::after {
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-ink) 22%, transparent) 1.2px, transparent 1.6px) 0 0 / 26px 26px;
+  mask-image: radial-gradient(55% 70% at var(--bd-x) 35%, black, transparent 80%);
 }
 
 /* Home hero: text beside the dashboard image from 768px up, stacked below. */

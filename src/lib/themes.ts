@@ -77,6 +77,8 @@ export const THEME_NAMES: ThemeName[] = ["periwinkle", "ember"];
 export const DEFAULT_THEME: ThemeName = "periwinkle";
 export const THEME_STORAGE_KEY = "veloce-theme";
 export const MOTION_STORAGE_KEY = "veloce-motion";
+/** sessionStorage flag: PerfMonitor saw slow frames on this device, so this visit stays in lite mode. */
+export const PERF_STORAGE_KEY = "veloce-perf";
 
 export const themeMeta: Record<ThemeName, { label: string; description: string; swatches: string[]; dark: boolean }> = {
   periwinkle: {
@@ -101,5 +103,8 @@ export const allThemesCss = (): string =>
   `:root[data-theme="periwinkle"]{color-scheme:light;${vars(periwinkleTheme)}}` +
   `:root[data-theme="ember"]{color-scheme:dark;${vars(emberTheme)}}`;
 
-/** Runs before first paint: applies a saved choice, so there is no flash of the wrong palette. */
-export const themeInitScript = `try{var d=document.documentElement,t=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});if(t==="periwinkle"||t==="ember")d.dataset.theme=t;if(localStorage.getItem(${JSON.stringify(MOTION_STORAGE_KEY)})==="full")d.dataset.motion="full"}catch(e){}`;
+/**
+ * Runs before first paint: applies a saved choice, so there is no flash of the wrong palette, and flags low-power devices
+ * (data-perf="lite": 4 GB or less memory, 2 or fewer cores, or Data Saver, or slow frames seen earlier this visit) so heavy decoration can be dropped.
+ */
+export const themeInitScript = `try{var d=document.documentElement,t=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});if(t==="periwinkle"||t==="ember")d.dataset.theme=t;var m=localStorage.getItem(${JSON.stringify(MOTION_STORAGE_KEY)});if(m==="full"||m==="reduced")d.dataset.motion=m}catch(e){}try{var n=navigator,c=n.connection;if((n.deviceMemory&&n.deviceMemory<=4)||(c&&c.saveData)||(n.hardwareConcurrency&&n.hardwareConcurrency<=2))document.documentElement.dataset.perf="lite"}catch(e){}try{if(sessionStorage.getItem(${JSON.stringify(PERF_STORAGE_KEY)})==="lite")document.documentElement.dataset.perf="lite"}catch(e){}`;

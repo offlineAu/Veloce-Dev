@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { cn } from "@/lib/utils";
 
@@ -37,7 +37,7 @@ export function HighlightGrid({ children, className }: { children: React.ReactNo
       }}
     >
       {children}
-      <motion.span
+      <m.span
         aria-hidden
         className="pointer-events-none absolute left-0 top-0 z-10 rounded-lg border-2 border-accent/70 bg-accent/5"
         initial={false}

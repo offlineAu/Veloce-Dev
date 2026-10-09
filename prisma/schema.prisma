@@ -25,6 +25,14 @@ enum LeadSource {
 enum LeadIntent {
   CONVERSATION
   CONSULTATION
+  MEETING
+}
+
+enum AppointmentStatus {
+  REQUESTED
+  CONFIRMED
+  CANCELLED
+  RESCHEDULED
 }
 
 enum ProjectType {
@@ -125,7 +133,7 @@ model ReferralCampaign {
   active           Boolean   @default(true)
   createdAt        DateTime  @default(now())
 
-  company       Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company       Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
   leads         Lead[]
   introductions ReferralIntroduction[]
 
@@ -133,7 +141,7 @@ model ReferralCampaign {
 }
 
 model Lead {
-  id                 String     @id @default(cuid())
+  id                 String       @id @default(cuid())
   companyId          String
   name               String
   email              String
@@ -144,19 +152,20 @@ model Lead {
   serviceSlug        String?
   projectGoals       String
   additionalDetails  String?
-  intent             LeadIntent @default(CONVERSATION)
-  status             LeadStatus @default(NEW)
-  source             LeadSource @default(DIRECT)
+  intent             LeadIntent   @default(CONVERSATION)
+  status             LeadStatus   @default(NEW)
+  source             LeadSource   @default(DIRECT)
   referralCampaignId String?
-  idempotencyKey     String     @unique
+  idempotencyKey     String       @unique
   consentAt          DateTime
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
 
   company       Company           @relation(fields: [companyId], references: [id])
   campaign      ReferralCampaign? @relation(fields: [referralCampaignId], references: [id], onDelete: SetNull)
   attribution   LeadAttribution?
   notifications NotificationLog[]
+  appointments  Appointment[]
 
   @@index([status, createdAt])
   @@index([referralCampaignId])
@@ -208,6 +217,7 @@ model NotificationLog {
   attempts       Int                @default(0)
   lastError      String?
   dedupeKey      String             @unique
+  leaseUntil     DateTime?
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
@@ -223,4 +233,71 @@ model RateLimit {
   count       Int      @default(0)
 
   @@id([key, windowStart])
+}
+
+model BookingSession {
+  id            String        @id @default(cuid())
+  referenceHash String        @unique
+  accessHash    String
+  companyId     String
+  eventTypeId   Int
+  hostId        Int
+  entryPoint    String
+  campaignId    String?
+  context       String?
+  utmSource     String?
+  utmMedium     String?
+  utmCampaign   String?
+  consentAt     DateTime
+  expiresAt     DateTime
+  createdAt     DateTime      @default(now())
+  appointments  Appointment[]
+
+  @@index([createdAt])
+}
+
+model Appointment {
+  id                String            @id @default(cuid())
+  sessionId         String
+  leadId            String
+  provider          String            @default("CAL")
+  providerBookingId String
+  eventTypeId       Int
+  hostId            Int
+  startAt           DateTime
+  endAt             DateTime
+  timezone          String
+  location          String?
+  status            AppointmentStatus
+  providerUpdatedAt DateTime
+  previousBookingId String?
+  replacementId     String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  session           BookingSession    @relation(fields: [sessionId], references: [id])
+  lead              Lead              @relation(fields: [leadId], references: [id])
+
+  @@unique([provider, providerBookingId])
+  @@index([sessionId])
+  @@index([status, updatedAt])
+}
+
+model BookingEvent {
+  id          String    @id @default(cuid())
+  dedupeKey   String    @unique
+  bookingUid  String
+  trigger     String
+  attempts    Int       @default(0)
+  processedAt DateTime?
+  lastError   String?
+  createdAt   DateTime  @default(now())
+
+  @@index([processedAt, createdAt])
+}
+
+model BookingSync {
+  key       String    @id
+  through   DateTime
+  cursor    String?
+  windowEnd DateTime?
 }

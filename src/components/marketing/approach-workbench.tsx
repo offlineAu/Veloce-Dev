@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { ArrowRight, Check, CheckCheck, ChevronRight, Hammer, Map, RefreshCw } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { CardRibbons } from "@/components/brand/card-ribbons";
@@ -9,8 +9,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { deliveryStages, workflowExamples } from "@/content/site";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import styles from "./veloce-bento.module.css";
+import { OpenMeetingButton, useMeeting } from "@/components/booking/meeting-provider";
+import dynamic from "next/dynamic";
+
+// The meeting panel pulls in react-hook-form and zod, so it loads when a meeting is first asked for.
+const MeetingPanel = dynamic(() => import("@/components/booking/meeting-panel").then((m) => m.MeetingPanel), {
+  loading: () => <p role="status" className="p-6 text-sm text-muted">Loading…</p>,
+});
 
 export function ApproachWorkbench() {
+  const meeting = useMeeting();
   const [stage, setStage] = useState("think");
   const [exampleIndex, setExampleIndex] = useState(0);
   const [selection, setSelection] = useState<string | null>(null);
@@ -26,6 +34,13 @@ export function ApproachWorkbench() {
   const laterFeature = priority === "first" ? example.later : example.first;
   const demo = priority === "first" ? { title: example.buildTitle, options: example.options, selectionLabel: example.selectionLabel, selectionResult: example.selectionResult } : example.alternate;
   const improvements = priority === "first" ? example.feedback : example.alternateFeedback;
+  const meetingInvitation = !meeting.open ? (
+    <div className={styles.meetingInvitation}>
+      <h4>Have a workflow like this?</h4>
+      <p>{feedback ? "Let’s talk about what would help your business first." : selection && example.id === "booking" && priority === "first" ? "That was a sample booking. Want to talk about a system for your business?" : "Meet with Veloce to talk through your business and what a useful first version could look like."}</p>
+      <OpenMeetingButton data-workbench-meeting context={{ workflow: example.id, priority: priority as "first" | "later", improvement: feedback ?? undefined }} className="mt-4 w-full" />
+    </div>
+  ) : null;
 
   function goToStage(next: string) {
     setStage(next);
@@ -54,8 +69,9 @@ export function ApproachWorkbench() {
           {deliveryStages.map((s, i) => (
             <TabsContent key={s.id} value={s.id} className={styles.deliveryContent}>
               <p className={styles.eyebrow}>Working together / 0{i + 1}</p>
-              <h3 className={styles.flipHeading}><motion.span key={s.id} initial={reduce ? false : { rotateX: -70, y: 12, opacity: 0 }} animate={{ rotateX: 0, y: 0, opacity: 1 }} transition={{ duration: reduce ? 0 : 0.5 }}>{s.headline}</motion.span></h3>
+              <h3 className={styles.flipHeading}><m.span key={s.id} initial={reduce ? false : { rotateX: -70, y: 12, opacity: 0 }} animate={{ rotateX: 0, y: 0, opacity: 1 }} transition={{ duration: reduce ? 0 : 0.5 }}>{s.headline}</m.span></h3>
               <p className={styles.stageSummary}>{s.summary}</p>
+              {meetingInvitation}
               <ol start={i * 2 + 1} className={styles.steps}>
                 {s.steps.map((step, j) => <li key={step.title}><span aria-hidden className={styles.stepNumber}>0{i * 2 + j + 1}</span><div><h4>{step.title}</h4><p>{step.body}</p></div></li>)}
               </ol>
@@ -67,7 +83,8 @@ export function ApproachWorkbench() {
             </TabsContent>
           ))}
         </div>
-        <aside className={styles.example} aria-labelledby={`${id}-example-title`}>
+        <aside className={`${styles.example} ${meeting.open ? styles.meetingMode : ""}`} aria-labelledby={meeting.open ? "veloce-meeting-title" : `${id}-example-title`}>
+          <div className={styles.examplePreview} hidden={meeting.open} inert={meeting.open}>
           <div className={styles.exampleTop}><LogoMark className={styles.mark} /><p className={styles.eyebrow}>The working version</p><span className={styles.exampleBadge}>Example</span></div>
           <h3 id={`${id}-example-title`}>Try the process.</h3>
           <p className={styles.muted}>Pick a workflow, then explore how it moves from a problem to a useful system.</p>
@@ -77,7 +94,7 @@ export function ApproachWorkbench() {
           <div className={styles.prototype}>
             <div className={styles.prototypeBar}><span className={styles.prototypeDots} aria-hidden><i /><i /><i /></span><span>{example.label}</span><span className={styles.prototypeStage}>{activeStage.label}</span></div>
             <AnimatePresence initial={false} mode="wait">
-              <motion.div key={`${stage}-${example.id}`} className={styles.prototypeBody}
+              <m.div key={`${stage}-${example.id}`} className={styles.prototypeBody}
                 initial={reduce ? false : { opacity: 0, y: 14, rotateX: -5 }} animate={{ opacity: 1, y: 0, rotateX: 0 }} exit={{ opacity: 0, y: reduce ? 0 : -12 }} transition={{ duration: reduce ? 0 : 0.22 }}>
                 {stage === "think" ? <>
                   <p className={styles.eyebrow}>The problem</p><p className={styles.problem}>{example.problem}</p>
@@ -100,10 +117,12 @@ export function ApproachWorkbench() {
                   <p className={styles.demoNote}>In a real project, we review feedback, agree the change, and test the improvement.</p>
                   <button type="button" className={styles.demoNext} onClick={() => goToStage("think")}>Revisit the scope <ArrowRight aria-hidden /></button>
                 </>}
-              </motion.div>
+              </m.div>
             </AnimatePresence>
           </div>
-          <p className={styles.exampleDisclaimer}>Illustrative workflow only. No real booking or request is created.</p>
+          <p className={styles.exampleDisclaimer}>These example choices do not create a booking.</p>
+          </div>
+          {meeting.started ? <MeetingPanel /> : null}
         </aside>
       </div>
     </Tabs>

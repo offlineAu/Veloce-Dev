@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { FaDiscord, FaEnvelope, FaFacebook, FaGithub, FaInstagram, FaLinkedin, FaWhatsapp } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
@@ -62,12 +62,12 @@ export default function SocialFlipButton({ items, word = "VELOCE", className }: 
     >
       {reduce ? null : (
         <div aria-hidden className="pointer-events-none absolute -inset-px overflow-hidden rounded-2xl">
-          <motion.div
+          <m.div
             className="absolute left-0 top-0 h-px w-full bg-gradient-to-r from-transparent via-accent to-transparent"
             animate={{ x: ["-100%", "100%"] }}
             transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
           />
-          <motion.div
+          <m.div
             className="absolute bottom-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-accent to-transparent"
             animate={{ x: ["100%", "-100%"] }}
             transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
@@ -94,7 +94,7 @@ export default function SocialFlipButton({ items, word = "VELOCE", className }: 
           >
             <AnimatePresence>
               {show && tip === i ? (
-                <motion.span
+                <m.span
                   aria-hidden
                   initial={reduce ? false : { opacity: 0, y: 10, scale: 0.8, x: "-50%" }}
                   animate={{ opacity: 1, y: -52, scale: 1, x: "-50%" }}
@@ -104,11 +104,11 @@ export default function SocialFlipButton({ items, word = "VELOCE", className }: 
                 >
                   {live ? item.label : `${item.label}, not set up yet`}
                   <span className="absolute -bottom-1 left-1/2 size-2 -translate-x-1/2 rotate-45 bg-ink" />
-                </motion.span>
+                </m.span>
               ) : null}
             </AnimatePresence>
 
-            <motion.span
+            <m.span
               aria-hidden
               className="relative block size-full"
               initial={false}
@@ -128,7 +128,7 @@ export default function SocialFlipButton({ items, word = "VELOCE", className }: 
               >
                 <Glyph />
               </span>
-            </motion.span>
+            </m.span>
           </Tile>
         );
       })}

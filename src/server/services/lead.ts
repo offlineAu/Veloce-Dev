@@ -108,8 +108,8 @@ export async function submitInquiry(raw: unknown, ctx: { clientKey: string }): P
     ]);
 
     return { ok: true };
-  } catch {
-    console.error("[inquiry] submission failed");
+  } catch (err) {
+    console.error("[inquiry] submission failed", err);
     return UNAVAILABLE;
   }
 }

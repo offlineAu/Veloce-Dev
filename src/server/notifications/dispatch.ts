@@ -37,29 +37,29 @@ export async function dispatch({ kind, entity, to, message }: DispatchInput): Pr
     return "FAILED";
   }
 
+  return deliverLoggedNotification(logId, to, message, dedupeKey);
+}
+
+/** Atomic lease shared by initial delivery and bounded recovery. */
+export async function deliverLoggedNotification(logId: string, to: string, message: Message, dedupeKey: string): Promise<DispatchResult> {
+  const now = new Date();
+  const claimed = await db.notificationLog.updateMany({
+    where: { id: logId, status: { in: ["PENDING", "FAILED", "SKIPPED"] }, attempts: { lt: 5 }, OR: [{ leaseUntil: null }, { leaseUntil: { lt: now } }] },
+    data: { leaseUntil: new Date(now.getTime() + 120_000) },
+  });
+  if (!claimed.count) return "DUPLICATE";
   const provider = getProvider();
   if (!provider.delivers) {
-    await db.notificationLog.update({
-      where: { id: logId },
-      data: { status: "SKIPPED", lastError: "No email provider configured" },
-    });
+    await db.notificationLog.update({ where: { id: logId }, data: { status: "SKIPPED", leaseUntil: null, lastError: "No email provider configured" } });
     return "SKIPPED";
   }
-
+  await db.notificationLog.update({ where: { id: logId }, data: { attempts: { increment: 1 } } });
   try {
     const { providerRef } = await provider.send({ to, ...message, idempotencyKey: dedupeKey });
-    await db.notificationLog.update({
-      where: { id: logId },
-      data: { status: "SENT", providerRef, attempts: { increment: 1 }, lastError: null },
-    });
+    await db.notificationLog.update({ where: { id: logId }, data: { status: "SENT", providerRef, leaseUntil: null, lastError: null } });
     return "SENT";
-  } catch (err) {
-    await db.notificationLog
-      .update({
-        where: { id: logId },
-        data: { status: "FAILED", attempts: { increment: 1 }, lastError: (err as Error).message.slice(0, 200) },
-      })
-      .catch(() => undefined);
+  } catch {
+    await db.notificationLog.update({ where: { id: logId }, data: { status: "FAILED", leaseUntil: null, lastError: "Email delivery failed" } }).catch(() => undefined);
     return "FAILED";
   }
 }
