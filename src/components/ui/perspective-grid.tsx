@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
+import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
 /*
- * Perspective grid, VengeanceUI "perspective-grid" (MIT): a tilted plane of real tiles with a radial fade.
+ * Perspective grid, inspired by VengeanceUI "perspective-grid" (MIT): a tilted plane with a radial fade.
  * Veloce changes:
  *  - straight "floor" tilt (rotateX only) instead of the original rotateY/rotateZ skew, which looked crooked at full width
  *  - themed (page tokens instead of white/black/gray) and decorative (aria-hidden, no pointer capture)
- *  - the tiles light up under the pointer wherever it is on the host section, not only when it is over the grid
- *    (content sits above the grid, so plain :hover would almost never fire); lit tiles fade out slowly = a trail
- *  - under prefers-reduced-motion the glow stays (it is only a colour change, no movement) but fades quickly, no long trail
+ *  - light on devices: the grid lines are one CSS background (no per-tile DOM nodes; the old version rendered 1,600 of them),
+ *    and the pointer glow reuses a small pool of cells instead of hit-testing the 3D plane on every move
+ *  - the glow follows the pointer wherever it is on the host section (content sits above the grid); lit cells fade out slowly = a trail
+ *  - under reduced motion the glow stays (it is only a colour change, no movement) but fades quickly, no long trail
+ *  - no glow on touch devices (no hover) or low-power devices (data-perf="lite"), so no listeners there
  */
 interface PerspectiveGridProps {
   className?: string;
@@ -21,59 +23,95 @@ interface PerspectiveGridProps {
   fadeRadius?: number;
 }
 
-const subscribeNone = () => () => {};
+// Plane geometry. Keep in sync with the inline style below.
+const PERSPECTIVE = 2000;
+const TILT = (58 * Math.PI) / 180;
+const SCALE = 2.4;
+const TOP = 0.62; // plane centre, as a fraction of the container height
+const POOL = 24; // glow cells alive at once (they fade for ~1.5s)
 
 export function PerspectiveGrid({ className, gridSize = 40, showOverlay = true, fadeRadius = 80 }: PerspectiveGridProps) {
-  // false during SSR/hydration, true afterwards: the 1,600 tiles are client-only so the HTML stays small.
-  const mounted = useSyncExternalStore(subscribeNone, () => true, () => false);
   const root = useRef<HTMLDivElement>(null);
-  const tiles = useMemo(() => Array.from({ length: gridSize * gridSize }), [gridSize]);
+  const plane = useRef<HTMLDivElement>(null);
+  const pool = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
     const el = root.current;
     const host = el?.parentElement;
-    if (!mounted || !el || !host) return;
-    const lit = new Map<Element, number>();
+    const grid = plane.current;
+    if (!el || !host || !grid || window.matchMedia("(pointer: coarse)").matches || document.documentElement.dataset.perf === "lite") return;
+    const timers = new Map<HTMLElement, number>();
     let raf = 0;
-    const move = (e: PointerEvent) => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        for (const t of document.elementsFromPoint(e.clientX, e.clientY)) {
-          if (!el.contains(t) || !t.classList.contains("tile")) continue;
-          t.classList.add("lit");
-          window.clearTimeout(lit.get(t));
-          lit.set(t, window.setTimeout(() => { t.classList.remove("lit"); lit.delete(t); }, 120));
-          break;
-        }
-      });
+    let next = 0;
+    let last = -1;
+    let pt: { x: number; y: number } | null = null;
+
+    // Inverts the plane's transform (perspective -> rotateX -> scale) to find the grid cell under a screen point.
+    const cellAt = (clientX: number, clientY: number) => {
+      const box = el.getBoundingClientRect();
+      const u = clientX - box.left - box.width / 2;
+      const v = clientY - box.top - box.height / 2;
+      const dy = (TOP - 0.5) * box.height;
+      const sin = Math.sin(TILT);
+      const y = (v - dy) / (SCALE * (Math.cos(TILT) + (v * sin) / PERSPECTIVE));
+      const w = 1 - (y * SCALE * sin) / PERSPECTIVE;
+      if (!(w > 0)) return null;
+      const x = (u * w) / SCALE;
+      const size = grid.offsetWidth;
+      const col = Math.floor(((x + size / 2) / size) * gridSize);
+      const row = Math.floor(((y + size / 2) / size) * gridSize);
+      return col < 0 || row < 0 || col >= gridSize || row >= gridSize ? null : { col, row };
     };
-    host.addEventListener("pointermove", move);
+
+    const frame = () => {
+      raf = 0;
+      if (!pt) return;
+      const c = cellAt(pt.x, pt.y);
+      if (!c || c.row * gridSize + c.col === last) return;
+      last = c.row * gridSize + c.col;
+      const cell = pool.current[next++ % POOL];
+      if (!cell) return;
+      window.clearTimeout(timers.get(cell));
+      cell.style.left = `${(c.col / gridSize) * 100}%`;
+      cell.style.top = `${(c.row / gridSize) * 100}%`;
+      cell.classList.add("lit");
+      timers.set(cell, window.setTimeout(() => cell.classList.remove("lit"), 120));
+    };
+    const move = (e: PointerEvent) => {
+      pt = { x: e.clientX, y: e.clientY };
+      if (!raf) raf = requestAnimationFrame(frame);
+    };
+    host.addEventListener("pointermove", move, { passive: true });
     return () => {
       cancelAnimationFrame(raf);
       host.removeEventListener("pointermove", move);
-      lit.forEach((id) => window.clearTimeout(id));
+      timers.forEach((id) => window.clearTimeout(id));
     };
-  }, [mounted]);
+  }, [gridSize]);
 
+  const line = "color-mix(in srgb, var(--color-ink) 15%, transparent)";
+  const cell = `${100 / gridSize}%`;
   return (
     <div
       ref={root}
       aria-hidden
-      className={cn("pointer-events-none absolute inset-x-0 top-0 -z-10 h-[820px] overflow-hidden", className)}
-      style={{ perspective: "2000px", transformStyle: "preserve-3d" }}
+      className={cn("pointer-events-none absolute inset-x-0 top-0 -z-10 h-[820px] overflow-hidden [mask-image:linear-gradient(to_bottom,black_55%,transparent)]", className)}
+      style={{ perspective: `${PERSPECTIVE}px` }}
     >
       <div
-        className="absolute grid aspect-square w-[80rem] origin-center"
+        ref={plane}
+        className="absolute aspect-square w-[80rem] origin-center"
         style={{
           left: "50%",
-          top: "62%",
-          transform: "translate(-50%, -50%) rotateX(58deg) scale(2.4)",
-          transformStyle: "preserve-3d",
-          gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
-          gridTemplateRows: `repeat(${gridSize}, 1fr)`,
+          top: `${TOP * 100}%`,
+          transform: `translate(-50%, -50%) rotateX(58deg) scale(${SCALE})`,
+          backgroundImage: `linear-gradient(to right, ${line} 1px, transparent 1px), linear-gradient(to bottom, ${line} 1px, transparent 1px)`,
+          backgroundSize: `${cell} ${cell}`,
         }}
       >
-        {mounted && tiles.map((_, i) => <div key={i} className="tile min-h-px min-w-px border border-ink/15 bg-transparent" />)}
+        {Array.from({ length: POOL }, (_, i) => (
+          <div key={i} ref={(n) => { pool.current[i] = n; }} className="tile absolute" style={{ width: cell, height: cell }} />
+        ))}
       </div>
       {showOverlay ? (
         <div className="absolute inset-0 z-10" style={{ background: `radial-gradient(circle, transparent 25%, var(--color-bg) ${fadeRadius}%)` }} />

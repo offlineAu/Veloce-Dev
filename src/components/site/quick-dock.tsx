@@ -1,11 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
-import { Menu, X } from "lucide-react";
+import { Menu, Palette, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useActiveSection } from "./notch-header";
+import { PaletteChoices, useThemeChoice } from "./theme-manager";
 
 /*
  * Quick dock: a glass pill fixed to the bottom with inline shortcuts and a "More" button that expands upward into a
@@ -17,6 +18,7 @@ import { useActiveSection } from "./notch-header";
  *    returns to the button, the closed menu is not focusable
  *  - mobile and tablet only (hidden from the lg breakpoint up, where the header already shows every link)
  *  - no call-to-action button here: the conversation call to action lives in the header
+ *  - the menu ends with the colour palette picker, because the header menu button is hidden while the dock is shown
  *  - reduced motion: no slide or height animation, the menu just toggles
  */
 export interface DockLink {
@@ -43,6 +45,7 @@ export function QuickDock({
   const root = React.useRef<HTMLElement>(null);
   const toggle = React.useRef<HTMLButtonElement>(null);
   const menuId = React.useId();
+  const palette = useThemeChoice();
   const active = useActiveSection([...shortcuts, ...columns.flatMap((c) => c.links)]);
 
   React.useEffect(() => {
@@ -74,7 +77,7 @@ export function QuickDock({
   const shown = visible || open;
 
   return (
-    <motion.nav
+    <m.nav
       ref={root}
       aria-label="Quick links"
       initial={false}
@@ -83,11 +86,11 @@ export function QuickDock({
       style={{ pointerEvents: shown ? "auto" : "none" }}
       // `inert` keeps the hidden dock out of the tab order until it is shown.
       {...(shown ? {} : { inert: true })}
-      className="fixed bottom-4 left-1/2 z-30 lg:hidden w-[min(680px,92vw)] -translate-x-1/2 overflow-hidden rounded-2xl border border-line bg-neutral-100/85 shadow-lg backdrop-blur-xl"
+      className="fixed bottom-4 left-1/2 z-[35] lg:hidden w-[min(680px,92vw)] -translate-x-1/2 overflow-hidden rounded-2xl border border-line bg-neutral-100/85 shadow-lg backdrop-blur-xl"
     >
       <AnimatePresence initial={false}>
         {open ? (
-          <motion.div
+          <m.div
             id={menuId}
             key="menu"
             initial={reduce ? false : { height: 0, opacity: 0 }}
@@ -121,7 +124,14 @@ export function QuickDock({
               ))}
             </div>
             <div aria-hidden className="mx-4 border-t border-dashed border-line" />
-          </motion.div>
+            <div className="px-5 pb-4 pt-4">
+              <p className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
+                <Palette aria-hidden className="size-4" />
+                Colour palette
+              </p>
+              <PaletteChoices compact theme={palette.theme} onSelect={palette.set} />
+            </div>
+          </m.div>
         ) : null}
       </AnimatePresence>
 
@@ -156,6 +166,6 @@ export function QuickDock({
           ))}
         </div>
       </div>
-    </motion.nav>
+    </m.nav>
   );
 }

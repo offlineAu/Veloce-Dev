@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
+import { PageLoading } from "@/components/site/page-loading";
 import { CardRibbons } from "@/components/brand/card-ribbons";
 import { ArrowRight, Check, Minus, MessageCircleMore } from "lucide-react";
 import { HeroHeadline } from "@/components/motion/hero-headline";
@@ -12,6 +14,7 @@ import { BorderBeam } from "@/components/motion/border-beam";
 import { ExpectationsAccordion } from "@/components/site/expectations-accordion";
 import { buildSearchEntries } from "@/lib/search";
 import { CapabilityTabs } from "@/components/site/capability-tabs";
+import { SectionBackdrop } from "@/components/site/section-backdrop";
 import { SiteFooter, SiteHeader } from "@/components/site/site-chrome";
 import { InquiryProvider, OpenInquiryButton } from "@/components/forms/inquiry";
 import { OfferSplit, ReferralBadge, SectionHeading } from "@/components/marketing/cards";
@@ -27,13 +30,25 @@ import { initials } from "@/lib/utils";
 import { getPublicCampaign } from "@/server/services/campaign";
 import { getCompanyProfile } from "@/server/services/company";
 import { getServices } from "@/server/services/services";
+import { MeetingProvider, OpenMeetingButton } from "@/components/booking/meeting-provider";
+import { publicMeetingConfig } from "@/server/booking/config";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
   // Same page for every ?ref= value; only the canonical URL is indexed.
 };
 
-export default async function HomePage({ searchParams }: { searchParams: Promise<{ ref?: string | string[] }> }) {
+type HomePageProps = { searchParams: Promise<{ ref?: string | string[] }> };
+
+export default function HomePage(props: HomePageProps) {
+  return (
+    <Suspense fallback={<PageLoading />}>
+      <HomeContent {...props} />
+    </Suspense>
+  );
+}
+
+async function HomeContent({ searchParams }: HomePageProps) {
   const sp = await searchParams;
   const ref = Array.isArray(sp.ref) ? sp.ref[0] : sp.ref;
   const [company, services, campaign] = await Promise.all([
@@ -60,6 +75,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   return (
     <InquiryProvider companyName={company.name} contactEmail={company.contactEmail} refToken={campaign?.token} introducedBy={introducedBy}>
+    <MeetingProvider config={publicMeetingConfig()} refToken={campaign?.token} contactEmail={company.contactEmail}>
       <SiteHeader companyName={company.name} links={links}
         menuCta={<OpenInquiryButton className="w-full">Start a conversation</OpenInquiryButton>} />
       <div className="relative isolate">
@@ -116,7 +132,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </section>
         ) : null}
 
-        <section id="services" className="py-16 md:py-24" aria-labelledby="services-title">
+        <section id="services" className="relative py-16 md:py-24" aria-labelledby="services-title">
+          <SectionBackdrop tone="accent" side="left" dots />
           <SectionHeading
             eyebrow="What we build"
             titleId="services-title" title="Practical systems, built around your business."
@@ -125,7 +142,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           <ServicesExplorer services={services} />
         </section>
 
-        <section className="py-16 md:py-24" aria-labelledby="custom-title">
+        <section className="relative py-16 md:py-24" aria-labelledby="custom-title">
+          <SectionBackdrop tone="sage" side="right" />
           <SectionHeading
             eyebrow="Why custom"
             tone="sage"
@@ -165,7 +183,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </div>
         </section>
 
-        <section id="approach" className="py-16 md:py-24" aria-labelledby="approach-title">
+        <section id="approach" className="relative py-16 md:py-24" aria-labelledby="approach-title">
+          <SectionBackdrop tone="accent" side="right" dots />
           <SectionHeading
             eyebrow="Our approach"
             titleId="approach-title" title="From idea to working system."
@@ -174,7 +193,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           <ApproachWorkbench />
         </section>
 
-        <section id="capabilities" className="py-16 md:py-24" aria-labelledby="cap-title">
+        <section id="capabilities" className="relative py-16 md:py-24" aria-labelledby="cap-title">
+          <SectionBackdrop tone="sage" side="left" dots />
           <SectionHeading eyebrow="Capabilities" titleId="cap-title" title="The functionality your business needs." />
           <div className="mt-10">
             <CapabilityTabs groups={capabilityGroups} />
@@ -182,7 +202,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           <p className="mt-6 text-sm text-muted">Not seeing what you need? Most projects include something specific to the business. Tell us about yours.</p>
         </section>
 
-        <section id="offer" className="py-12 md:py-20" aria-label="Offer">
+        <section id="offer" className="relative py-12 md:py-20" aria-label="Offer">
+          <SectionBackdrop tone="accent" side="center" />
           {offer && campaign ? (
             <OfferSplit
               heading={campaign.hasReferrer ? "A special offer for your introduction." : "A special offer for you."}
@@ -216,7 +237,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           )}
         </section>
 
-        <section className="py-16 md:py-24" aria-labelledby="expect-title">
+        <section className="relative py-16 md:py-24" aria-labelledby="expect-title">
+          <SectionBackdrop tone="sage" side="left" />
           <SectionHeading eyebrow="What you can expect" tone="sage" titleId="expect-title" title="No pressure. Just a clear path forward." />
           <ExpectationsAccordion items={expectations} />
         </section>
@@ -238,6 +260,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             <div className="flex flex-wrap gap-3">
               <OpenInquiryButton size="lg">Start a conversation</OpenInquiryButton>
               <OpenInquiryButton size="lg" variant="outline" intent="CONSULTATION">Request a consultation</OpenInquiryButton>
+              <OpenMeetingButton size="lg" variant="outline" entryPoint="contact" />
             </div>
             <div className="mt-2 flex min-w-0 max-w-full flex-col gap-3 border-t border-sage-200 pt-6">
               <p className="text-sm font-semibold uppercase tracking-[0.08em] text-sage-800">Or reach us directly</p>
@@ -261,6 +284,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           <span aria-hidden className={fabLabelClass}>Start a conversation</span>
         </OpenInquiryButton>
       </ConversationFab>
+    </MeetingProvider>
     </InquiryProvider>
   );
 }

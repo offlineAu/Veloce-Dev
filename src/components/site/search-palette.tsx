@@ -6,6 +6,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Icon } from "@/components/ui/icon";
 import type { SearchEntry, SearchGroup } from "@/lib/search";
+import { prefersReducedMotion } from "@/lib/use-reduced-motion";
 import { cn } from "@/lib/utils";
 
 /*
@@ -40,7 +41,7 @@ export function SearchPalette({ entries, className, variant = "compact", keyboar
       } else if (entry.kind === "mail" && entry.href) {
         window.location.href = entry.href;
       } else if (entry.href?.startsWith("#")) {
-        document.getElementById(entry.href.slice(1))?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+        document.getElementById(entry.href.slice(1))?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth" });
         history.replaceState(null, "", entry.href);
       } else if (entry.href) {
         window.location.assign(entry.href);

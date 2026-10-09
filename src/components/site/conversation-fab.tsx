@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Plus } from "lucide-react";
 import type { SearchEntry } from "@/lib/search";
 import { SearchPalette } from "./search-palette";
@@ -111,7 +111,7 @@ export function ConversationFab({ children, search = [] }: { children: React.Rea
       </button>
       <AnimatePresence>
         {ripple ? (
-          <motion.span
+          <m.span
             key={ripple.id}
             aria-hidden
             className="pointer-events-none fixed z-40 size-14 rounded-full bg-accent"

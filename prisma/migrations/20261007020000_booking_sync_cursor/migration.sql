@@ -1,0 +1,1 @@
+ALTER TABLE "BookingSync" ADD COLUMN "cursor" TEXT, ADD COLUMN "windowEnd" TIMESTAMP(3);

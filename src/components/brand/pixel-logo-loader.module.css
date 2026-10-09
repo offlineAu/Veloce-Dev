@@ -1,0 +1,265 @@
+/* All tiles share a two-second clock; only their reveal thresholds differ. */
+.loader {
+  display: block;
+}
+
+.tile,
+.solid {
+  opacity: 1;
+}
+
+@keyframes resolve {
+  0%, 60% { opacity: 0; }
+  66%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step0 { animation-name: reveal0; }
+@keyframes reveal0 {
+  0%, 8.000% { opacity: 0; }
+  8.100%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step1 { animation-name: reveal1; }
+@keyframes reveal1 {
+  0%, 9.733% { opacity: 0; }
+  9.833%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step2 { animation-name: reveal2; }
+@keyframes reveal2 {
+  0%, 11.467% { opacity: 0; }
+  11.567%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step3 { animation-name: reveal3; }
+@keyframes reveal3 {
+  0%, 13.200% { opacity: 0; }
+  13.300%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step4 { animation-name: reveal4; }
+@keyframes reveal4 {
+  0%, 14.933% { opacity: 0; }
+  15.033%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step5 { animation-name: reveal5; }
+@keyframes reveal5 {
+  0%, 16.667% { opacity: 0; }
+  16.767%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step6 { animation-name: reveal6; }
+@keyframes reveal6 {
+  0%, 18.400% { opacity: 0; }
+  18.500%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step7 { animation-name: reveal7; }
+@keyframes reveal7 {
+  0%, 20.133% { opacity: 0; }
+  20.233%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step8 { animation-name: reveal8; }
+@keyframes reveal8 {
+  0%, 21.867% { opacity: 0; }
+  21.967%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step9 { animation-name: reveal9; }
+@keyframes reveal9 {
+  0%, 23.600% { opacity: 0; }
+  23.700%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step10 { animation-name: reveal10; }
+@keyframes reveal10 {
+  0%, 25.333% { opacity: 0; }
+  25.433%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step11 { animation-name: reveal11; }
+@keyframes reveal11 {
+  0%, 27.067% { opacity: 0; }
+  27.167%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step12 { animation-name: reveal12; }
+@keyframes reveal12 {
+  0%, 28.800% { opacity: 0; }
+  28.900%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step13 { animation-name: reveal13; }
+@keyframes reveal13 {
+  0%, 30.533% { opacity: 0; }
+  30.633%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step14 { animation-name: reveal14; }
+@keyframes reveal14 {
+  0%, 32.267% { opacity: 0; }
+  32.367%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step15 { animation-name: reveal15; }
+@keyframes reveal15 {
+  0%, 34.000% { opacity: 0; }
+  34.100%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step16 { animation-name: reveal16; }
+@keyframes reveal16 {
+  0%, 35.733% { opacity: 0; }
+  35.833%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step17 { animation-name: reveal17; }
+@keyframes reveal17 {
+  0%, 37.467% { opacity: 0; }
+  37.567%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step18 { animation-name: reveal18; }
+@keyframes reveal18 {
+  0%, 39.200% { opacity: 0; }
+  39.300%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step19 { animation-name: reveal19; }
+@keyframes reveal19 {
+  0%, 40.933% { opacity: 0; }
+  41.033%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step20 { animation-name: reveal20; }
+@keyframes reveal20 {
+  0%, 42.667% { opacity: 0; }
+  42.767%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step21 { animation-name: reveal21; }
+@keyframes reveal21 {
+  0%, 44.400% { opacity: 0; }
+  44.500%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step22 { animation-name: reveal22; }
+@keyframes reveal22 {
+  0%, 46.133% { opacity: 0; }
+  46.233%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step23 { animation-name: reveal23; }
+@keyframes reveal23 {
+  0%, 47.867% { opacity: 0; }
+  47.967%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step24 { animation-name: reveal24; }
+@keyframes reveal24 {
+  0%, 49.600% { opacity: 0; }
+  49.700%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step25 { animation-name: reveal25; }
+@keyframes reveal25 {
+  0%, 51.333% { opacity: 0; }
+  51.433%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step26 { animation-name: reveal26; }
+@keyframes reveal26 {
+  0%, 53.067% { opacity: 0; }
+  53.167%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step27 { animation-name: reveal27; }
+@keyframes reveal27 {
+  0%, 54.800% { opacity: 0; }
+  54.900%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step28 { animation-name: reveal28; }
+@keyframes reveal28 {
+  0%, 56.533% { opacity: 0; }
+  56.633%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step29 { animation-name: reveal29; }
+@keyframes reveal29 {
+  0%, 58.267% { opacity: 0; }
+  58.367%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.step30 { animation-name: reveal30; }
+@keyframes reveal30 {
+  0%, 60.000% { opacity: 0; }
+  60.100%, 84% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tile {
+    animation-duration: 2s;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+  }
+  .solid { animation: resolve 2s linear infinite; }
+}
+
+:global(:root[data-motion="full"]) .tile {
+  animation-duration: 2s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+:global(:root[data-motion="full"]) .solid {
+  animation: resolve 2s linear infinite;
+}
+
+/* Override the global duration clamp: the loop's last frame is empty. */
+:global(:root[data-motion="reduced"]) .tile,
+:global(:root[data-motion="reduced"]) .solid {
+  animation: none;
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  :global(:root:not([data-motion="full"])) .tile,
+  :global(:root:not([data-motion="full"])) .solid {
+    animation: none;
+    opacity: 1;
+  }
+}

@@ -28,6 +28,7 @@
   transform: translate(-4px, 4px);
 }
 
+:global(:root[data-motion="reduced"]) .ribbon { transition: none; }
 @media (prefers-reduced-motion: reduce) {
   :global(:root:not([data-motion="full"])) .ribbon { transition: none; }
 }

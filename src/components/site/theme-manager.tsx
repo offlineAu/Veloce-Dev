@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
  */
 const subscribe = (cb: () => void) => {
   const mo = new MutationObserver(cb);
-  mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "data-motion"] });
+  mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "data-motion", "data-perf"] });
   window.addEventListener("storage", cb);
   return () => {
     mo.disconnect();
@@ -46,20 +46,37 @@ function useTheme() {
   return { theme, set, reset };
 }
 
-/** "Always animate": plays animations even when the device asks for reduced motion. Off = follow the device. */
-function useAlwaysAnimate() {
-  const on = React.useSyncExternalStore(subscribe, () => document.documentElement.dataset.motion === "full", () => false);
-  const set = React.useCallback((v: boolean) => {
-    if (v) document.documentElement.dataset.motion = "full";
-    else delete document.documentElement.dataset.motion;
+type MotionChoice = "auto" | "full" | "reduced";
+
+const MOTION_OPTIONS: { value: MotionChoice; label: string; description: string }[] = [
+  { value: "auto", label: "Adaptive", description: "Follows your device's settings and eases off by itself if the page starts to lag." },
+  { value: "full", label: "Always play animations", description: "Keep every animation, even if your device asks for less motion." },
+  { value: "reduced", label: "Reduce animations", description: "Freeze decorative motion. Best for older or slower devices." },
+];
+
+/** Motion preference, stored as data-motion on <html> ("full" | "reduced"; unset = match the device). */
+function useMotionChoice() {
+  const choice = React.useSyncExternalStore(
+    subscribe,
+    (): MotionChoice => {
+      const m = document.documentElement.dataset.motion;
+      return m === "full" || m === "reduced" ? m : "auto";
+    },
+    (): MotionChoice => "auto",
+  );
+  const set = React.useCallback((v: MotionChoice) => {
+    if (v === "auto") delete document.documentElement.dataset.motion;
+    else document.documentElement.dataset.motion = v;
     try {
-      if (v) localStorage.setItem(MOTION_STORAGE_KEY, "full");
-      else localStorage.removeItem(MOTION_STORAGE_KEY);
+      if (v === "auto") localStorage.removeItem(MOTION_STORAGE_KEY);
+      else localStorage.setItem(MOTION_STORAGE_KEY, v);
     } catch {
       /* ignore */
     }
   }, []);
-  return { on, set };
+  // Adaptive mode has eased off (the device asked for it, is low-powered, or frames ran slow).
+  const eased = React.useSyncExternalStore(subscribe, () => document.documentElement.dataset.perf === "lite", () => false);
+  return { choice, set, eased };
 }
 
 /** The palette radio cards. Shared by the palette side panel and the mobile menu (`compact` = swatches only, side by side). */
@@ -108,7 +125,7 @@ export function useThemeChoice() {
 
 export function ThemeManager({ variant = "icon", className }: { variant?: "icon" | "text"; className?: string }) {
   const { theme, set, reset } = useTheme();
-  const motion = useAlwaysAnimate();
+  const motion = useMotionChoice();
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -129,27 +146,40 @@ export function ThemeManager({ variant = "icon", className }: { variant?: "icon"
           <SheetTitle className="font-heading text-xl">Colour palette</SheetTitle>
           <SheetDescription className="text-[15px] text-muted">Pick the look you prefer. It is remembered in this browser.</SheetDescription>
         </SheetHeader>
-        <PaletteChoices theme={theme} onSelect={set} className="flex-1 overflow-y-auto p-4" />
+        <div className="flex-1 overflow-y-auto">
+        <PaletteChoices theme={theme} onSelect={set} className="p-4" />
         <div className="border-t border-line p-4">
-          <button
-            type="button"
-            role="switch"
-            aria-checked={motion.on}
-            onClick={() => motion.set(!motion.on)}
-            className="flex w-full items-center justify-between gap-4 rounded-xl p-2 text-left hover:bg-ink/5"
-          >
-            <span className="flex flex-col gap-0.5">
-              <span className="font-semibold text-ink">Always play animations</span>
-              <span className="text-[14px] leading-snug text-muted">By default the site follows your device&apos;s reduce-motion setting. Turn this on to see the animations anyway.</span>
-            </span>
-            <span aria-hidden className={cn("flex h-7 w-12 shrink-0 items-center rounded-full p-1 transition-colors", motion.on ? "bg-accent-700" : "bg-neutral-300")}>
-              <span className={cn("size-5 rounded-full bg-surface shadow transition-transform", motion.on && "translate-x-5")} />
-            </span>
-          </button>
+          <p className="mb-3 font-semibold text-ink">Animations</p>
+          <div role="radiogroup" aria-label="Animations" className="flex flex-col gap-2">
+            {MOTION_OPTIONS.map((o) => {
+              const on = motion.choice === o.value;
+              return (
+                <button
+                  key={o.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  onClick={() => motion.set(o.value)}
+                  className={cn(
+                    "flex flex-col gap-1 rounded-xl border p-3 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+                    on ? "border-accent-700 bg-accent-100" : "border-line bg-neutral-100 hover:bg-neutral-200",
+                  )}
+                >
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-ink">{o.label}</span>
+                    {on ? <Check aria-hidden className="size-4 shrink-0 text-accent-700" strokeWidth={3} /> : null}
+                  </span>
+                  <span className="text-[14px] leading-snug text-muted">{o.description}</span>
+                  {on && o.value === "auto" && motion.eased ? <span role="status" className="text-[13px] font-medium text-accent-700">Easing off to keep things smooth on this device.</span> : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
         </div>
         <div className="flex items-center justify-between gap-3 border-t border-line p-4 text-[14px] text-muted">
           <span>Saved on this device only.</span>
-          <button type="button" onClick={() => { reset(); motion.set(false); }} className="min-h-11 rounded-full px-4 font-semibold text-accent-700 hover:bg-ink/5">
+          <button type="button" onClick={() => { reset(); motion.set("auto"); }} className="min-h-11 rounded-full px-4 font-semibold text-accent-700 hover:bg-ink/5">
             Use site default
           </button>
         </div>

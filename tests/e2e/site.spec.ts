@@ -534,15 +534,15 @@ test.describe("navigation, search and motion", () => {
     const ctx = await browser.newContext({ reducedMotion: "reduce" });
     const page = await ctx.newPage();
     await page.goto("/");
-    const flipTile = () => page.locator("section[aria-labelledby='cta-title'] a[aria-label='Email']").evaluate((a) => getComputedStyle(a.lastElementChild!).transform);
-    const cta = page.locator("section[aria-labelledby='cta-title']");
+    const flipTile = () => page.locator("section[aria-labelledby='cta-title']:visible a[aria-label='Email']").evaluate((a) => getComputedStyle(a.lastElementChild!).transform);
+    const cta = page.locator("section[aria-labelledby='cta-title']:visible");
     await cta.scrollIntoViewIfNeeded();
     await cta.getByText("Or reach us directly").hover();
     await cta.locator("a[aria-label='Email']").hover();
     await page.waitForTimeout(300);
     expect(await flipTile()).toBe("none");
     await openPaletteButton(page).click();
-    await page.getByRole("switch", { name: /Always play animations/ }).click();
+    await page.getByRole("radio", { name: /Always play animations/ }).click();
     await expect(page.locator("html")).toHaveAttribute("data-motion", "full");
     await page.keyboard.press("Escape");
     await page.reload();
@@ -553,6 +553,67 @@ test.describe("navigation, search and motion", () => {
     await page.waitForTimeout(150);
     expect(await flipTile()).toMatch(/matrix3d/); // a real 3D rotation is running
     await ctx.close();
+  });
+
+  test("normal device: \"Reduce animations\" stops the decorative motion and is remembered", async ({ page }) => {
+    await page.goto("/");
+    const aura = () => page.evaluate(() => getComputedStyle(document.querySelector(".aura-a")!).animationPlayState);
+    expect(await aura()).toBe("running"); // device default: animations play
+    await openPaletteButton(page).click();
+    await page.getByRole("radio", { name: /Reduce animations/ }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-motion", "reduced");
+    expect(await aura()).toBe("paused"); // frozen in place, not snapped back
+    // Scroll-reveal text is shown as it is, never hidden or mid-fade (that was the flicker).
+    expect(await page.evaluate(() => [...document.querySelectorAll("[data-reveal]")].every((e) => getComputedStyle(e).opacity === "1"))).toBe(true);
+    expect(await page.evaluate(() => getComputedStyle(document.querySelector(".scroll-progress")!).display)).toBe("none");
+    await page.keyboard.press("Escape");
+    await page.reload();
+    await expect(page.locator("html")).toHaveAttribute("data-motion", "reduced");
+    expect(await aura()).toBe("paused");
+  });
+
+  test("hero grid glow lights the cell under the pointer", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/");
+    test.skip(await page.evaluate(() => matchMedia("(pointer: coarse)").matches), "touch devices have no hover glow");
+    const x = 640, y = 420;
+    await page.mouse.move(x - 20, y - 20);
+    await page.mouse.move(x, y, { steps: 3 });
+    const hit = await page.waitForFunction(([px = 0, py = 0]) => {
+      const lit = [...document.querySelectorAll(".tile.lit")] as HTMLElement[];
+      return lit.some((t) => { const r = t.getBoundingClientRect(); return px >= r.left - 6 && px <= r.right + 6 && py >= r.top - 6 && py <= r.bottom + 6; });
+    }, [x, y], { timeout: 2000 }).catch(() => null);
+    expect(hit).not.toBeNull();
+  });
+
+  test("low-power device: decoration is dropped automatically, \"Always play animations\" brings the motion back", async ({ page }) => {
+    await page.addInitScript(() => Object.defineProperty(navigator, "deviceMemory", { value: 2 }));
+    await page.goto("/");
+    await expect(page.locator("html")).toHaveAttribute("data-perf", "lite");
+    const css = (sel: string, prop: "animationPlayState" | "display") => page.evaluate(([q, p]) => getComputedStyle(document.querySelector(q!)!)[p as "display"], [sel, prop]);
+    expect(await css(".aura-a", "animationPlayState")).toBe("paused");
+    await openPaletteButton(page).click();
+    await page.getByRole("radio", { name: /Always play animations/ }).click();
+    await page.keyboard.press("Escape");
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" })); // the aura pauses while off-screen
+    await expect.poll(() => css(".aura-a", "animationPlayState")).toBe("running");
+  });
+
+  test("adaptive: a device that ran slow earlier this visit stays in lite mode and says so", async ({ page }) => {
+    await page.addInitScript(() => sessionStorage.setItem("veloce-perf", "lite"));
+    await page.goto("/");
+    await expect(page.locator("html")).toHaveAttribute("data-perf", "lite");
+    await openPaletteButton(page).click();
+    await expect(page.getByRole("radio", { name: /Adaptive/ })).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByText("Easing off to keep things smooth on this device.")).toBeVisible();
+  });
+
+  test("looping animations pause while their section is off-screen", async ({ page }) => {
+    await page.goto("/");
+    const paused = () => page.evaluate(() => getComputedStyle(document.querySelector(".aura-a")!).animationPlayState);
+    await expect.poll(paused).toBe("running");
+    await page.evaluate(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "instant" }));
+    await expect.poll(paused).toBe("paused");
   });
 
   test("footer social flip shows the email channel with an accessible name", async ({ page }) => {
@@ -568,7 +629,7 @@ test.describe("navigation, search and motion", () => {
     await revealAll(page);
     await expect(page.getByRole("heading", { name: "Practical systems, built around your business." })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Business websites" })).toBeVisible();
-    expect(await page.evaluate(() => getComputedStyle(document.querySelector(".aura-a")!).animationName)).toBe("none");
+    expect(await page.evaluate(() => getComputedStyle(document.querySelector(".aura-a")!).animationPlayState)).toBe("paused");
     await ctx.close();
   });
 
