@@ -105,7 +105,7 @@ export function ConversationFab({ children, search = [] }: { children: React.Rea
         aria-expanded={expanded}
         aria-controls={panelId}
         onClick={() => setExpanded((value) => !value)}
-        className="relative grid size-14 place-items-center rounded-full border border-accent-300/40 bg-gradient-to-br from-accent-300 via-accent-600 to-accent-700 text-on-accent shadow-lg transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent motion-reduce:transition-none"
+        className="relative grid size-14 place-items-center rounded-full border border-on-inverse/10 bg-inverse text-accent shadow-lg transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent motion-reduce:transition-none"
       >
         <Plus aria-hidden className={cn("size-6 transition-transform duration-300 motion-reduce:transition-none", expanded && "rotate-45")} />
       </button>

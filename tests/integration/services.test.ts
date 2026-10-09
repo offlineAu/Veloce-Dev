@@ -76,6 +76,49 @@ d("services against a real database", () => {
     expect(recipients).toContain(input.email);
   });
 
+  it("stores a site-builder design with the lead, sanitised, under an unguessable preview token", async () => {
+    const siteDraft = {
+      templateId: "business",
+      data: { root: { props: { title: "Mine" } }, content: [{ type: "CustomHtml", props: { id: "h", html: "<p onclick=\"x()\">hi</p><script>bad()</script>" } }] },
+    };
+    const input = { ...base(), siteDraft };
+    expect(await lead.submitInquiry(input, ctx)).toEqual({ ok: true });
+    const row = await db.lead.findUniqueOrThrow({ where: { idempotencyKey: input.idempotencyKey }, include: { siteDraft: true } });
+    expect(row.siteDraft).toMatchObject({ templateId: "business" });
+    expect(row.siteDraft!.token).toMatch(/^[A-Za-z0-9_-]{22}$/);
+    expect(JSON.stringify(row.siteDraft!.data)).not.toMatch(/onclick|script/);
+
+    // A retry neither duplicates the lead nor the design.
+    await lead.submitInquiry(input, ctx);
+    expect(await db.siteDraft.count({ where: { leadId: row.id } })).toBe(1);
+  });
+
+  it("stores a multi-page design made from an imported template, labelled with its exact version", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { docFromTemplate } = await import("@/lib/builder/template-doc");
+    const pkg = JSON.parse(readFileSync("public/builder-templates/noir-needle/v1/template.json", "utf8"));
+    const doc = docFromTemplate(pkg);
+    const input = { ...base(), siteDraft: { templateId: "noir-needle", data: doc } };
+    expect(await lead.submitInquiry(input, ctx)).toEqual({ ok: true });
+    const row = await db.lead.findUniqueOrThrow({ where: { idempotencyKey: input.idempotencyKey }, include: { siteDraft: true } });
+    expect(row.siteDraft?.templateId).toBe("noir-needle@v1");
+    expect((row.siteDraft?.data as { pages: unknown[] }).pages).toHaveLength(doc.pages.length);
+
+    // A section id the template doesn't have is refused, and nothing is stored.
+    const tampered = structuredClone(doc);
+    (tampered.pages[0]!.data.content[0]!.props as { sectionId: string }).sectionId = "made-up";
+    const bad = { ...base(), siteDraft: { templateId: "noir-needle", data: tampered } };
+    expect(await lead.submitInquiry(bad, ctx)).toMatchObject({ ok: false, code: "VALIDATION" });
+    expect(await db.lead.count({ where: { idempotencyKey: bad.idempotencyKey } })).toBe(0);
+  });
+
+  it("rejects a design with unknown blocks and stores nothing", async () => {
+    const input = { ...base(), siteDraft: { data: { root: {}, content: [{ type: "Nope", props: {} }] } } };
+    const r = await lead.submitInquiry(input, ctx);
+    expect(r).toMatchObject({ ok: false, code: "VALIDATION" });
+    expect(await db.lead.count({ where: { idempotencyKey: input.idempotencyKey } })).toBe(0);
+  });
+
   it("attributes a verified referral token to the campaign", async () => {
     const input = { ...base(), refToken: TOKEN };
     await lead.submitInquiry(input, ctx);

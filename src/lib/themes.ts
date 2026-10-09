@@ -1,8 +1,10 @@
 /**
  * Colour palettes. The base tokens in globals.css ("organic") are only a fallback; the site always applies one of
- * the two palettes below, same token names, and every pairing is contrast-checked in tests/unit/contrast.test.ts.
+ * the palettes below, same token names, and every pairing is contrast-checked in tests/unit/contrast.test.ts.
  *
- * - periwinkle (DEFAULT): the owner's Color Hunt palette https://colorhunt.co/palette/9fa1ffb5baffaee2ffd9f9df
+ * - pistachio (DEFAULT): the editorial redesign. Warm ivory canvas #f6f4ee, obsidian ink #111612, pistachio lime
+ *     #d9f5ab accent (dark text on it), olive accent text, cool blue-grey secondary tones.
+ * - periwinkle: the owner's Color Hunt palette https://colorhunt.co/palette/9fa1ffb5baffaee2ffd9f9df
  *     #9FA1FF periwinkle (accent / buttons), #B5BAFF lavender, #AEE2FF sky, #D9F9DF mint.
  *   The page, text and secondary-blue tones (bg, ink, muted, line, neutrals, accent-700/800, sage-700/800, danger)
  *   are DERIVED from that family to keep text readable, and need owner sign-off.
@@ -12,6 +14,38 @@
  * A visitor's choice is kept in this browser (localStorage "veloce-theme") and applied before first paint; with no
  * choice the site default below is used. Change DEFAULT_THEME to change the default for everyone.
  */
+export const pistachioTheme = {
+  "--color-bg": "#f6f4ee",
+  "--color-surface": "#ffffff",
+  "--color-ink": "#111612",
+  "--color-muted": "#4f5650",
+  "--color-line": "#e5e2d6",
+  "--color-neutral-100": "#faf9f5",
+  "--color-neutral-200": "#efede5",
+  "--color-neutral-300": "#e2dfd3",
+  "--color-neutral-700": "#596059",
+  "--color-accent": "#d9f5ab",
+  "--color-accent-100": "#eefad6",
+  "--color-accent-200": "#e3f6c2",
+  "--color-accent-300": "#c8ea94",
+  "--color-accent-600": "#d9f5ab",
+  "--color-accent-hover": "#c8ea94",
+  "--color-accent-700": "#3f5a1e",
+  "--color-accent-800": "#2c4013",
+  "--color-sage": "#55707f",
+  "--color-sage-100": "#e8eef1",
+  "--color-sage-200": "#dbe5eb",
+  "--color-sage-300": "#c3d2db",
+  "--color-sage-700": "#3d5563",
+  "--color-sage-800": "#2a3d48",
+  "--color-danger": "#a1271b",
+  "--color-on-accent": "#111612",
+  "--color-on-sage": "#ffffff",
+  "--color-on-danger": "#ffffff",
+  "--color-inverse": "#111612",
+  "--color-on-inverse": "#f6f4ee",
+} as const;
+
 export const periwinkleTheme = {
   "--color-bg": "#f7f7ff",
   "--color-surface": "#ffffff",
@@ -40,6 +74,8 @@ export const periwinkleTheme = {
   "--color-on-accent": "#1b1d4d",
   "--color-on-sage": "#ffffff",
   "--color-on-danger": "#ffffff",
+  "--color-inverse": "#1b1d4d",
+  "--color-on-inverse": "#f7f7ff",
 } as const;
 
 export const emberTheme = {
@@ -70,17 +106,27 @@ export const emberTheme = {
   "--color-on-accent": "#171010",
   "--color-on-sage": "#171010",
   "--color-on-danger": "#171010",
+  "--color-inverse": "#0e0909",
+  "--color-on-inverse": "#f3eae6",
 } as const;
 
-export type ThemeName = "periwinkle" | "ember";
-export const THEME_NAMES: ThemeName[] = ["periwinkle", "ember"];
-export const DEFAULT_THEME: ThemeName = "periwinkle";
+export type ThemeName = "pistachio" | "periwinkle" | "ember";
+export const THEME_NAMES: ThemeName[] = ["pistachio", "periwinkle", "ember"];
+export const DEFAULT_THEME: ThemeName = "pistachio";
+export const themes: Record<ThemeName, Record<string, string>> = { pistachio: pistachioTheme, periwinkle: periwinkleTheme, ember: emberTheme };
+export const isThemeName = (t: unknown): t is ThemeName => typeof t === "string" && (THEME_NAMES as string[]).includes(t);
 export const THEME_STORAGE_KEY = "veloce-theme";
 export const MOTION_STORAGE_KEY = "veloce-motion";
 /** sessionStorage flag: PerfMonitor saw slow frames on this device, so this visit stays in lite mode. */
 export const PERF_STORAGE_KEY = "veloce-perf";
 
 export const themeMeta: Record<ThemeName, { label: string; description: string; swatches: string[]; dark: boolean }> = {
+  pistachio: {
+    label: "Pistachio",
+    description: "Warm and editorial. Ivory and obsidian with a fresh lime accent.",
+    swatches: ["#f6f4ee", "#d9f5ab", "#dbe5eb", "#111612"],
+    dark: false,
+  },
   periwinkle: {
     label: "Periwinkle",
     description: "Light and airy. Soft blues and lavender with mint.",
@@ -98,13 +144,13 @@ export const themeMeta: Record<ThemeName, { label: string; description: string; 
 const vars = (t: Record<string, string>) => Object.entries(t).map(([k, v]) => `${k}:${v}`).join(";");
 
 /** The default palette on :root, the other palettes under [data-theme]. */
+const scheme = (t: ThemeName) => (themeMeta[t].dark ? "dark" : "light");
 export const allThemesCss = (): string =>
-  `:root{color-scheme:${themeMeta[DEFAULT_THEME].dark ? "dark" : "light"};${vars(DEFAULT_THEME === "periwinkle" ? periwinkleTheme : emberTheme)}}` +
-  `:root[data-theme="periwinkle"]{color-scheme:light;${vars(periwinkleTheme)}}` +
-  `:root[data-theme="ember"]{color-scheme:dark;${vars(emberTheme)}}`;
+  `:root{color-scheme:${scheme(DEFAULT_THEME)};${vars(themes[DEFAULT_THEME])}}` +
+  THEME_NAMES.map((t) => `:root[data-theme="${t}"]{color-scheme:${scheme(t)};${vars(themes[t])}}`).join("");
 
 /**
  * Runs before first paint: applies a saved choice, so there is no flash of the wrong palette, and flags low-power devices
  * (data-perf="lite": 4 GB or less memory, 2 or fewer cores, or Data Saver, or slow frames seen earlier this visit) so heavy decoration can be dropped.
  */
-export const themeInitScript = `try{var d=document.documentElement,t=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});if(t==="periwinkle"||t==="ember")d.dataset.theme=t;var m=localStorage.getItem(${JSON.stringify(MOTION_STORAGE_KEY)});if(m==="full"||m==="reduced")d.dataset.motion=m}catch(e){}try{var n=navigator,c=n.connection;if((n.deviceMemory&&n.deviceMemory<=4)||(c&&c.saveData)||(n.hardwareConcurrency&&n.hardwareConcurrency<=2))document.documentElement.dataset.perf="lite"}catch(e){}try{if(sessionStorage.getItem(${JSON.stringify(PERF_STORAGE_KEY)})==="lite")document.documentElement.dataset.perf="lite"}catch(e){}`;
+export const themeInitScript = `try{var d=document.documentElement,t=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});if(${JSON.stringify(THEME_NAMES)}.indexOf(t)>-1)d.dataset.theme=t;var m=localStorage.getItem(${JSON.stringify(MOTION_STORAGE_KEY)});if(m==="full"||m==="reduced")d.dataset.motion=m}catch(e){}try{var n=navigator,c=n.connection;if((n.deviceMemory&&n.deviceMemory<=4)||(c&&c.saveData)||(n.hardwareConcurrency&&n.hardwareConcurrency<=2))document.documentElement.dataset.perf="lite"}catch(e){}try{if(sessionStorage.getItem(${JSON.stringify(PERF_STORAGE_KEY)})==="lite")document.documentElement.dataset.perf="lite"}catch(e){}`;

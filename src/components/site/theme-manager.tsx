@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Check, Palette } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { DEFAULT_THEME, MOTION_STORAGE_KEY, THEME_NAMES, THEME_STORAGE_KEY, themeMeta, type ThemeName } from "@/lib/themes";
+import { DEFAULT_THEME, MOTION_STORAGE_KEY, THEME_NAMES, THEME_STORAGE_KEY, isThemeName, themeMeta, type ThemeName } from "@/lib/themes";
 import { cn } from "@/lib/utils";
 
 /*
@@ -22,7 +22,7 @@ const subscribe = (cb: () => void) => {
 };
 const read = (): ThemeName => {
   const t = document.documentElement.dataset.theme;
-  return t === "ember" || t === "periwinkle" ? t : DEFAULT_THEME;
+  return isThemeName(t) ? t : DEFAULT_THEME;
 };
 
 function useTheme() {

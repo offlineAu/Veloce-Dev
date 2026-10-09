@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { ArrowUpRight, Menu, Palette, X } from "lucide-react";
-import { LogoBadge } from "@/components/brand/logo";
+import { LogoMark } from "@/components/brand/logo";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { PaletteChoices, ThemeManager, useThemeChoice } from "./theme-manager";
@@ -198,7 +198,7 @@ export function NotchHeader({
                 </SheetTrigger>
                 <SheetContent side="left" showCloseButton={false} className="w-[min(86vw,360px)] gap-0 border-line bg-bg p-0">
                   <SheetHeader className="flex-row items-center gap-3 border-b border-line p-4 pr-3">
-                    <LogoBadge className="size-10" />
+                    <LogoMark className="size-7 text-ink" />
                     <div className="min-w-0 flex-1">
                       <SheetTitle className="truncate font-heading text-xl">{companyName}</SheetTitle>
                       <SheetDescription className="sr-only">Site navigation, colour palette and contact</SheetDescription>
@@ -247,8 +247,8 @@ export function NotchHeader({
                 </SheetContent>
               </Sheet>
 
-              <Link href="/" className="flex shrink-0 items-center gap-2.5 font-heading text-lg" aria-label={`${companyName} home`}>
-                <LogoBadge className="size-9" />
+              <Link href="/" className="flex shrink-0 items-center gap-2.5 font-heading text-lg text-ink" aria-label={`${companyName} home`}>
+                <LogoMark className="size-7" />
                 <span>{companyName}</span>
               </Link>
 

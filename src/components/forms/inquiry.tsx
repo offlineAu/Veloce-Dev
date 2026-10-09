@@ -7,9 +7,18 @@ import { Button, type ButtonProps } from "@/components/ui/button";
 
 // The form pulls in react-hook-form and zod, so it loads on demand instead of with the page.
 const loadDialog = () => import("./inquiry-dialog");
-const InquiryDialog = dynamic(loadDialog);
+// A null fallback keeps the suspense local: otherwise the first open suspends the whole page and the scroll resets to the top.
+const InquiryDialog = dynamic(loadDialog, { loading: () => null });
 
 export type Intent = "CONVERSATION" | "CONSULTATION";
+
+/** A page designed in the /build editor, sent along with the inquiry. */
+export interface SiteDraftPayload {
+  templateId?: string;
+  websiteType?: string;
+  /** The whole site: its pages, each with the sections the visitor placed. */
+  data: { pages: { data: { content: unknown[] } }[] };
+}
 
 /** The service card an inquiry was opened from. */
 export interface InquiryService {
@@ -30,9 +39,11 @@ export interface InquiryProviderProps {
   refToken?: string;
   /** Referrer shown to the visitor (only when the campaign allows it). */
   introducedBy?: string | null;
+  /** In the site builder: reads the current design at submit time so it is attached to the inquiry. */
+  getSiteDraft?: () => SiteDraftPayload;
 }
 
-export function InquiryProvider({ children, companyName, contactEmail, refToken, introducedBy }: InquiryProviderProps) {
+export function InquiryProvider({ children, companyName, contactEmail, refToken, introducedBy, getSiteDraft }: InquiryProviderProps) {
   const [isOpen, setOpen] = useState(false);
   const [intent, setIntent] = useState<Intent>("CONVERSATION");
   const focus = useOpenerFocus();
@@ -55,6 +66,7 @@ export function InquiryProvider({ children, companyName, contactEmail, refToken,
           contactEmail={contactEmail}
           refToken={refToken}
           introducedBy={introducedBy}
+          getSiteDraft={getSiteDraft}
           intent={intent}
           service={service}
           onCloseAutoFocus={focus.onCloseAutoFocus}

@@ -96,6 +96,74 @@ export const customVsTemplate = {
   },
 };
 
+/**
+ * Landing sections (hero, services carousel, "built around your business"). Layout follows the owner's reference design;
+ * the copy describes how Veloce works and makes no claims about clients, results or speed.
+ */
+export const landing = {
+  heroEyebrow: "Custom software & web development",
+  heroSideLabel: "Custom development",
+  heroSide: ["Made for", "your growth"],
+  servicesEyebrow: "Tailored services",
+  servicesTitle: "Services tailored to what you need. Built to help your business succeed.",
+  featured: {
+    badge: "Start here",
+    title: "Talk to the builders",
+    body: "Tell us what needs to work better. We'll suggest a first version worth building, in plain language.",
+    cta: "Work with us",
+  },
+  /** Last card in the carousel: a photo card pointing to the full service list. */
+  closing: {
+    title: "Not sure where it fits?",
+    body: "Browse every service by what needs to work better, then ask about the parts that matter to you.",
+    cta: "Explore every service",
+  },
+  approachEyebrow: "Client-focused approach",
+  approachTitle: "Built around your business, your team, and your customers.",
+  approachLead: "No buzzwords and no overcomplicated process. We build around the problem you actually need solved, and improve it through real use.",
+  approachCta: "See if we're a good fit",
+  /** Decorative floating cards around the rings: how the work runs, never names, quotes or numbers. */
+  approachCards: {
+    early: { title: "Working version early", note: "Something real to try" },
+    progress: { title: "Visible progress", note: "Review it as it's built" },
+    scope: { title: "A scope you can change", note: "First things first" },
+    improve: { title: "Improve from real use", note: "Learn, then refine" },
+  },
+};
+
+/** Technology choices and their purpose; no vendor partnerships or delivery guarantees. */
+export const modernTools = {
+  eyebrow: "Built with modern tools",
+  title: "The right tools for what you need.",
+  lead: "We choose the technology around your workflows, existing systems, and plans for growth.",
+  items: [
+    {
+      id: "web",
+      title: "Web experiences",
+      description: "Websites and web apps designed for phones, tablets, and desktops.",
+      detail: "React · Next.js · TypeScript",
+    },
+    {
+      id: "data",
+      title: "Business data",
+      description: "Structure the records your team needs to manage and use.",
+      detail: "PostgreSQL · Prisma",
+    },
+    {
+      id: "integrations",
+      title: "Integrations & automation",
+      description: "Connect existing tools and reduce repetitive steps.",
+      detail: "APIs · Workflow automation",
+    },
+    {
+      id: "deployment",
+      title: "Deployment & support",
+      description: "Plan how your system goes live and how it will be maintained.",
+      detail: "Hosting and support scoped to the project",
+    },
+  ],
+} as const;
+
 export const processSteps = [
   { title: "Understand the problem", body: "We learn about your business, processes and constraints, and what needs to be solved." },
   { title: "Agree what matters", body: "We turn that into a clear scope: the functionality that matters first, and what can wait." },
@@ -200,6 +268,26 @@ export const referralSteps = [
   { title: "Introduce", body: "Tell us who you're introducing. The form takes a minute." },
   { title: "Build", body: "Our team reviews it and follows up about their needs." },
 ];
+
+/** The "What we offer" walkthrough for the site builder at /build. Template ids match src/components/builder/templates.ts. */
+export const builderGuide = {
+  heading: "Design it yourself. We build it for real.",
+  lead: "Not sure how to describe the website you want? Sketch it in our builder. No account, no code, nothing to install. When it looks right, send it to us and we'll turn it into a fast, finished site.",
+  steps: [
+    { title: "Pick a template", body: "Start from a business, restaurant, portfolio, product or shop layout, or a blank page." },
+    { title: "Drag in blocks", body: "Add heroes, features, pricing, FAQs and more. Click any text to edit it in place." },
+    { title: "Make it yours", body: "Change colours and fonts, save sections you like, or paste your own HTML." },
+    { title: "Send it to us", body: "We review your design and reply with questions, a scope and an honest estimate." },
+  ],
+  templates: [
+    { id: "business", label: "Business" },
+    { id: "restaurant", label: "Restaurant" },
+    { id: "portfolio", label: "Portfolio" },
+    { id: "saas", label: "Product" },
+    { id: "shop", label: "Shop" },
+  ],
+  note: "Your draft is saved in this browser as you work. Nothing is shared until you choose to send it.",
+};
 
 /** What the inquiry dialog adapts to when it is opened from a service card. */
 export interface ServiceInquiry {

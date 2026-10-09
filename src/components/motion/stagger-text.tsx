@@ -1,6 +1,8 @@
 "use client";
 
+import { Fragment } from "react";
 import { m } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 /*
  * Word-by-word rise for section headings. Adapted from VengeanceUI "stagger-text" (MIT).
@@ -10,8 +12,10 @@ import { m } from "framer-motion";
  */
 const EASE = [0.22, 1, 0.36, 1] as const;
 
-export function StaggerText({ text, delay = 0 }: { text: string; delay?: number }) {
+/** `bold`: how many trailing words to set bold on their own line (the editorial "light / **bold**" split). */
+export function StaggerText({ text, delay = 0, bold = 0 }: { text: string; delay?: number; bold?: number }) {
   const words = text.split(" ");
+  const boldFrom = bold > 0 ? Math.max(0, words.length - bold) : words.length;
   return (
     <>
       <span className="sr-only">{text}</span>
@@ -25,15 +29,18 @@ export function StaggerText({ text, delay = 0 }: { text: string; delay?: number 
         variants={{ hidden: {}, show: { transition: { staggerChildren: 0.05, delayChildren: delay } } }}
       >
         {words.map((w, i) => (
-          <span key={i} className="-mb-[0.12em] inline-block overflow-hidden pb-[0.12em] align-top">
-            <m.span
-              className="stagger-word inline-block"
-              variants={{ hidden: { y: "110%" }, show: { y: "0%", transition: { duration: 0.6, ease: EASE } } }}
-            >
-              {w}
-              {i < words.length - 1 ? " " : ""}
-            </m.span>
-          </span>
+          <Fragment key={i}>
+            {i === boldFrom && i > 0 ? <br className="hidden sm:inline" /> : null}
+            <span className={cn("-mb-[0.12em] inline-block overflow-hidden pb-[0.12em] align-top", i >= boldFrom && "font-bold")}>
+              <m.span
+                className="stagger-word inline-block"
+                variants={{ hidden: { y: "110%" }, show: { y: "0%", transition: { duration: 0.6, ease: EASE } } }}
+              >
+                {w}
+                {i < words.length - 1 ? " " : ""}
+              </m.span>
+            </span>
+          </Fragment>
         ))}
       </m.span>
     </>

@@ -29,6 +29,17 @@ export default function InquiryDialog({ onCloseAutoFocus, ...props }: Omit<Inqui
       </ModalContent>
     );
   }
+  if (props.getSiteDraft) {
+    return (
+      <ModalContent
+        onCloseAutoFocus={onCloseAutoFocus}
+        title="Send us your design"
+        description={`${props.companyName} will review your page and reply with questions, a proposed scope and an honest estimate. Nothing goes live until you agree.`}
+      >
+        <InquiryForm key="draft" {...props} service={undefined} />
+      </ModalContent>
+    );
+  }
   return (
     <ModalContent
       onCloseAutoFocus={onCloseAutoFocus}
@@ -46,11 +57,15 @@ const DEFAULTS = {
 };
 
 export function InquiryForm({
-  companyName, contactEmail, refToken, introducedBy, intent, service, onClose,
+  companyName, contactEmail, refToken, introducedBy, intent, service, getSiteDraft, onClose,
 }: Omit<InquiryProviderProps, "children"> & { intent: Intent; service?: InquiryService; onClose: () => void }) {
   const consultation = intent === "CONSULTATION";
   const receivedTitle = consultation ? "Consultation request received" : "Inquiry received";
   const preset = service ? serviceInquiries[service.slug] : undefined;
+  // Read once when the form opens, to label the inquiry; the design itself is read again at submit time.
+  const [draftAtOpen] = useState(() => getSiteDraft?.());
+  const draftPages = draftAtOpen?.data.pages.length ?? 0;
+  const draftBlocks = draftAtOpen?.data.pages.reduce((n, p) => n + p.data.content.length, 0) ?? 0;
   const [editTopic, setEditTopic] = useState(false);
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   const [startedAt] = useState(() => Date.now());
@@ -60,7 +75,11 @@ export function InquiryForm({
 
   const { register, handleSubmit, setError, setValue, control, formState: { errors } } = useForm<InquiryFormValues>({
     resolver: zodResolver(inquiryClientSchema),
-    defaultValues: { ...DEFAULTS, ...(preset ? { projectType: preset.projectType, websiteType: preset.websiteType ?? "" } : {}) } as unknown as Partial<InquiryFormValues>,
+    defaultValues: {
+      ...DEFAULTS,
+      ...(preset ? { projectType: preset.projectType, websiteType: preset.websiteType ?? "" } : {}),
+      ...(draftAtOpen ? { projectType: "NEW_PROJECT", websiteType: draftAtOpen.websiteType ?? "" } : {}),
+    } as unknown as Partial<InquiryFormValues>,
     mode: "onTouched",
   });
 
@@ -93,6 +112,7 @@ export function InquiryForm({
     setFormError(null);
     startTransition(async () => {
       const params = new URLSearchParams(window.location.search);
+      const draft = getSiteDraft?.();
       const result = await submitInquiryAction({
         ...data,
         intent,
@@ -104,10 +124,13 @@ export function InquiryForm({
         utmSource: params.get("utm_source") ?? undefined,
         utmMedium: params.get("utm_medium") ?? undefined,
         utmCampaign: params.get("utm_campaign") ?? undefined,
+        siteDraft: draft ? { templateId: draft.templateId, data: draft.data } : undefined,
       }).catch(() => ({ ok: false, code: "UNAVAILABLE" }) as const);
       if (result.ok) {
         setSentTo(data.email as string);
         toast.success(receivedTitle);
+      } else if (result.code === "VALIDATION" && result.fieldErrors.siteDraft?.[0]) {
+        setFormError(result.fieldErrors.siteDraft[0]); // a problem with the design, not a form field
       } else {
         setFormError(applyServerResult(result, setError, contactEmail));
       }
@@ -133,6 +156,11 @@ export function InquiryForm({
             <p className="font-semibold">A clearer next step</p>
             <p className="mt-1">Use this discussion to review an issue, compare options, or work out priorities. We&apos;ll confirm the scope and any cost by email before you commit.</p>
           </div>
+        ) : null}
+        {draftAtOpen ? (
+          <p className="rounded-md bg-accent-100 px-4 py-3 text-sm text-ink">
+            Your design ({draftPages} {draftPages === 1 ? "page" : "pages"}, {draftBlocks} {draftBlocks === 1 ? "section" : "sections"}) will be attached. You can keep editing it afterwards.
+          </p>
         ) : null}
         {introducedBy ? (
           <p className="rounded-md bg-sage-100 px-4 py-3 text-sm text-sage-800">

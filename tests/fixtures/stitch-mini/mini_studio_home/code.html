@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<title>Mini Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&amp;family=Playfair+Display:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>body{margin:0}</style>
+<script src="https://cdn.tailwindcss.com"></script>
+<script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "primary": "#f2ca50", "on-primary": "#3c2f00", "surface": "#141312", "surface-container-low": "#1d1b1a", "on-surface": "#e6e1df", "on-surface-variant": "#d0c5af", "outline-variant": "#4d4635", "background": "#141312" }, "borderRadius": { "DEFAULT": "0.125rem", "lg": "0.25rem" }, "spacing": { "gutter": "1.5rem" }, "fontFamily": { "headline-xl": ["Playfair Display"], "body-md": ["Outfit"] }, "fontSize": { "headline-xl": ["56px", { "lineHeight": "64px", "letterSpacing": "-0.02em", "fontWeight": "400" }], "label-md": ["11px", { "lineHeight": "14px", "letterSpacing": "0.15em", "fontWeight": "600" }] } } } };</script>
+</head>
+<body class="bg-surface font-body-md text-on-surface">
+<header class="fixed top-0 w-full bg-surface/85">
+<nav class="flex gap-gutter">
+<a aria-current="page" class="text-primary font-bold" data-path="home" href="#">Home</a>
+<a class="text-on-surface-variant hover:text-on-surface" data-path="artists" href="#">Artists</a>
+<a class="text-on-surface-variant hover:text-on-surface" data-path="journal" href="#">Journal</a>
+</nav>
+</header>
+<main class="pt-20">
+<div class="flex flex-col">
+<!-- Editorial Hero -->
+<section class="py-16 px-gutter">
+<span class="font-label-md text-label-md uppercase text-primary">Now booking</span>
+<h1 class="font-headline-xl text-headline-xl">Ink <span class="italic text-primary">as art</span></h1>
+<p class="max-w-xl text-on-surface-variant">Fine-line work in a private studio.</p>
+<button class="px-4 py-2 bg-primary text-on-primary rounded" data-path="artists" onclick="go()">Meet the artists <span class="material-symbols-outlined">arrow_forward</span></button>
+<a class="underline" href="javascript:alert(1)">Bad link</a>
+<img alt="Studio" class="rounded-lg shadow" src="https://lh3.googleusercontent.com/hero.jpg"/>
+</section>
+<!-- Portfolio Grid -->
+<section class="grid grid-cols-3 gap-gutter">
+<article class="rounded-lg bg-surface-container-low p-4"><img data-alt="Rose" src="https://lh3.googleusercontent.com/a.jpg"/><h3>Rose</h3><p>Fine line</p></article>
+<article class="rounded-lg bg-surface-container-low p-4"><img data-alt="Fern" src="https://lh3.googleusercontent.com/b.jpg"/><h3>Fern</h3><p>Botanical</p></article>
+<article class="rounded-lg bg-surface-container-low p-4"><img data-alt="Moth" src="https://lh3.googleusercontent.com/missing.jpg"/><h3>Moth</h3><p>Blackwork</p></article>
+</section>
+<div class="hidden fixed inset-0" id="modal"><p>Booked!</p></div>
+</div>
+</main>
+<footer class="py-8"><p>© Mini Studio</p></footer>
+<script>function go(){}</script>
+</body></html>

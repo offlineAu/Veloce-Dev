@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { emberTheme, periwinkleTheme } from "../../src/lib/themes";
+import { emberTheme, periwinkleTheme, pistachioTheme } from "../../src/lib/themes";
 
 const css = readFileSync(new URL("../../src/app/globals.css", import.meta.url), "utf8");
 const parse = (name: string, source: string) => {
@@ -56,12 +56,15 @@ const common: [string, string, number, string][] = [
   ["ink", "neutral-100", 4.5, "text on inputs and cards"],
   ["danger", "bg", 4.5, "error text"],
   ["on-accent", "accent", 3, "text on accent fill (large/bold only)"],
+  ["on-inverse", "inverse", 4.5, "copy on dark panels (hero, closing CTA, footer)"],
+  ["accent", "inverse", 4.5, "accent text and eyebrows on dark panels"],
 ];
 // Pairs that only exist on the dark Ember surfaces (cards and code blocks drawn on `surface`).
 const emberOnly: [string, string, number, string][] = [];
 
 const themes: [string, string, [string, string, number, string][]][] = [
-  ["periwinkle (default)", `${css};${toVars(periwinkleTheme)}`, common],
+  ["pistachio (default)", `${css};${toVars(pistachioTheme)}`, common],
+  ["periwinkle (option)", `${css};${toVars(periwinkleTheme)}`, common],
   ["ember (option)", `${css};${toVars(emberTheme)}`, [...common, ...emberOnly]],
 ];
 

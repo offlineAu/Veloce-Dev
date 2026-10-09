@@ -53,6 +53,8 @@
   --color-on-accent: #ffffff; /* text on accent-600 fills */
   --color-on-sage: #ffffff; /* text on sage / sage-700 fills */
   --color-on-danger: #ffffff; /* text on danger fills */
+  --color-inverse: #201e1d; /* dark feature panels: hero, closing CTA, footer */
+  --color-on-inverse: #f5ead8; /* text on inverse panels */
 
   /*
    * shadcn/ui aliases. Components under src/components/ui use these names; they point at the brand tokens above,
@@ -75,17 +77,18 @@
   --color-input: var(--color-line);
   --color-ring: var(--color-accent);
 
-  --font-heading: var(--font-caprasimo), ui-serif, Georgia, serif;
-  --font-body: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --radius-sm: 8px;
   --radius-md: 16px;
-  --radius-lg: 28px;
-  --radius-xl: 40px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
 
-  --shadow-sm: 0 1px 2px color-mix(in srgb, #2e2b25 14%, transparent);
-  --shadow-md: 0 3px 10px color-mix(in srgb, #2e2b25 16%, transparent);
-  --shadow-lg: 0 12px 32px color-mix(in srgb, #2e2b25 22%, transparent);
+  --shadow-sm: 0 1px 2px color-mix(in srgb, var(--color-ink) 6%, transparent);
+  --shadow-md: 0 8px 24px -6px color-mix(in srgb, var(--color-ink) 10%, transparent);
+  --shadow-lg: 0 20px 48px -8px color-mix(in srgb, var(--color-ink) 16%, transparent);
 
   --container-page: 80rem;
 }
@@ -131,20 +134,44 @@
     text-wrap: pretty;
     overflow-x: clip;
   }
+  /* Editorial headings: light by default, with <strong> for the bold second line ("Your idea shouldn't / **stay an idea.**"). */
   h1,
   h2,
   h3,
   h4 {
     font-family: var(--font-heading);
     font-weight: 400;
+    letter-spacing: -0.03em;
+  }
+  h1,
+  h2 {
+    font-weight: 300;
+    letter-spacing: -0.04em;
+  }
+  :is(h1, h2) strong {
+    font-weight: 700;
+  }
+  h3,
+  h4 {
+    font-weight: 700;
   }
   :focus-visible {
     outline: 2px solid var(--color-accent-700);
     outline-offset: 2px;
   }
   ::selection {
-    background: var(--color-accent-200);
+    background: var(--color-accent-300);
+    color: var(--color-ink);
   }
+}
+
+/* Concentric rings behind feature panels (from the redesign mock). Decorative only. */
+.ring-pattern {
+  background-image: repeating-radial-gradient(
+    circle at 50% 50%,
+    transparent 0 139px,
+    color-mix(in srgb, var(--color-ink) 9%, transparent) 139px 140px
+  );
 }
 
 /* Gentle entrance for dialogs and menus. */
@@ -290,6 +317,10 @@
   color: transparent;
   animation: shimmer 5s ease-in-out infinite;
 }
+/* On dark (inverse) panels. */
+.shimmer.shimmer-light {
+  background-image: linear-gradient(100deg, var(--color-accent) 30%, var(--color-on-inverse) 50%, var(--color-accent) 70%);
+}
 @keyframes shimmer {
   0%, 100% { background-position: 100% 0; }
   50% { background-position: 0 0; }
@@ -354,3 +385,6 @@
     gap: 2rem;
   }
 }
+
+/* First-visit loader: skipped once it has been seen this session (set by the inline script in BootLoader). */
+:root[data-booted] [data-boot-loader] { display: none; }

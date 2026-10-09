@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * The Veloce mark: three slanted bars. Vector trace of the owner's supplied logo (Gemini-generated PNG), simplified to
- * straight-edged polygons. Uses currentColor. The round badge uses the logo's own colours (near-black on light grey).
+ * straight-edged polygons. Uses currentColor so each placement follows its selected palette.
  */
 export const LOGO_POLYGONS = [
   "59.8,0 60.1,27 13.7,73.3 0,59.6",
@@ -25,14 +25,5 @@ export function LogoMark({ className, title }: { className?: string; title?: str
         <polygon key={p} points={p} />
       ))}
     </svg>
-  );
-}
-
-/** Mark in a round badge, as used in the header and footer. */
-export function LogoBadge({ className, markClassName }: { className?: string; markClassName?: string }) {
-  return (
-    <span aria-hidden className={cn("grid shrink-0 place-items-center rounded-full bg-[#ebebeb] text-[#202020] ring-1 ring-black/10", className)}>
-      <LogoMark className={cn("size-[60%]", markClassName)} />
-    </span>
   );
 }
