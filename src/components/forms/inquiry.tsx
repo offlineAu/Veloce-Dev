@@ -7,7 +7,8 @@ import { Button, type ButtonProps } from "@/components/ui/button";
 
 // The form pulls in react-hook-form and zod, so it loads on demand instead of with the page.
 const loadDialog = () => import("./inquiry-dialog");
-const InquiryDialog = dynamic(loadDialog);
+// A null fallback keeps the suspense local: otherwise the first open suspends the whole page and the scroll resets to the top.
+const InquiryDialog = dynamic(loadDialog, { loading: () => null });
 
 export type Intent = "CONVERSATION" | "CONSULTATION";
 

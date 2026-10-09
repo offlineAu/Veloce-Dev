@@ -86,7 +86,7 @@ export function QuickDock({
       style={{ pointerEvents: shown ? "auto" : "none" }}
       // `inert` keeps the hidden dock out of the tab order until it is shown.
       {...(shown ? {} : { inert: true })}
-      className="fixed bottom-4 left-1/2 z-[35] lg:hidden w-[min(680px,92vw)] -translate-x-1/2 overflow-hidden rounded-2xl border border-line bg-neutral-100/85 shadow-lg backdrop-blur-xl"
+      className="fixed bottom-4 left-1/2 z-[35] lg:hidden w-[min(680px,92vw)] -translate-x-1/2 overflow-hidden rounded-3xl border border-line bg-bg/90 shadow-lg backdrop-blur-xl"
     >
       <AnimatePresence initial={false}>
         {open ? (
@@ -102,8 +102,8 @@ export function QuickDock({
             <div className="grid grid-cols-2 gap-x-2 gap-y-5 p-5">
               {columns.map((col) => (
                 <div key={col.title} className="flex min-w-0 flex-col gap-0.5">
-                  <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
-                    <span aria-hidden className="size-1.5 rounded-full bg-accent" />
+                  <p className="mb-2 flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-[0.12em] text-muted">
+                    <span aria-hidden className="size-1.5 bg-ink" />
                     {col.title}
                   </p>
                   {col.links.map((l) => (
@@ -143,8 +143,8 @@ export function QuickDock({
           aria-controls={open ? menuId : undefined}
           onClick={() => setOpen((v) => !v)}
           className={cn(
-            "flex min-h-11 flex-1 items-center justify-center gap-2 sm:flex-none rounded-xl border border-line px-4 text-sm font-medium transition-colors hover:bg-ink/10",
-            open ? "bg-ink/10 text-ink" : "bg-ink/5 text-muted",
+            "flex min-h-11 flex-1 items-center justify-center gap-2 sm:flex-none rounded-full border px-4 text-sm font-semibold transition-colors",
+            open ? "border-inverse bg-inverse text-on-inverse" : "border-line bg-surface text-ink hover:border-ink/40",
           )}
         >
           {open ? <X aria-hidden className="size-4" /> : <Menu aria-hidden className="size-4" />}
@@ -157,8 +157,8 @@ export function QuickDock({
               href={s.href}
               aria-current={active === s.href ? "location" : undefined}
               className={cn(
-                "hidden min-h-11 min-w-0 flex-1 items-center justify-center truncate rounded-xl border px-2 text-sm transition-colors sm:flex",
-                active === s.href ? "border-accent/70 text-ink" : "border-line text-muted hover:border-ink/40 hover:text-ink",
+                "hidden min-h-11 min-w-0 flex-1 items-center justify-center truncate rounded-full border px-2 text-sm transition-colors sm:flex",
+                active === s.href ? "border-accent-300 bg-accent-100 font-semibold text-ink" : "border-line text-muted hover:border-ink/40 hover:text-ink",
               )}
             >
               {s.label}

@@ -15,11 +15,14 @@ export function SectionHeading({
   lead,
   tone = "accent",
   as: Tag = "h2",
+  bold = 0,
   className,
 }: {
   eyebrow?: string;
   /** Plain text: it is split into words for the stagger effect. */
   title: string;
+  /** How many trailing words of the title are set bold on their own line. */
+  bold?: number;
   titleId?: string;
   lead?: ReactNode;
   tone?: "accent" | "sage";
@@ -27,14 +30,15 @@ export function SectionHeading({
   className?: string;
 }) {
   return (
-    <Reveal className={cn("flex max-w-2xl flex-col gap-4", className)}>
+    <Reveal className={cn("flex max-w-3xl flex-col gap-4", className)}>
       {eyebrow ? (
-        <p className={cn("text-[13px] font-semibold uppercase tracking-[0.08em]", tone === "accent" ? "text-accent-700" : "text-sage-700")}>
+        <p className={cn("flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.14em]", tone === "accent" ? "text-accent-700" : "text-sage-700")}>
+          <span aria-hidden className="size-2 bg-current" />
           {eyebrow}
         </p>
       ) : null}
-      <Tag id={titleId} className="text-[clamp(30px,3.8vw,46px)] leading-[1.1]">
-        <StaggerText text={title} />
+      <Tag id={titleId} className="text-[clamp(32px,4.2vw,52px)] leading-[1.05] text-ink">
+        <StaggerText text={title} bold={bold} />
       </Tag>
       {lead ? <p className="text-[17px] leading-relaxed text-muted">{lead}</p> : null}
     </Reveal>

@@ -71,7 +71,6 @@ export function ApproachWorkbench() {
               <p className={styles.eyebrow}>Working together / 0{i + 1}</p>
               <h3 className={styles.flipHeading}><m.span key={s.id} initial={reduce ? false : { rotateX: -70, y: 12, opacity: 0 }} animate={{ rotateX: 0, y: 0, opacity: 1 }} transition={{ duration: reduce ? 0 : 0.5 }}>{s.headline}</m.span></h3>
               <p className={styles.stageSummary}>{s.summary}</p>
-              {meetingInvitation}
               <ol start={i * 2 + 1} className={styles.steps}>
                 {s.steps.map((step, j) => <li key={step.title}><span aria-hidden className={styles.stepNumber}>0{i * 2 + j + 1}</span><div><h4>{step.title}</h4><p>{step.body}</p></div></li>)}
               </ol>
@@ -80,6 +79,7 @@ export function ApproachWorkbench() {
                 <div><dt>What you receive</dt><dd>{s.youReceive}</dd></div>
               </dl>
               <p className={styles.principle}><CheckCheck aria-hidden />{s.principle}</p>
+              {meetingInvitation}
             </TabsContent>
           ))}
         </div>

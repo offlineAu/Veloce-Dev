@@ -99,7 +99,7 @@ test("inquiry loader respects motion preferences, inherits theme color, and clea
     await page.evaluate(() => { delete document.documentElement.dataset.motion; });
     await expect(solid).toHaveCSS("opacity", "1");
 
-    for (const theme of ["periwinkle", "ember"]) {
+    for (const theme of ["pistachio", "periwinkle", "ember"]) {
       await page.evaluate((theme) => { document.documentElement.dataset.theme = theme; }, theme);
       await expect.poll(() => loader.evaluate((svg) =>
         getComputedStyle(svg).color === getComputedStyle(svg.closest("button")!).color,

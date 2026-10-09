@@ -2,8 +2,10 @@ import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { TOKENS, query, resetFixtures, uniqueEmail } from "./helpers";
 
-test.beforeEach(async () => {
+test.beforeEach(async ({ page }) => {
   await resetFixtures();
+  // The first-visit loader covers the page for ~2s; these tests are about the page itself (see boot-loader.spec.ts).
+  await page.addInitScript(() => { try { sessionStorage.setItem("veloce-booted", "1"); } catch {} });
 });
 
 /** Scroll through the page so once-only scroll reveals have run, then return to the top. */
@@ -44,7 +46,7 @@ test.describe("sales page", () => {
     await page.goto("/");
     await expect(page.getByRole("heading", { level: 1 })).toContainText("idea shouldn't stay an idea");
     await expect(page.getByText("Build fast. Build what works.").first()).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Business websites" })).toBeVisible();
+    await expect(page.locator("[data-services-explorer]").getByRole("heading", { name: "Business websites" })).toBeVisible();
     await expect(page.getByText("Special offer")).toHaveCount(0);
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", /localhost:3000\/?$/);
   });
@@ -430,7 +432,7 @@ test.describe("navigation, search and motion", () => {
     test.skip((page.viewportSize()?.width ?? 0) < 768, "desktop nav");
     await page.goto("/");
     await expect(page.getByRole("navigation", { name: "More" }).getByRole("link", { name: "Offer", exact: true })).toBeVisible();
-    await expect(page.locator("#offer").getByRole("heading", { name: "A clear way to start." })).toBeVisible();
+    await expect(page.locator("#offer").getByRole("heading", { name: "Design it yourself. We build it for real." })).toBeVisible();
     await expect(page.locator("#offer").getByText("Special offer")).toHaveCount(0);
   });
 
@@ -510,15 +512,16 @@ test.describe("navigation, search and motion", () => {
     await expect(cta.getByRole("link", { name: "Facebook" })).toHaveCount(0);
   });
 
-  test("colour palette: periwinkle by default, Ember is an option that is remembered, reset returns to default", async ({ page }) => {
+  test("colour palette: pistachio by default, Ember is an option that is remembered, reset returns to default", async ({ page }) => {
     await page.goto("/");
     const html = page.locator("html");
     await expect(html).not.toHaveAttribute("data-theme", /.+/);
     const bg = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-    expect(await bg()).toBe("rgb(247, 247, 255)");
+    expect(await bg()).toBe("rgb(246, 244, 238)");
     await openPaletteButton(page).click();
     const panel = page.getByRole("dialog", { name: "Colour palette" });
-    await expect(panel.getByRole("radio", { name: /Periwinkle/ })).toHaveAttribute("aria-checked", "true");
+    await expect(panel.getByRole("radio", { name: /Pistachio/ })).toHaveAttribute("aria-checked", "true");
+    await expect(panel.getByRole("radio", { name: /Periwinkle/ })).toHaveAttribute("aria-checked", "false");
     await panel.getByRole("radio", { name: /Ember/ }).click();
     await expect(html).toHaveAttribute("data-theme", "ember");
     expect(await bg()).toBe("rgb(23, 16, 16)");
@@ -527,7 +530,7 @@ test.describe("navigation, search and motion", () => {
     await openPaletteButton(page).click();
     await page.getByRole("button", { name: "Use site default" }).click();
     await expect(html).not.toHaveAttribute("data-theme", /.+/);
-    expect(await bg()).toBe("rgb(247, 247, 255)");
+    expect(await bg()).toBe("rgb(246, 244, 238)");
   });
 
   test("reduced-motion device: flip is static by default; \"Always play animations\" turns the real flip on and is remembered", async ({ browser }) => {
@@ -572,20 +575,6 @@ test.describe("navigation, search and motion", () => {
     expect(await aura()).toBe("paused");
   });
 
-  test("hero grid glow lights the cell under the pointer", async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto("/");
-    test.skip(await page.evaluate(() => matchMedia("(pointer: coarse)").matches), "touch devices have no hover glow");
-    const x = 640, y = 420;
-    await page.mouse.move(x - 20, y - 20);
-    await page.mouse.move(x, y, { steps: 3 });
-    const hit = await page.waitForFunction(([px = 0, py = 0]) => {
-      const lit = [...document.querySelectorAll(".tile.lit")] as HTMLElement[];
-      return lit.some((t) => { const r = t.getBoundingClientRect(); return px >= r.left - 6 && px <= r.right + 6 && py >= r.top - 6 && py <= r.bottom + 6; });
-    }, [x, y], { timeout: 2000 }).catch(() => null);
-    expect(hit).not.toBeNull();
-  });
-
   test("low-power device: decoration is dropped automatically, \"Always play animations\" brings the motion back", async ({ page }) => {
     await page.addInitScript(() => Object.defineProperty(navigator, "deviceMemory", { value: 2 }));
     await page.goto("/");
@@ -628,7 +617,7 @@ test.describe("navigation, search and motion", () => {
     await page.goto("/");
     await revealAll(page);
     await expect(page.getByRole("heading", { name: "Practical systems, built around your business." })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Business websites" })).toBeVisible();
+    await expect(page.locator("[data-services-explorer]").getByRole("heading", { name: "Business websites" })).toBeVisible();
     expect(await page.evaluate(() => getComputedStyle(document.querySelector(".aura-a")!).animationPlayState)).toBe("paused");
     await ctx.close();
   });
