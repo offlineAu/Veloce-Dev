@@ -1,5 +1,5 @@
 import type { ComponentConfig, Slot } from "@puckeditor/core";
-import { toneClass, toneOptions, type Tone } from "./shared";
+import { kitFor, toneClass, toneOptions, withLook, type Look, type Tone } from "./shared";
 
 const padClass = { sm: "py-8", md: "py-14", lg: "py-24" } as const;
 const widthClass = { narrow: "max-w-3xl", wide: "max-w-6xl", full: "max-w-none" } as const;
@@ -9,9 +9,10 @@ export type SectionProps = {
   padding: keyof typeof padClass;
   width: keyof typeof widthClass;
   content: Slot;
+  look?: Look;
 };
 
-export const Section: ComponentConfig<SectionProps> = {
+export const Section: ComponentConfig<SectionProps> = withLook({
   label: "Section",
   fields: {
     tone: { type: "select", label: "Background", options: [...toneOptions] },
@@ -20,12 +21,25 @@ export const Section: ComponentConfig<SectionProps> = {
     content: { type: "slot" },
   },
   defaultProps: { tone: "light", padding: "md", width: "wide", content: [] },
-  render: ({ tone, padding, width, content: Content }) => (
-    <section className={`${toneClass[tone]} ${padClass[padding]} px-6`}>
-      <Content className={`mx-auto flex min-h-16 flex-col gap-6 ${widthClass[width]}`} />
-    </section>
-  ),
-};
+  render: ({ tone, padding, width, content: Content, look, puck }) => {
+    const k = kitFor(puck, look);
+    // Matching the design: the template's own section spacing and background, and its content container.
+    if (k) {
+      return (
+        <section className={k.section ?? "py-16"}>
+          <div className={k.container ?? "mx-auto max-w-6xl px-6"}>
+            <Content className="flex min-h-16 flex-col gap-6" />
+          </div>
+        </section>
+      );
+    }
+    return (
+      <section className={`${toneClass[tone]} ${padClass[padding]} px-6`}>
+        <Content className={`mx-auto flex min-h-16 flex-col gap-6 ${widthClass[width]}`} />
+      </section>
+    );
+  },
+}, ["tone", "padding", "width"]);
 
 export type ColumnsProps = {
   count: "2" | "3";
