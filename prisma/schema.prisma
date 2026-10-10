@@ -316,3 +316,60 @@ model BookingSync {
   cursor    String?
   windowEnd DateTime?
 }
+
+enum TemplateVersionStatus {
+  DRAFT
+  PUBLISHED
+  UNPUBLISHED
+}
+
+/// A site-builder template uploaded by a developer from the live site (repo templates live in public/builder-templates).
+model BuilderTemplate {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String
+  websiteType String
+  scheme      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  versions BuilderTemplateVersion[]
+}
+
+/// One immutable import of a template. Visitors only ever see PUBLISHED versions; designs keep the version they used.
+model BuilderTemplateVersion {
+  id             String                @id @default(cuid())
+  templateId     String
+  version        Int
+  status         TemplateVersionStatus @default(DRAFT)
+  /// The template package (lib/builder/template-package.ts) and its compiled stylesheet.
+  package        Json
+  css            String
+  report         String
+  thumbnails     Json
+  /// Name typed by the developer when unlocking the panel, and a keyed hash of their IP.
+  uploadedBy     String
+  uploaderIpHash String
+  createdAt      DateTime              @default(now())
+  publishedAt    DateTime?
+
+  template BuilderTemplate        @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  assets   BuilderTemplateAsset[]
+
+  @@unique([templateId, version])
+  @@index([status])
+}
+
+/// Fonts, images and thumbnails of an uploaded version, served from /build/t/<slug>/v<N>/<path>.
+model BuilderTemplateAsset {
+  id          String @id @default(cuid())
+  versionId   String
+  path        String
+  contentType String
+  bytes       Bytes
+
+  version BuilderTemplateVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@unique([versionId, path])
+}

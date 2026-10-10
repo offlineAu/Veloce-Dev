@@ -1,13 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { withFreshIds, type BlockItem } from "@/lib/builder/blocks";
-import { MAX_HTML_BYTES, sanitizeHtml } from "@/lib/builder/sanitize";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import path from "node:path";
+import { MAX_HTML_BYTES } from "@/lib/builder/sanitize-limits";
+import { sanitizeHtmlOnServer as sanitizeHtml } from "@/server/builder/sanitize-html";
 import { MAX_SITE_BYTES, siteDraftSchema } from "@/schemas/site-draft";
 import { STARTER_TEMPLATES } from "@/components/builder/templates";
 import { loadDraft, loadTemplates, saveDraft } from "@/components/builder/storage";
 
 const page = (content: BlockItem[]) => ({ data: { root: { props: { title: "T" } }, content } });
 
-describe("sanitizeHtml", () => {
+describe("server HTML sanitiser", () => {
   it("strips scripts, event handlers and javascript: URLs but keeps layout and styles", () => {
     const out = sanitizeHtml(`<style>.a{color:red}</style><div class="a" onclick="x()">Hi<img src="x" onerror="alert(1)"><a href="javascript:alert(1)">go</a></div><script>alert(1)</script>`);
     expect(out).toContain("<style>.a{color:red}</style>");
@@ -22,8 +25,8 @@ describe("sanitizeHtml", () => {
 });
 
 describe("siteDraftSchema", () => {
-  it("accepts known blocks (including nested ones) and sanitises Custom HTML", () => {
-    const r = siteDraftSchema.safeParse(
+  it("accepts known blocks (including nested ones) and sanitises Custom HTML", async () => {
+    const r = await siteDraftSchema.safeParseAsync(
       page([{ type: "Section", props: { id: "s", content: [{ type: "CustomHtml", props: { id: "h", html: "<b onclick=x>hi</b>" } }] } }]),
     );
     expect(r.success).toBe(true);
@@ -33,19 +36,19 @@ describe("siteDraftSchema", () => {
     expect(nested.props.html).toBe("<b>hi</b>");
   });
 
-  it("rejects unknown block types, even nested", () => {
-    const r = siteDraftSchema.safeParse(page([{ type: "Section", props: { content: [{ type: "Evil", props: {} }] } }]));
+  it("rejects unknown block types, even nested", async () => {
+    const r = await siteDraftSchema.safeParseAsync(page([{ type: "Section", props: { content: [{ type: "Evil", props: {} }] } }]));
     expect(r.success).toBe(false);
   });
 
-  it("rejects designs over the size cap", () => {
-    const r = siteDraftSchema.safeParse(page([{ type: "Text", props: { text: "x".repeat(MAX_SITE_BYTES) } }]));
+  it("rejects designs over the size cap", async () => {
+    const r = await siteDraftSchema.safeParseAsync(page([{ type: "Text", props: { text: "x".repeat(MAX_SITE_BYTES) } }]));
     expect(r.success).toBe(false);
   });
 
-  it("every starter template is a valid draft", () => {
+  it("every starter template is a valid draft", async () => {
     for (const t of STARTER_TEMPLATES) {
-      expect(siteDraftSchema.safeParse({ templateId: t.id, data: t.build() }).success, t.id).toBe(true);
+      expect((await siteDraftSchema.safeParseAsync({ templateId: t.id, data: t.build() })).success, t.id).toBe(true);
     }
   });
 });
@@ -75,5 +78,22 @@ describe("builder storage", () => {
   it("ignores corrupt saved data", () => {
     vi.stubGlobal("window", { localStorage: { getItem: () => "{not json", setItem: () => {}, removeItem: () => {} } });
     expect(loadDraft()).toBeNull();
+  });
+});
+
+describe("server bundle", () => {
+  // jsdom (pulled in by isomorphic-dompurify) fails to load in Vercel functions and took every inquiry down with it.
+  it("server code never imports a DOM library or the browser-only sanitiser", () => {
+    const files: string[] = [];
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const full = path.join(dir, name);
+        if (statSync(full).isDirectory()) walk(full);
+        else if (/\.(ts|tsx)$/.test(name)) files.push(full);
+      }
+    };
+    ["src/server", "src/schemas", "src/app/api"].forEach(walk);
+    const offenders = files.filter((f) => /from "(jsdom|isomorphic-dompurify|dompurify|@\/lib\/builder\/sanitize)"/.test(readFileSync(f, "utf8")));
+    expect(offenders).toEqual([]);
   });
 });

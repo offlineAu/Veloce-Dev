@@ -184,23 +184,74 @@ const firstMatch = <T>(rec: Record<string, T>, ...patterns: RegExp[]) => {
   return undefined;
 };
 
-/** Maps a Material-style palette (primary, surface, on-surface…) onto the builder's theme tokens. */
-export function builderTheme(t: DesignTokens, dark: boolean, report: Report): ThemeTokens {
+/** Colour roles native blocks need. Each can be filled from a named token of the design. */
+export const COLOR_ROLES = ["accent", "bg", "surface", "fg", "muted", "line"] as const;
+export type ColorRole = (typeof COLOR_ROLES)[number];
+/** Role → colour token name (or a #hex) chosen by the developer during upload. */
+export type ThemeOverrides = Partial<Record<ColorRole, string>>;
+
+/** How the design uses its colours, read from the page: the body's own classes and what buttons are filled with. */
+export interface ColorHints {
+  bodyBg?: string;
+  bodyText?: string;
+  /** Colour token → how many buttons and links use it as their background. */
+  buttonBgs: Map<string, number>;
+}
+
+/** Every named colour in the design, for the upload screen's theme step. */
+export const extractPalette = (t: DesignTokens) => Object.entries(t.colors).filter(([, v]) => HEX.test(v)).map(([name, value]) => ({ name, value }));
+
+const HEX = /^#[0-9a-f]{6}$/i;
+
+/** Name guesses for palettes without Material names (e.g. brand-ivory, brand-dark, brand-slate-text). */
+const NAME_GUESS: Record<ColorRole, RegExp> = {
+  accent: /(^|-)(primary|accent|brand|lime|highlight|cta)$/i,
+  bg: /(^|-)(background|bg|canvas|ivory|cream|paper|base)$/i,
+  surface: /(^|-)(surface|card-?bg|card|panel|elevated)$/i,
+  fg: /(^|-)(on-surface|foreground|fg|ink|dark|text|obsidian)$/i,
+  muted: /(^|-)(muted|slate-?text|secondary-text|subtle|gray|grey)$/i,
+  line: /(^|-)(outline-variant|outline|border-?soft|border|line|divider)$/i,
+};
+
+/**
+ * Maps the design's colours onto the builder's theme roles. In order: the developer's choices, Material names
+ * (primary, surface, on-surface…), how the page itself uses colours (body background and text, most-used button
+ * fill), then name guesses. The chosen token for each role is reported for review.
+ */
+export function builderTheme(t: DesignTokens, dark: boolean, report: Report, hints?: ColorHints, overrides: ThemeOverrides = {}): ThemeTokens {
   const c = t.colors;
-  const accent = c.primary ?? c["primary-container"] ?? c.accent ?? c.brand;
-  const bg = c.background ?? c.surface ?? (dark ? "#121212" : "#ffffff");
+  const hex = (v: string | undefined) => (v === undefined ? undefined : HEX.test(v) ? v : HEX.test(c[v] ?? "") ? c[v] : undefined);
+  const byName = (role: ColorRole) => Object.keys(c).find((k) => NAME_GUESS[role].test(k) && HEX.test(c[k]!));
+  const topButton = [...(hints?.buttonBgs ?? [])].filter(([k]) => HEX.test(c[k] ?? "") && k !== hints?.bodyBg).sort((x, y) => y[1] - x[1])[0]?.[0];
+  const pick = (role: ColorRole, material: (string | undefined)[], fromPage?: string): { token?: string; value?: string } => {
+    for (const candidate of [overrides[role], ...material, fromPage, byName(role)]) {
+      const v = hex(candidate);
+      if (v) return { token: candidate, value: v };
+    }
+    return {};
+  };
+  const roles = {
+    accent: pick("accent", ["primary", "primary-container", "accent", "brand"], topButton),
+    bg: pick("bg", ["background", "surface"], hints?.bodyBg),
+    surface: pick("surface", ["surface-container-low", "surface-container"]),
+    fg: pick("fg", ["on-surface", "on-background", "foreground"], hints?.bodyText),
+    muted: pick("muted", ["on-surface-variant"]),
+    line: pick("line", ["outline-variant", "outline"]),
+  };
   const heading = firstMatch(t.fontFamily, /^(display|headline|heading|h1|title)/i);
   const body = firstMatch(t.fontFamily, /^body|^sans|^text/i);
   const label = firstMatch(t.fontSize, /^label/i);
+  const accent = roles.accent.value;
+  const bg = roles.bg.value ?? (dark ? "#121212" : "#ffffff");
   const theme = normalizeTheme({
     scheme: dark ? "dark" : "light",
     accent,
-    onAccent: c["on-primary"] ?? (accent ? readableOn(accent) : undefined),
+    onAccent: hex(overrides.accent ? undefined : "on-primary") ?? (accent ? readableOn(accent) : undefined),
     bg,
-    surface: c["surface-container-low"] ?? c["surface-container"] ?? c.surface ?? bg,
-    fg: c["on-surface"] ?? c["on-background"] ?? c.foreground,
-    muted: c["on-surface-variant"] ?? c.muted,
-    line: c["outline-variant"] ?? c.outline ?? c.border,
+    surface: roles.surface.value ?? bg,
+    fg: roles.fg.value,
+    muted: roles.muted.value,
+    line: roles.line.value,
     fontHeading: heading ? fontStack(heading) : undefined,
     fontBody: body ? fontStack(body) : undefined,
     radius: t.radius.lg ?? t.radius.xl ?? t.radius.DEFAULT,
@@ -208,7 +259,8 @@ export function builderTheme(t: DesignTokens, dark: boolean, report: Report): Th
     labelCase: "uppercase",
     labelTracking: label?.letterSpacing,
   });
-  if (!accent) report.warn("No primary colour found; native blocks use the default accent.");
+  if (!accent) report.warn("No accent colour found; native blocks use the default accent. Pick one in the theme step.");
+  report.note(`Theme colours: ${COLOR_ROLES.map((r) => `${r} ← ${roles[r].token ?? "default"}`).join(", ")}.`);
   for (const [pair, a, b] of [["text on background", theme.fg, theme.bg], ["muted text on background", theme.muted, theme.bg], ["button text on accent", theme.onAccent, theme.accent]] as const) {
     const ratio = contrast(a, b);
     if (ratio < 4.5) report.warn(`Low contrast for ${pair} (${ratio.toFixed(2)}:1, needs 4.5:1).`);

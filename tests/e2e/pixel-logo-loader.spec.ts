@@ -48,7 +48,8 @@ test("streams a branded home fallback, then replaces it without changing referra
     await expect(page.locator("main#main")).toBeVisible();
     // Check real CSS animations, not just animation-name: CSS modules must resolve keyframes.
     await page.emulateMedia({ reducedMotion: "no-preference" });
-    expect(await loader.locator("rect").first().evaluate((tile) => tile.getAnimations().length)).toBe(1);
+    // The loader's CSS-module stylesheet streams in just after the markup, so wait for the animation to attach.
+    await expect.poll(() => loader.locator("rect").first().evaluate((tile) => tile.getAnimations().length)).toBe(1);
     const assembled = await loader.evaluate((svg) => {
       for (const animation of svg.getAnimations({ subtree: true })) {
         animation.pause();

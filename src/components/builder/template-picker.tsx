@@ -6,13 +6,13 @@ import { Copy, Pencil, Trash2 } from "lucide-react";
 import { Dialog, ModalContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { currentVersion, isDraftVersion, visibleTemplates, type ImportedTemplateEntry } from "@/content/builder-templates";
 import type { SiteDoc } from "@/lib/builder/site-doc";
 import { docFromTemplate } from "@/lib/builder/template-doc";
-import { packageBase } from "@/lib/builder/template-package";
+import type { TemplateListing } from "@/lib/builder/template-package";
 import { STARTER_TEMPLATES } from "./templates";
 import { loadTemplates, saveTemplates, type SavedTemplate } from "./storage";
 import { loadTemplate } from "./template-registry";
+import { TemplatePreview } from "./template-preview";
 
 const STRIPE: Record<string, string> = {
   Hero: "h-10 bg-(--thumb-accent)/35",
@@ -41,6 +41,7 @@ function Thumb({ doc }: { doc: SiteDoc }) {
 }
 
 type PickerProps = {
+  templates: TemplateListing[];
   highlight?: string;
   hasContent: () => boolean;
   onChoose: (doc: SiteDoc, templateId?: string) => void;
@@ -57,7 +58,7 @@ export function TemplatePicker({ open, onOpenChange, ...props }: PickerProps & {
   );
 }
 
-function PickerBody({ highlight, hasContent, onChoose }: PickerProps) {
+function PickerBody({ templates, highlight, hasContent, onChoose }: PickerProps) {
   const [mine, setMine] = useState<SavedTemplate[]>(loadTemplates);
   const [confirm, setConfirm] = useState<{ name: string; doc: SiteDoc; templateId?: string } | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
@@ -73,9 +74,9 @@ function PickerBody({ highlight, hasContent, onChoose }: PickerProps) {
     else onChoose(doc, templateId);
   };
 
-  const chooseImported = async (t: ImportedTemplateEntry) => {
-    const version = currentVersion(t);
-    if (version === undefined || loading) return;
+  const chooseImported = async (t: TemplateListing) => {
+    const version = t.version;
+    if (loading) return;
     setLoading(t.slug);
     try {
       const { pkg } = await loadTemplate({ slug: t.slug, version });
@@ -87,7 +88,7 @@ function PickerBody({ highlight, hasContent, onChoose }: PickerProps) {
     }
   };
 
-  const imported = visibleTemplates();
+  const imported = templates;
 
   return (
     <>
@@ -107,32 +108,38 @@ function PickerBody({ highlight, hasContent, onChoose }: PickerProps) {
           <h3 className="mt-2 text-sm font-bold uppercase tracking-[0.08em] text-muted">Designer templates</h3>
           <ul className="mt-3 grid gap-4 sm:grid-cols-2">
             {imported.map((t) => {
-              const version = currentVersion(t)!;
-              const draft = isDraftVersion(t, version);
               return (
-                <li key={t.slug}>
-                  <button
-                    type="button"
-                    data-template={t.slug}
-                    aria-busy={loading === t.slug}
-                    onClick={() => void chooseImported(t)}
+                <li key={t.slug} className="relative">
+                  {/* The picture sits outside the button: a live preview contains the design's own links and buttons. */}
+                  <div
                     className={cn(
-                      "flex w-full flex-col gap-2 rounded-xl border-2 border-line p-3 text-left transition-colors hover:border-accent-600 focus-visible:outline-2 focus-visible:outline-accent-700",
+                      "flex h-full flex-col gap-2 rounded-xl border-2 border-line p-3 transition-colors has-[button:hover]:border-accent-600 has-[button:focus-visible]:outline-2 has-[button:focus-visible]:outline-accent-700",
                       highlight === t.slug && "border-accent-600 bg-accent-100",
                     )}
                   >
-                    {t.thumbnails[0] ? (
+                    {t.thumbnail ? (
                       // eslint-disable-next-line @next/next/no-img-element -- static package asset
-                      <img src={`${packageBase(t.slug, version)}/${t.thumbnails[0]}`} alt="" className="aspect-[4/3] w-full rounded-lg border border-line object-cover object-top" />
-                    ) : null}
-                    <span className="flex flex-wrap items-center gap-2 font-semibold">
-                      {t.name}
-                      <span className="rounded-full bg-ink px-2 py-0.5 text-xs font-semibold text-bg">{t.pages.length} pages</span>
-                      {t.scheme === "dark" ? <span className="rounded-full border border-line px-2 py-0.5 text-xs">Dark</span> : null}
-                      {draft ? <span className="rounded-full bg-accent-100 px-2 py-0.5 text-xs text-ink">Draft · review</span> : null}
-                    </span>
-                    <span className="text-sm leading-snug text-muted">{loading === t.slug ? "Loading…" : t.description}</span>
-                  </button>
+                      <img src={t.thumbnail} alt="" className="aspect-[4/3] w-full rounded-lg border border-line object-cover object-top" />
+                    ) : (
+                      <TemplatePreview slug={t.slug} version={t.version} />
+                    )}
+                    <button
+                      type="button"
+                      data-template={t.slug}
+                      aria-busy={loading === t.slug}
+                      onClick={() => void chooseImported(t)}
+                      // Stretched over the whole card, so clicking the picture picks the template too.
+                      className="flex flex-col gap-2 text-left outline-none after:absolute after:inset-0 after:rounded-xl after:content-['']"
+                    >
+                      <span className="flex flex-wrap items-center gap-2 font-semibold">
+                        {t.name}
+                        <span className="rounded-full bg-ink px-2 py-0.5 text-xs font-semibold text-bg">{t.pages.length} {t.pages.length === 1 ? "page" : "pages"}</span>
+                        {t.scheme === "dark" ? <span className="rounded-full border border-line px-2 py-0.5 text-xs">Dark</span> : null}
+                        {t.draft ? <span className="rounded-full bg-accent-100 px-2 py-0.5 text-xs text-ink">Draft · review</span> : null}
+                      </span>
+                      <span className="text-sm leading-snug text-muted">{loading === t.slug ? "Loading…" : t.description}</span>
+                    </button>
+                  </div>
                 </li>
               );
             })}

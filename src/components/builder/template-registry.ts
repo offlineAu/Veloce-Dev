@@ -2,7 +2,7 @@
 
 import { createContext, useEffect, useState } from "react";
 import type { TemplateRef } from "@/lib/builder/site-doc";
-import { packageBase, type TemplatePackage } from "@/lib/builder/template-package";
+import { templateFileUrl, type TemplatePackage } from "@/lib/builder/template-package";
 
 export interface LoadedTemplate {
   pkg: TemplatePackage;
@@ -16,16 +16,15 @@ const cache = new Map<string, Promise<LoadedTemplate>>();
 const key = (ref: TemplateRef) => `${ref.slug}@${ref.version}`;
 
 /**
- * Fetches an imported template's package and stylesheet from /builder-templates/… once per version. Versions are
- * immutable, so a cached copy never goes stale.
+ * Fetches a template's package and stylesheet once per version (published versions never change, so a cached copy
+ * never goes stale; a draft being reviewed is fetched fresh on each page load).
  */
 export function loadTemplate(ref: TemplateRef): Promise<LoadedTemplate> {
   let p = cache.get(key(ref));
   if (!p) {
-    const base = packageBase(ref.slug, ref.version);
     p = Promise.all([
-      fetch(`${base}/template.json`).then((r) => (r.ok ? (r.json() as Promise<TemplatePackage>) : Promise.reject(new Error(`template ${r.status}`)))),
-      fetch(`${base}/theme.css`).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`theme ${r.status}`)))),
+      fetch(templateFileUrl(ref.slug, ref.version, "template.json")).then((r) => (r.ok ? (r.json() as Promise<TemplatePackage>) : Promise.reject(new Error(`template ${r.status}`)))),
+      fetch(templateFileUrl(ref.slug, ref.version, "theme.css")).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`theme ${r.status}`)))),
     ]).then(([pkg, css]) => ({ pkg, css }));
     p.catch(() => cache.delete(key(ref))); // let a later attempt retry
     cache.set(key(ref), p);

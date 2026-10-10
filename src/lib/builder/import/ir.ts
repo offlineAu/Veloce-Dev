@@ -27,6 +27,8 @@ export type IRNode = IRText | IRComment | IREl;
 export interface ParsedPage {
   htmlClass: string;
   title: string;
+  /** <meta name="description">, if any. */
+  description: string;
   /** Source of the inline `tailwind.config = {…}` script, if any. */
   tailwindConfig?: string;
   /** Google Fonts stylesheet URLs. */
@@ -157,6 +159,7 @@ export function parsePage(html: string, report: Report): ParsedPage {
   return {
     htmlClass: attr(htmlEl, "class") ?? "",
     title: titleEl ? text(titleEl).trim() : "",
+    description: attr(find(doc, (e) => e.tagName === "meta" && attr(e, "name")?.toLowerCase() === "description"), "content")?.trim() ?? "",
     tailwindConfig: config,
     fontLinks,
     styles,

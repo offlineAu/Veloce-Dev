@@ -33,7 +33,22 @@ function headingLabel(el: IREl): string | undefined {
   return undefined;
 }
 
-const tidyComment = (c: string) => c.replace(/^[\s=*#-]+|[\s=*#-]+$/g, "").replace(/\s+/g, " ").slice(0, 50);
+/** "BEGIN: CTAContactSection" → "CTA contact section"; plain comments are only trimmed. */
+export function tidyComment(c: string): string {
+  let t = c.replace(/^[\s=*#-]+|[\s=*#-]+$/g, "").replace(/^(begin|start)\s*[:\-]\s*/i, "").replace(/\s+/g, " ");
+  if (/^[A-Za-z0-9]+$/.test(t) && /[a-z][A-Z]|[A-Z]{2}[a-z]/.test(t)) {
+    t = t
+      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+      .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+      .split(" ")
+      .map((w, i) => (i === 0 || /^[A-Z0-9]{2,}$/.test(w) ? w : w.toLowerCase()))
+      .join(" ");
+  }
+  return t.slice(0, 50);
+}
+
+/** Closing markers ("END: MainHeader") label nothing. */
+const isEndMarker = (c: string) => /^[\s=*#-]*(end|\/)\b/i.test(c);
 
 const isHidden = (el: IREl) => "hidden" in el.attrs || classList(el).some((c) => c === "hidden" || c === "invisible");
 
@@ -45,7 +60,7 @@ export function splitSections(body: IREl, report: Report): { frame: string[]; se
     let comment: string | undefined;
     for (const child of container.children) {
       if (child.kind === "comment") {
-        comment = tidyComment(child.text) || comment;
+        if (!isEndMarker(child.text)) comment = tidyComment(child.text) || comment;
         continue;
       }
       if (child.kind === "text") {

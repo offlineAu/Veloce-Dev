@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { DraftRender } from "@/components/builder/draft-render";
 import { migrateDoc, pageRefs } from "@/lib/builder/site-doc";
 import { isWellFormedToken } from "@/lib/token";
-import { readTemplate } from "@/server/builder/template-store";
+import { readTemplate } from "@/server/builder/template-registry";
 import { db } from "@/server/db";
 
 // A visitor's private design: never indexed or cached. The unguessable token is the only key.
@@ -27,7 +27,7 @@ export default async function DraftPreviewPage({ params, searchParams }: Props) 
   const wanted = Array.isArray(sp.page) ? sp.page[0] : sp.page;
   const page = doc.pages.find((p) => p.path === wanted) ?? doc.pages[0]!;
   // Designs stay on the template version they were made with, even after the template is updated.
-  const template = doc.templateRef ? (readTemplate(doc.templateRef.slug, doc.templateRef.version, { requirePublished: false }) ?? undefined) : undefined;
+  const template = doc.templateRef ? ((await readTemplate(doc.templateRef.slug, doc.templateRef.version, { requirePublished: false, includeDrafts: true })) ?? undefined) : undefined;
 
   return (
     <>

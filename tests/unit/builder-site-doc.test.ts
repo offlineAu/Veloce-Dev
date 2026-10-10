@@ -49,18 +49,18 @@ describe("site documents", () => {
     expect(doc.pages.every((p) => (p.data.root.props?.theme as { accent: string }).accent === noir.accent)).toBe(true);
   });
 
-  it("server accepts multi-page sites and rejects broken ones", () => {
+  it("server accepts multi-page sites and rejects broken ones", async () => {
     const doc = addPage(docFromPage(v1), "Contact").doc;
-    expect(siteDraftSchema.safeParse({ data: doc }).success).toBe(true);
+    expect((await siteDraftSchema.safeParseAsync({ data: doc })).success).toBe(true);
     const dupPaths = { ...doc, pages: doc.pages.map((p) => ({ ...p, path: "/" })) };
-    expect(siteDraftSchema.safeParse({ data: dupPaths }).success).toBe(false);
+    expect((await siteDraftSchema.safeParseAsync({ data: dupPaths })).success).toBe(false);
     const badPath = { ...doc, pages: [doc.pages[0]!, { ...doc.pages[1]!, path: "/../etc" }] };
-    expect(siteDraftSchema.safeParse({ data: badPath }).success).toBe(false);
+    expect((await siteDraftSchema.safeParseAsync({ data: badPath })).success).toBe(false);
     const tooMany = { ...doc, pages: Array.from({ length: 13 }, (_, i) => ({ ...doc.pages[0]!, id: `p${i}`, path: i ? `/p${i}` : "/" })) };
-    expect(siteDraftSchema.safeParse({ data: tooMany }).success).toBe(false);
+    expect((await siteDraftSchema.safeParseAsync({ data: tooMany })).success).toBe(false);
     // A design built on an imported template that doesn't exist is refused.
     const ghost = { ...doc, templateRef: { slug: "ghost", version: 1 }, pages: [{ ...doc.pages[0]!, data: { ...doc.pages[0]!.data, content: [{ type: "DesignSection", props: { sectionId: "x" } }] } }] };
-    expect(siteDraftSchema.safeParse({ data: ghost }).error?.issues[0]?.message).toMatch(/no longer available/);
+    expect((await siteDraftSchema.safeParseAsync({ data: ghost })).error?.issues[0]?.message).toMatch(/no longer available/);
   });
 });
 

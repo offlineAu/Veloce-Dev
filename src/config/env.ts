@@ -34,6 +34,13 @@ const schema = z.object({
   BOOKING_FORMAT: optionalString,
   BOOKING_COST_LABEL: optionalString,
   BOOKING_CRON_SECRET: optionalString,
+  // Developer template upload (shortcut + shared password). Both unset: the upload panel is switched off.
+  TEMPLATE_UPLOAD_PASSWORD_HASH: optionalString, // scrypt "salt:hash" from `npm run template:password`
+  DEV_SESSION_SECRET: z
+    .string()
+    .optional()
+    .transform((v) => (v && v.trim() !== "" ? v.trim() : undefined))
+    .refine((v) => v === undefined || v.length >= 32, "DEV_SESSION_SECRET must be at least 32 characters"),
   // Optional public channels shown in the footer. Any that are unset are simply not shown.
   COMPANY_WHATSAPP: optionalString, // international number; digits only are used
   SOCIAL_FACEBOOK_URL: optionalString,

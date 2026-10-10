@@ -13,6 +13,48 @@ When you import a design:
 - Repeated cards, steps and links become lists that visitors can add to.
 - The layout inside each section stays exactly as designed.
 
+## Uploading on the live site (no code or deploy needed)
+
+Developers can upload HTML designs straight on the site:
+
+1. On any page, press **⌘/Ctrl + Shift + Alt + T** to open the developer panel.
+2. Enter your name and the shared developer password. A session lasts 8 hours. After 5 wrong attempts from the same address, wait 15 minutes.
+3. Go to **Upload**:
+   - Give the template a name; the slug stays the same across versions.
+   - Pick the website type.
+   - Add one or more `.html` files. The first is the home page; use the arrows to reorder.
+   - Optionally add a `DESIGN.md` and a screenshot per page (screenshots become the picker thumbnails).
+4. The upload becomes a **draft**:
+   - Fonts and images are downloaded into the template (public `https` addresses only).
+   - Check the "things to check" list.
+   - In **Theme colours**, pick from the design's own colours which ones native blocks should use (accent, background, text, muted).
+5. **Open review** shows the draft in the builder with a review banner. Only developers can see drafts. Check each section, then press **Publish**. It appears in every visitor's template picker straight away.
+6. **Templates** lists everything uploaded:
+   - **Publish** and **Unpublish** versions. Unpublished versions disappear from the picker, but designs made with them keep working.
+   - **Delete** drafts.
+
+Uploading the same slug again creates a new version; earlier versions never change.
+
+**Limits:**
+
+| What | Limit |
+| --- | --- |
+| Upload size | 4 MB |
+| Pages per template | 12 |
+| Size per HTML file | 1 MB |
+| Downloaded images and fonts per version | 10 MB |
+
+**Setup.** Run `npm run template:password` and set the two values it prints in Vercel (Production and Preview):
+
+- `TEMPLATE_UPLOAD_PASSWORD_HASH`
+- `DEV_SESSION_SECRET`
+
+Without them, the panel says uploads are off. To change the password, set a new hash; to sign everyone out immediately, also set a new secret.
+
+**Where uploads live.** Uploaded templates are stored in Postgres: tables `BuilderTemplate`, `BuilderTemplateVersion` and `BuilderTemplateAsset`. They're served from `/build/t/<slug>/v<N>/…`, and templates committed to the repo (below) are served from the same route. Repo templates can't be changed from the panel.
+
+## Importing templates into the repo (CLI)
+
 ## 1. Import
 
 ```sh

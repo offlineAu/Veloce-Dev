@@ -86,7 +86,32 @@ export interface TemplatePackage {
   importedAt: string;
 }
 
+/** Where a repo template's files live (public/builder-templates, committed with the code). */
 export const packageBase = (slug: string, version: number) => `/builder-templates/${slug}/v${version}`;
+
+/** Where an uploaded template's files are served from (stored in the database). */
+export const uploadBase = (slug: string, version: number) => `/build/t/${slug}/v${version}`;
+
+/**
+ * The URL the editor fetches a template's package or stylesheet from. Served by one route for both kinds of
+ * template, so the browser never needs to know where a template came from.
+ */
+export const templateFileUrl = (slug: string, version: number, file: "template.json" | "theme.css") => `${uploadBase(slug, version)}/${file}`;
+
+/** A template as the picker lists it: the version this visitor should start from. */
+export interface TemplateListing {
+  slug: string;
+  name: string;
+  description: string;
+  websiteType: string;
+  scheme: "light" | "dark";
+  source: "repo" | "upload";
+  version: number;
+  /** Not published yet: only developers see it. */
+  draft: boolean;
+  pages: { key: string; title: string }[];
+  thumbnail?: string;
+}
 
 export const findSection = (pkg: TemplatePackage | undefined, sectionId: string) => {
   for (const page of pkg?.pages ?? []) {

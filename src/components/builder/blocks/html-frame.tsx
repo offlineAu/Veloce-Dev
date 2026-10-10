@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { sanitizeHtml } from "@/lib/builder/sanitize";
 
 /*
@@ -17,7 +17,6 @@ export function HtmlFrame({ html, title, editing }: { html: string; title: strin
   const id = useId();
   const ref = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(120);
-  const srcDoc = useMemo(() => `<!doctype html><html><head><meta charset="utf-8">${base}</head><body>${sanitizeHtml(html)}${sizer(id)}</body></html>`, [html, id]);
 
   useEffect(() => {
     // The editor canvas is itself an iframe, so listen on the window that owns this frame.
@@ -32,9 +31,14 @@ export function HtmlFrame({ html, title, editing }: { html: string; title: strin
     return () => win.removeEventListener("message", onMessage);
   }, [id]);
 
+  // Filled in the browser only: the sanitiser needs a real DOM, and the preview page also renders on the server.
+  useEffect(() => {
+    if (ref.current) ref.current.srcdoc = `<!doctype html><html><head><meta charset="utf-8">${base}</head><body>${sanitizeHtml(html)}${sizer(id)}</body></html>`;
+  }, [html, id]);
+
   return (
     <div className="relative">
-      <iframe ref={ref} title={title} srcDoc={srcDoc} sandbox="allow-scripts allow-popups" loading="lazy" className="block w-full border-0" style={{ height }} />
+      <iframe ref={ref} title={title} sandbox="allow-scripts allow-popups" loading="lazy" className="block w-full border-0" style={{ height }} />
       {/* While designing, clicks select the block instead of landing inside the frame. */}
       {editing ? <div aria-hidden className="absolute inset-0" /> : null}
     </div>

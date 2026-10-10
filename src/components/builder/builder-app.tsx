@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { ArrowLeft, Bookmark, Code2, Download, Eye, LayoutTemplate, Pencil, Send, Shapes } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InquiryProvider, OpenInquiryButton, type SiteDraftPayload } from "@/components/forms/inquiry";
-import { currentVersion, findImported } from "@/content/builder-templates";
 import {
   addPage, countBlocks, deletePage, duplicatePage, movePage, newDoc, pageRefs, renamePage, updatePage, withTheme,
   type PageData, type SiteDoc,
@@ -26,7 +25,7 @@ import { PagesContext, type BuilderMetadata } from "./links";
 import { PageTabs, type PageAction, type PageSource } from "./page-tabs";
 import { ReviewBanner, type ReviewInfo } from "./review-banner";
 import { TemplateContext, loadTemplate, useTemplate } from "./template-registry";
-import { findSection } from "@/lib/builder/template-package";
+import { findSection, type TemplateListing } from "@/lib/builder/template-package";
 
 type Panel = "templates" | "sections" | "import" | "saveTemplate" | null;
 type PreviewMode = "edit" | "interactive";
@@ -37,6 +36,8 @@ export interface BuilderAppProps {
   refToken?: string;
   /** Template requested by the link that opened the builder (e.g. /build?template=saas): a starter id or an imported slug. */
   requestedTemplate?: string;
+  /** Designer templates this visitor may start from (repo and uploaded; drafts only for developers). */
+  templates: TemplateListing[];
   /** Development only: reviewing an imported template before publishing it. */
   review?: ReviewInfo;
 }
@@ -50,23 +51,22 @@ interface Session {
 }
 
 /** Loads whatever `requested` names: a starter template now, an imported one after fetching its package. */
-async function requestedDoc(requested: string | undefined): Promise<{ doc: SiteDoc; templateId: string } | null> {
+async function requestedDoc(requested: string | undefined, templates: TemplateListing[]): Promise<{ doc: SiteDoc; templateId: string } | null> {
   const starter = findTemplate(requested);
   if (starter) return { doc: starter.build(), templateId: starter.id };
-  const imported = findImported(requested);
-  const version = imported ? currentVersion(imported) : undefined;
-  if (!imported || version === undefined) return null;
-  const { pkg } = await loadTemplate({ slug: imported.slug, version });
+  const imported = templates.find((t) => t.slug === requested);
+  if (!imported) return null;
+  const { pkg } = await loadTemplate({ slug: imported.slug, version: imported.version });
   return { doc: docFromTemplate(pkg), templateId: imported.slug };
 }
 
-export default function BuilderApp({ companyName, contactEmail, refToken, requestedTemplate, review }: BuilderAppProps) {
+export default function BuilderApp({ companyName, contactEmail, refToken, requestedTemplate, templates, review }: BuilderAppProps) {
   // The editor only ever renders in the browser, so a saved draft can be read while setting up state.
   // A saved draft wins over a template link, so the link never wipes someone's work: the picker opens instead.
   const [boot] = useState(() => {
     const saved = loadDraft();
     const restored = saved && countBlocks(saved.doc) > 0 ? saved : null;
-    const asked = !!restored && !!requestedTemplate && !!(findTemplate(requestedTemplate) || findImported(requestedTemplate));
+    const asked = !!restored && !!requestedTemplate && !!(findTemplate(requestedTemplate) || templates.some((t) => t.slug === requestedTemplate));
     return { restored, asked };
   });
   const initial = boot.restored ? { doc: boot.restored.doc, activeId: boot.restored.doc.pages[0]!.id, templateId: boot.restored.templateId } : null;
@@ -111,7 +111,7 @@ export default function BuilderApp({ companyName, contactEmail, refToken, reques
       latest.current = s;
       setSession(s);
     };
-    requestedDoc(requestedTemplate).then(
+    requestedDoc(requestedTemplate, templates).then(
       (r) => {
         if (r) return start(r.doc, r.templateId);
         start(newDoc());
@@ -125,6 +125,8 @@ export default function BuilderApp({ companyName, contactEmail, refToken, reques
     return () => {
       live = false;
     };
+    // Only on first open: later changes to the list must not reload the site.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boot, requestedTemplate]);
 
   /** Edits on the canvas: kept in `latest` and saved shortly after typing stops. A theme change applies site-wide. */
@@ -181,9 +183,9 @@ export default function BuilderApp({ companyName, contactEmail, refToken, reques
 
   const getSiteDraft = useCallback((): SiteDraftPayload => {
     const s = latest.current!;
-    const websiteType = findTemplate(s.templateId)?.websiteType ?? findImported(s.templateId)?.websiteType;
+    const websiteType = findTemplate(s.templateId)?.websiteType ?? templates.find((t) => t.slug === s.templateId)?.websiteType;
     return { templateId: s.templateId, websiteType, data: s.doc };
-  }, []);
+  }, [templates]);
 
   const pages = useMemo(() => (session ? pageRefs(session.doc) : []), [session]);
   const sources = useMemo<PageSource[]>(
@@ -242,6 +244,7 @@ export default function BuilderApp({ companyName, contactEmail, refToken, reques
         </PagesContext.Provider>
       </TemplateContext.Provider>
       <TemplatePicker
+        templates={templates}
         open={panel === "templates"}
         onOpenChange={(o) => {
           setPanel(o ? "templates" : null);

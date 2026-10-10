@@ -19,6 +19,11 @@ import { renderNode } from "@/components/builder/node-tree";
 vi.mock("@/content/builder-templates", () => ({
   isKnownVersion: (slug: string, version: number) => slug === "mini" && version === 1,
   findImported: (slug: string) => (slug === "mini" ? { slug, versions: [1], published: [] } : undefined),
+  showDrafts: () => true,
+  currentVersion: () => 1,
+  isDraftVersion: () => true,
+  visibleTemplates: () => [],
+  IMPORTED_TEMPLATES: [],
 }));
 
 const FIXTURE = path.join(__dirname, "../fixtures/stitch-mini");
@@ -67,7 +72,7 @@ beforeAll(async () => {
   mkdirSync(dir, { recursive: true });
   writeFileSync(path.join(dir, "template.json"), JSON.stringify(result.pkg));
   writeFileSync(path.join(dir, "theme.css"), result.css);
-  const store = await import("@/server/builder/template-store");
+  const store = await import("@/server/builder/template-registry");
   store.setTemplateRootForTests(root);
 });
 

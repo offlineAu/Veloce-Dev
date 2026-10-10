@@ -8,7 +8,7 @@ import { hmac, newPublicToken } from "@/server/security/hash";
 import { allow } from "@/server/security/rate-limit";
 import { looksLikeBot } from "@/server/security/request";
 import { CONSULTATION_TOPICS, PROJECT_TYPES, WEBSITE_TYPES, inquirySchema } from "@/schemas/inquiry";
-import { siteDraftSchema, type SiteDraftData } from "@/schemas/site-draft";
+import type { SiteDraftData } from "@/schemas/site-draft";
 import type { Prisma } from "@/generated/prisma/client";
 import { defaultServices } from "@/content/site";
 import { findCampaign } from "./campaign";
@@ -26,9 +26,10 @@ export async function submitInquiry(raw: unknown, ctx: { clientKey: string }): P
     return { ok: false, code: "VALIDATION", fieldErrors: z.flattenError(parsed.error).fieldErrors };
   }
   const input = parsed.data;
-  // A page designed in the /build editor. Validated on its own so the inquiry form never bundles the HTML sanitiser.
+  // A site designed in the /build editor. Its validation (template packages, HTML sanitising) is loaded only when a
+  // design is attached, so an ordinary inquiry never depends on any of it.
   const draftRaw = (raw as { siteDraft?: unknown } | null)?.siteDraft;
-  const draft = draftRaw === undefined ? undefined : siteDraftSchema.safeParse(draftRaw);
+  const draft = draftRaw === undefined ? undefined : await (await import("@/schemas/site-draft")).siteDraftSchema.safeParseAsync(draftRaw);
   if (draft && !draft.success) {
     return { ok: false, code: "VALIDATION", fieldErrors: { siteDraft: [draft.error.issues[0]?.message ?? "We couldn't read your design."] } };
   }
@@ -52,7 +53,7 @@ export async function submitInquiry(raw: unknown, ctx: { clientKey: string }): P
     const companyId = await ensureCompanyId();
 
     let leadId: string;
-    let draftToken: string | undefined;
+    const draftToken = draft?.success ? newPublicToken() : undefined;
     try {
       const lead = await db.lead.create({
         data: {
@@ -80,13 +81,12 @@ export async function submitInquiry(raw: unknown, ctx: { clientKey: string }): P
             },
           },
           ...(draft?.success
-            ? { siteDraft: { create: { token: newPublicToken(), templateId: draftLabel(draft.data), data: draft.data.data as unknown as Prisma.InputJsonValue } } }
+            ? { siteDraft: { create: { token: draftToken!, templateId: draftLabel(draft.data), data: draft.data.data as unknown as Prisma.InputJsonValue } } }
             : {}),
         },
-        select: { id: true, siteDraft: { select: { token: true } } },
+        select: { id: true },
       });
       leadId = lead.id;
-      draftToken = lead.siteDraft?.token;
     } catch (err) {
       if ((err as { code?: string }).code === "P2002") return { ok: true }; // concurrent duplicate
       throw err;

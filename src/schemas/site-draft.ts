@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { BLOCK_TYPES, mapBlocks, type BlockItem } from "@/lib/builder/blocks";
-import { sanitizeHtml } from "@/lib/builder/sanitize";
+import { sanitizeHtmlOnServer } from "@/server/builder/sanitize-html";
 import { MAX_PAGES, PATH_RE, migrateDoc, type SiteDoc } from "@/lib/builder/site-doc";
 import { checkDesignSections } from "@/server/builder/design-validation";
 
@@ -20,7 +20,7 @@ export const siteDraftSchema = z
     templateId: z.string().regex(/^[a-z0-9-]{1,40}$/).optional(),
     data: z.unknown(),
   })
-  .transform((v, ctx) => {
+  .transform(async (v, ctx) => {
     if (JSON.stringify(v.data ?? null).length > MAX_SITE_BYTES) {
       ctx.addIssue({ code: "custom", message: "This design is too large to send. Remove some blocks and try again." });
       return z.NEVER;
@@ -30,7 +30,7 @@ export const siteDraftSchema = z
       ctx.addIssue({ code: "custom", message: "We couldn't read your design." });
       return z.NEVER;
     }
-    const problem = checkSite(doc);
+    const problem = await checkSite(doc);
     if (problem) {
       ctx.addIssue({ code: "custom", message: problem });
       return z.NEVER;
@@ -38,7 +38,7 @@ export const siteDraftSchema = z
     return { templateId: v.templateId, data: sanitizeSite(doc) };
   });
 
-function checkSite(doc: SiteDoc): string | null {
+async function checkSite(doc: SiteDoc): Promise<string | null> {
   if (doc.pages.length > MAX_PAGES) return `A design can have up to ${MAX_PAGES} pages.`;
   const ids = new Set<string>();
   const paths = new Set<string>();
@@ -61,7 +61,7 @@ function checkSite(doc: SiteDoc): string | null {
 
 const sanitizeBlocks = (items: BlockItem[]) =>
   mapBlocks(items, (b) =>
-    b.type === "CustomHtml" && typeof b.props.html === "string" ? { ...b, props: { ...b.props, html: sanitizeHtml(b.props.html) } } : b,
+    b.type === "CustomHtml" && typeof b.props.html === "string" ? { ...b, props: { ...b.props, html: sanitizeHtmlOnServer(b.props.html) } } : b,
   );
 
 function sanitizeSite(doc: SiteDoc): SiteDoc {

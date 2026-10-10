@@ -1,8 +1,9 @@
 import "server-only";
 import { mapBlocks } from "@/lib/builder/blocks";
 import { PAGE_LINK, type SiteDoc } from "@/lib/builder/site-doc";
-import { CLASS_PREFIX, findSection, packageBase, type FieldDef, type TemplatePackage } from "@/lib/builder/template-package";
-import { readTemplate } from "./template-store";
+import { CLASS_PREFIX, findSection, type FieldDef, type TemplatePackage } from "@/lib/builder/template-package";
+import { readDevSession } from "@/server/security/dev-session";
+import { isOwnAsset, readTemplate } from "./template-registry";
 
 const MAX_TEXT = 2000;
 const SAFE_URL = /^(https?:\/\/|mailto:|tel:|#|\/)/i;
@@ -15,8 +16,8 @@ function checkValue(field: FieldDef, value: unknown, pkg: TemplatePackage, pageI
   if (typeof value !== "string") return "bad value";
   if (value.length > MAX_TEXT) return "text too long";
   if (field.kind === "image") {
-    const ok = value === "" || value.startsWith(`${packageBase(pkg.slug, pkg.version)}/`) || /^https:\/\//i.test(value);
-    return ok && !value.includes("..") ? null : "image address not allowed";
+    const ok = value === "" || isOwnAsset(pkg, value) || (/^https:\/\//i.test(value) && !value.includes(".."));
+    return ok ? null : "image address not allowed";
   }
   if (field.kind === "link") {
     if (value.startsWith(PAGE_LINK)) return pageIds.has(value.slice(PAGE_LINK.length)) ? null : "link to a missing page";
@@ -42,9 +43,11 @@ function checkValues(fields: FieldDef[], raw: unknown, pkg: TemplatePackage, pag
  * Sections from an imported template ("DesignSection" blocks) must point at a section of the template version the
  * site is built on, and every value must fit that section's fields. Returns a message for the visitor, or null.
  */
-export function checkDesignSections(doc: SiteDoc): string | null {
+export async function checkDesignSections(doc: SiteDoc): Promise<string | null> {
   const pageIds = new Set(doc.pages.map((p) => p.id));
-  const tpl = doc.templateRef ? readTemplate(doc.templateRef.slug, doc.templateRef.version) : null;
+  // A developer testing a template under review may send a design made with it; visitors only published ones.
+  const includeDrafts = !!(await readDevSession().catch(() => null));
+  const tpl = doc.templateRef ? await readTemplate(doc.templateRef.slug, doc.templateRef.version, { includeDrafts }) : null;
   let problem: string | null = null;
 
   for (const page of doc.pages) {
