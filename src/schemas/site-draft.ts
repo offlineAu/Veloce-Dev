@@ -6,8 +6,11 @@ import { checkDesignSections } from "@/server/builder/design-validation";
 
 const KNOWN = new Set<string>(BLOCK_TYPES);
 
-/** Upper bound on a whole site once serialised. Imported sections store only their text and links, not markup. */
-export const MAX_SITE_BYTES = 1_000_000;
+/**
+ * Upper bound on a whole site once serialised. Locked imported sections store only their text and links; sections
+ * taken apart with "Edit layout" store their pieces, so allow room for a few of those.
+ */
+export const MAX_SITE_BYTES = 2_000_000;
 const MAX_BLOCKS_PER_PAGE = 200;
 
 /**

@@ -3,6 +3,7 @@ import { mapBlocks } from "@/lib/builder/blocks";
 import { PAGE_LINK, type SiteDoc } from "@/lib/builder/site-doc";
 import { CLASS_PREFIX, findSection, type FieldDef, type TemplatePackage } from "@/lib/builder/template-package";
 import { readDevSession } from "@/server/security/dev-session";
+import { checkPieces } from "./piece-validation";
 import { isOwnAsset, readTemplate } from "./template-registry";
 
 const MAX_TEXT = 2000;
@@ -72,6 +73,8 @@ export async function checkDesignSections(doc: SiteDoc): Promise<string | null> 
       return b;
     });
     if (problem) return problem;
+    const pieces = checkPieces(page.data.content, tpl?.pkg, pageIds);
+    if (pieces) return `Part of “${page.title}” couldn't be saved (${pieces}).`;
   }
   return null;
 }

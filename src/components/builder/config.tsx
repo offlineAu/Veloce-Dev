@@ -7,7 +7,12 @@ import {
   type ContactProps, type CtaBandProps, type FaqProps, type FeaturesProps, type HeroProps, type PricingProps, type TestimonialsProps,
 } from "./blocks/marketing";
 import { CustomHtml, type CustomHtmlProps } from "./blocks/custom-html";
+import { PIECE_CSS } from "./blocks/elements";
 import { DesignSection, type DesignSectionProps } from "./blocks/design-section";
+import {
+  Box, DField, DIcon, DImage, DLink, DRaw, DText,
+  type BoxProps, type DFieldProps, type DIconProps, type DImageProps, type DLinkProps, type DRawProps, type DTextProps,
+} from "./blocks/elements";
 import type { LoadedTemplate } from "./template-registry";
 import { DEFAULT_THEME, normalizeTheme, themeFromLegacy, themeToCssVars, type ThemeTokens } from "@/lib/builder/theme";
 import { ThemeField } from "./theme-field";
@@ -31,6 +36,13 @@ export type BuilderComponents = {
   Contact: ContactProps;
   CustomHtml: CustomHtmlProps;
   DesignSection: DesignSectionProps;
+  Box: BoxProps;
+  DText: DTextProps;
+  DImage: DImageProps;
+  DLink: DLinkProps;
+  DIcon: DIconProps;
+  DField: DFieldProps;
+  DRaw: DRawProps;
 };
 
 export type BuilderRoot = {
@@ -52,6 +64,8 @@ export const builderConfig: Config<BuilderComponents, BuilderRoot> & { component
     content: { title: "Content", components: ["Heading", "Text", "Image", "ButtonLink", "List"] },
     marketing: { title: "Ready-made sections", components: ["Hero", "Features", "Pricing", "Testimonials", "Faq", "CtaBand", "Contact"] },
     advanced: { title: "Advanced", components: ["CustomHtml"] },
+    // The pieces a design section is made of ("Edit layout" takes a section apart into these).
+    pieces: { title: "Design pieces", components: ["Box", "DText", "DImage", "DLink", "DIcon"], defaultExpanded: false },
     // Imported sections are added from "Add a section", which knows the template; an empty one would be meaningless.
     other: { visible: false },
   },
@@ -75,10 +89,11 @@ export const builderConfig: Config<BuilderComponents, BuilderRoot> & { component
         >
           {/* The template's compiled stylesheet: scoped to [data-vt] and prefixed, so it can't restyle anything else. */}
           {template ? <style>{template.css}</style> : null}
+          <style>{PIECE_CSS}</style>
           {frame && template ? <div className={frame}>{children}</div> : children}
         </div>
       );
     },
   },
-  components: { Section, Columns, Spacer, Divider, Heading, Text, Image, ButtonLink, List, Hero, Features, Pricing, Testimonials, Faq, CtaBand, Contact, CustomHtml, DesignSection },
+  components: { Section, Columns, Spacer, Divider, Heading, Text, Image, ButtonLink, List, Hero, Features, Pricing, Testimonials, Faq, CtaBand, Contact, CustomHtml, DesignSection, Box, DText, DImage, DLink, DIcon, DField, DRaw },
 };

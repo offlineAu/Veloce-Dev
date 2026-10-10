@@ -24,6 +24,7 @@ import { SAVE_SECTION_EVENT, usePuck } from "./editor-hooks";
 import { PagesContext, type BuilderMetadata } from "./links";
 import { PageTabs, type PageAction, type PageSource } from "./page-tabs";
 import { ReviewBanner, type ReviewInfo } from "./review-banner";
+import { EditLayoutAction } from "./edit-layout";
 import { TemplateContext, loadTemplate, useTemplate } from "./template-registry";
 import { findSection, type TemplateListing } from "@/lib/builder/template-package";
 
@@ -311,6 +312,7 @@ function BlockActionBar({ label, parentAction, children }: { label?: string; par
     <ActionBar label={name}>
       <ActionBar.Group>{parentAction}</ActionBar.Group>
       <ActionBar.Group>
+        <EditLayoutAction />
         <SaveSectionAction />
         {children}
       </ActionBar.Group>

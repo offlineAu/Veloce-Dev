@@ -19,6 +19,14 @@ export const BLOCK_TYPES = [
   "Contact",
   "CustomHtml",
   "DesignSection",
+  // Design pieces (lib/builder/elements.ts)
+  "Box",
+  "DText",
+  "DImage",
+  "DLink",
+  "DIcon",
+  "DField",
+  "DRaw",
 ] as const;
 
 export type BlockType = (typeof BLOCK_TYPES)[number];
