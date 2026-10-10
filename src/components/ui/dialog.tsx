@@ -110,7 +110,7 @@ function ModalContent({
           wheel/touch scrolling through inside the content element, so a scrolling wrapper outside it cannot scroll. */}
         <DialogPrimitive.Content
           data-slot="dialog-content"
-          className={cn("animate-rise fixed inset-0 z-50 m-auto h-fit max-h-[calc(100dvh-1.5rem)] w-[calc(100%-1.5rem)] max-w-[660px] modal-scroll overflow-y-auto overscroll-contain rounded-xl bg-background p-6 shadow-lg outline-none sm:max-h-[calc(100dvh-4rem)] sm:p-10", className)}
+          className={cn("animate-rise fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 max-h-[calc(100dvh-1.5rem)] w-[calc(100%-1.5rem)] max-w-[660px] modal-scroll overflow-y-auto overscroll-contain rounded-xl bg-background p-6 shadow-lg outline-none sm:max-h-[calc(100dvh-4rem)] sm:p-10", className)}
           onCloseAutoFocus={onCloseAutoFocus}
           {...(description ? {} : { "aria-describedby": undefined })}
         >
