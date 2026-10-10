@@ -5,6 +5,9 @@ import path from "node:path";
 import { BuilderLoader } from "@/components/builder/builder-loader";
 import type { ReviewInfo } from "@/components/builder/review-banner";
 import { currentVersion, findImported, showDrafts } from "@/content/builder-templates";
+import { listTemplates } from "@/server/builder/template-registry";
+import { db } from "@/server/db";
+import { readDevSession } from "@/server/security/dev-session";
 import { PageLoading } from "@/components/site/page-loading";
 import { findCampaign } from "@/server/services/campaign";
 import { getCompanyProfile } from "@/server/services/company";
@@ -28,8 +31,20 @@ export default function BuildPage(props: BuildPageProps) {
   );
 }
 
-/** While developing, the import report of the template being reviewed (reports live outside public/). */
-function reviewInfo(slug: string | undefined): ReviewInfo | undefined {
+/**
+ * The template being reviewed: an uploaded one (developer session) with its report from the database, or a repo
+ * one while developing locally (reports live outside public/).
+ */
+async function reviewInfo(slug: string | undefined, isDeveloper: boolean): Promise<ReviewInfo | undefined> {
+  if (!slug) return undefined;
+  if (isDeveloper && !findImported(slug)) {
+    const v = await db.builderTemplateVersion.findFirst({
+      where: { template: { slug } },
+      orderBy: { version: "desc" },
+      select: { version: true, status: true, report: true },
+    });
+    if (v) return { slug, version: v.version, published: v.status === "PUBLISHED", report: v.report, canPublish: true };
+  }
   const t = findImported(slug);
   const version = t ? currentVersion(t, true) : undefined;
   if (!showDrafts() || !t || version === undefined) return undefined;
@@ -40,13 +55,18 @@ function reviewInfo(slug: string | undefined): ReviewInfo | undefined {
   } catch {
     /* imported without a report */
   }
-  return { slug: t.slug, version, published: t.published.includes(version), report };
+  return { slug: t.slug, version, published: t.published.includes(version), report, canPublish: false };
 }
 
 async function BuildContent({ searchParams }: BuildPageProps) {
   const sp = await searchParams;
   const ref = first(sp.ref);
-  const [company, campaign] = await Promise.all([getCompanyProfile(), ref ? findCampaign(ref) : Promise.resolve(null)]);
+  const developer = await readDevSession();
+  const [company, campaign, templates] = await Promise.all([
+    getCompanyProfile(),
+    ref ? findCampaign(ref) : Promise.resolve(null),
+    listTemplates({ includeDrafts: !!developer }),
+  ]);
   return (
     <main id="main" className="h-dvh">
       <h1 className="sr-only">Design your website</h1>
@@ -55,7 +75,8 @@ async function BuildContent({ searchParams }: BuildPageProps) {
         contactEmail={company.contactEmail}
         refToken={campaign ? ref : undefined}
         requestedTemplate={first(sp.template)}
-        review={first(sp.review) === "1" ? reviewInfo(first(sp.template)) : undefined}
+        templates={templates}
+        review={first(sp.review) === "1" ? await reviewInfo(first(sp.template), !!developer) : undefined}
       />
     </main>
   );

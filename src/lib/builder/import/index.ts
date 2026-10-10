@@ -13,7 +13,10 @@ import { classList, parsePage, textOf, walk, type IREl, type ParsedPage } from "
 import { validatePackage } from "./package-schema";
 import { Report } from "./report";
 import { splitSections } from "./sections";
-import { builderTheme, mergeTokens, readTailwindConfig, themeCss, tokensFromConfig, tokensFromDesignMd } from "./theme";
+import {
+  builderTheme, extractPalette, mergeTokens, readTailwindConfig, themeCss, tokensFromConfig, tokensFromDesignMd,
+  type ColorHints, type ThemeOverrides,
+} from "./theme";
 
 export interface ImportSource {
   pages: { dir: string; html: string; screen?: Buffer }[];
@@ -29,6 +32,12 @@ export interface ImportOptions {
   fetcher: FetchLike;
   /** Page folder → page key, when the export doesn't make it clear which page is which. */
   pageMap?: Record<string, string>;
+  /** Keep the pages in the order given (the first is the home page) instead of the navigation's order. */
+  keepOrder?: boolean;
+  /** Where the package's files will be served from (defaults to the repo location, public/builder-templates). */
+  assetBase?: string;
+  /** The developer's choice of design colour for each theme role (from the upload screen). */
+  themeOverrides?: ThemeOverrides;
 }
 
 export interface ImportResult {
@@ -38,6 +47,8 @@ export interface ImportResult {
   files: Map<string, Buffer>;
   thumbnails: string[];
   report: string;
+  /** Named colours of the design, to pick theme roles from. */
+  palette: { name: string; value: string }[];
 }
 
 const ICON_CLASS = /^material-(symbols|icons)/;
@@ -85,6 +96,28 @@ function guessPath(p: PageInfo, candidates: Map<string, number>): string | undef
   return best?.path;
 }
 
+/** Colour token named by a utility class ("hover:bg-brand-lime/80" → "brand-lime" for prefix "bg"). */
+const colorToken = (cls: string, prefix: "bg" | "text") => cls.split(":").pop()!.match(new RegExp(`^${prefix}-([a-zA-Z][\\w-]*?)(?:\\/\\d+)?$`))?.[1];
+
+/** How the home page uses colour: its body's background and text, and what buttons and links are filled with. */
+function colorHints(body: IREl): ColorHints {
+  const own = classList(body).filter((c) => !c.includes(":"));
+  const buttonBgs = new Map<string, number>();
+  for (const el of walk(body)) {
+    if (el.tag !== "button" && el.tag !== "a") continue;
+    for (const c of classList(el)) {
+      if (c.includes(":")) continue;
+      const t = colorToken(c, "bg");
+      if (t) buttonBgs.set(t, (buttonBgs.get(t) ?? 0) + 1);
+    }
+  }
+  return {
+    bodyBg: own.map((c) => colorToken(c, "bg")).find(Boolean),
+    bodyText: own.map((c) => colorToken(c, "text")).find(Boolean),
+    buttonBgs,
+  };
+}
+
 function commonPrefix(names: string[]): string {
   if (names.length < 2) return "";
   let p = names[0]!;
@@ -95,7 +128,7 @@ function commonPrefix(names: string[]): string {
 export async function importTemplate(src: ImportSource, opts: ImportOptions): Promise<ImportResult> {
   const report = new Report();
   if (!src.pages.length) throw new Error("No pages found (expected folders with a code.html each).");
-  const base = packageBase(opts.slug, opts.version);
+  const base = opts.assetBase ?? packageBase(opts.slug, opts.version);
   const scope = `[data-vt="${opts.slug}"]`;
 
   // 1. Parse every page.
@@ -105,7 +138,7 @@ export async function importTemplate(src: ImportSource, opts: ImportOptions): Pr
   const design = tokensFromDesignMd(src.designMd, report);
   const tokens = mergeTokens(...pages.map((p) => tokensFromConfig(readTailwindConfig(p.parsed.tailwindConfig, report), report)), design.tokens);
   const dark = pages.some((p) => p.parsed.htmlClass.split(/\s+/).includes("dark"));
-  const theme = builderTheme(tokens, dark, report);
+  const theme = builderTheme(tokens, dark, report, colorHints(pages[0]!.parsed.body), opts.themeOverrides);
 
   // 3. Which page is which, and their order (the navigation's order, home first).
   const prefix = commonPrefix(pages.map((p) => p.dir));
@@ -119,7 +152,7 @@ export async function importTemplate(src: ImportSource, opts: ImportOptions): Pr
   report.note(`Pages matched to links: ${pages.map((p) => `${p.dir} → “${p.path}”`).join(", ")}. If one is wrong, re-import with --map <folder>=<link>.`);
   const navOrder = navLinks(pages[0]!.parsed.body).map((l) => l.attrs["data-path"]!);
   const rank = (p: PageInfo) => (navOrder.includes(p.path!) ? navOrder.indexOf(p.path!) : navOrder.length + pages.indexOf(p));
-  pages.sort((a, b) => rank(a) - rank(b));
+  if (!opts.keepOrder) pages.sort((a, b) => rank(a) - rank(b));
   const keyOf = new Map(pages.map((p, i) => [p.path!, i === 0 ? "" : slugify(p.path!)]));
   const navText = new Map(navLinks(pages[0]!.parsed.body).map((l) => [l.attrs["data-path"]!, textOf(l)]));
   const missing = new Set<string>();
@@ -150,7 +183,8 @@ export async function importTemplate(src: ImportSource, opts: ImportOptions): Pr
     frameClasses.split(" ").forEach((c) => c && env.candidates.add(c));
     return {
       key,
-      title: (navText.get(p.path!) || p.parsed.title || humanize(p.path!)).slice(0, 60),
+      // The home page is "Home" unless the navigation names it; other pages fall back to their file or folder name.
+      title: (navText.get(p.path!) || (key === "" ? "Home" : humanize(p.path!))).slice(0, 60),
       frame: frameClasses,
       sections: sections.map((s): TemplateSection => {
         let id = `${key || "home"}-${slugify(s.label)}`.slice(0, 70);
@@ -212,5 +246,5 @@ export async function importTemplate(src: ImportSource, opts: ImportOptions): Pr
   if (pages.some((p) => p.parsed.styles.length)) report.count("page <style> blocks left out (page boilerplate)", pages.reduce((n, p) => n + p.parsed.styles.length, 0));
   report.note("Interactive parts that relied on scripts (tabs, filters, sliders, multi-step forms, modals) show their first state. Rebuild the behaviour when building the real site.");
 
-  return { pkg, css, files, thumbnails, report: report.toMarkdown(`${opts.name} v${opts.version}`) };
+  return { pkg, css, files, thumbnails, report: report.toMarkdown(`${opts.name} v${opts.version}`), palette: extractPalette(tokens) };
 }

@@ -25,8 +25,8 @@ describe("server HTML sanitiser", () => {
 });
 
 describe("siteDraftSchema", () => {
-  it("accepts known blocks (including nested ones) and sanitises Custom HTML", () => {
-    const r = siteDraftSchema.safeParse(
+  it("accepts known blocks (including nested ones) and sanitises Custom HTML", async () => {
+    const r = await siteDraftSchema.safeParseAsync(
       page([{ type: "Section", props: { id: "s", content: [{ type: "CustomHtml", props: { id: "h", html: "<b onclick=x>hi</b>" } }] } }]),
     );
     expect(r.success).toBe(true);
@@ -36,19 +36,19 @@ describe("siteDraftSchema", () => {
     expect(nested.props.html).toBe("<b>hi</b>");
   });
 
-  it("rejects unknown block types, even nested", () => {
-    const r = siteDraftSchema.safeParse(page([{ type: "Section", props: { content: [{ type: "Evil", props: {} }] } }]));
+  it("rejects unknown block types, even nested", async () => {
+    const r = await siteDraftSchema.safeParseAsync(page([{ type: "Section", props: { content: [{ type: "Evil", props: {} }] } }]));
     expect(r.success).toBe(false);
   });
 
-  it("rejects designs over the size cap", () => {
-    const r = siteDraftSchema.safeParse(page([{ type: "Text", props: { text: "x".repeat(MAX_SITE_BYTES) } }]));
+  it("rejects designs over the size cap", async () => {
+    const r = await siteDraftSchema.safeParseAsync(page([{ type: "Text", props: { text: "x".repeat(MAX_SITE_BYTES) } }]));
     expect(r.success).toBe(false);
   });
 
-  it("every starter template is a valid draft", () => {
+  it("every starter template is a valid draft", async () => {
     for (const t of STARTER_TEMPLATES) {
-      expect(siteDraftSchema.safeParse({ templateId: t.id, data: t.build() }).success, t.id).toBe(true);
+      expect((await siteDraftSchema.safeParseAsync({ templateId: t.id, data: t.build() })).success, t.id).toBe(true);
     }
   });
 });

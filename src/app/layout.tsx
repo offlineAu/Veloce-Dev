@@ -5,6 +5,7 @@ import { brand } from "@/content/site";
 import { ThemeScope } from "@/components/site/theme-scope";
 import { BootInitScript, BootLoader } from "@/components/site/boot-loader";
 import { MarketingOnly } from "@/components/site/marketing-only";
+import { DevShortcut } from "@/components/dev/dev-shortcut";
 import { Providers } from "@/components/providers";
 import { ScrollProgress } from "@/components/motion/scroll-progress";
 import "./globals.css";
@@ -45,7 +46,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <BootLoader />
           <ScrollProgress />
         </MarketingOnly>
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <DevShortcut />
+        </Providers>
       </body>
     </html>
   );

@@ -29,7 +29,7 @@ export async function submitInquiry(raw: unknown, ctx: { clientKey: string }): P
   // A site designed in the /build editor. Its validation (template packages, HTML sanitising) is loaded only when a
   // design is attached, so an ordinary inquiry never depends on any of it.
   const draftRaw = (raw as { siteDraft?: unknown } | null)?.siteDraft;
-  const draft = draftRaw === undefined ? undefined : (await import("@/schemas/site-draft")).siteDraftSchema.safeParse(draftRaw);
+  const draft = draftRaw === undefined ? undefined : await (await import("@/schemas/site-draft")).siteDraftSchema.safeParseAsync(draftRaw);
   if (draft && !draft.success) {
     return { ok: false, code: "VALIDATION", fieldErrors: { siteDraft: [draft.error.issues[0]?.message ?? "We couldn't read your design."] } };
   }
