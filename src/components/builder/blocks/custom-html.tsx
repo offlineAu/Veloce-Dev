@@ -1,5 +1,5 @@
 import type { ComponentConfig } from "@puckeditor/core";
-import { MAX_HTML_BYTES } from "@/lib/builder/sanitize";
+import { MAX_HTML_BYTES } from "@/lib/builder/sanitize-limits";
 import { HtmlFrame } from "./html-frame";
 
 export type CustomHtmlProps = { label: string; html: string };

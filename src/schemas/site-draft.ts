@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { BLOCK_TYPES, mapBlocks, type BlockItem } from "@/lib/builder/blocks";
-import { sanitizeHtml } from "@/lib/builder/sanitize";
+import { sanitizeHtmlOnServer } from "@/server/builder/sanitize-html";
 import { MAX_PAGES, PATH_RE, migrateDoc, type SiteDoc } from "@/lib/builder/site-doc";
 import { checkDesignSections } from "@/server/builder/design-validation";
 
@@ -61,7 +61,7 @@ function checkSite(doc: SiteDoc): string | null {
 
 const sanitizeBlocks = (items: BlockItem[]) =>
   mapBlocks(items, (b) =>
-    b.type === "CustomHtml" && typeof b.props.html === "string" ? { ...b, props: { ...b.props, html: sanitizeHtml(b.props.html) } } : b,
+    b.type === "CustomHtml" && typeof b.props.html === "string" ? { ...b, props: { ...b.props, html: sanitizeHtmlOnServer(b.props.html) } } : b,
   );
 
 function sanitizeSite(doc: SiteDoc): SiteDoc {

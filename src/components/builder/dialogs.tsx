@@ -4,7 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Dialog, ModalContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { MAX_HTML_BYTES } from "@/lib/builder/sanitize";
+import { MAX_HTML_BYTES } from "@/lib/builder/sanitize-limits";
 import type { SiteDoc } from "@/lib/builder/site-doc";
 import { htmlBlock, useAppendBlocks } from "./editor-hooks";
 import { loadTemplates, saveTemplates } from "./storage";

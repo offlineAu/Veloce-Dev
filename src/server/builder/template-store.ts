@@ -2,14 +2,14 @@ import "server-only";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { findImported, isKnownVersion } from "@/content/builder-templates";
-import { packageBase, type TemplatePackage } from "@/lib/builder/template-package";
+import type { TemplatePackage } from "@/lib/builder/template-package";
 
 const cache = new Map<string, { pkg: TemplatePackage; css: string } | null>();
 
-/** Root of the published template packages (public/builder-templates). Overridable for tests. */
-let root = path.join(process.cwd(), "public");
+/** Root of the template packages. Kept literal so the server bundle only includes public/builder-templates. */
+let root = path.join(process.cwd(), "public", "builder-templates");
 export const setTemplateRootForTests = (dir: string) => {
-  root = dir;
+  root = path.join(dir, "builder-templates");
   cache.clear();
 };
 
@@ -24,7 +24,7 @@ export function readTemplate(slug: string, version: number, { requirePublished =
   const key = `${slug}@${version}`;
   if (!cache.has(key)) {
     try {
-      const dir = path.join(root, packageBase(slug, version));
+      const dir = path.join(root, slug, `v${version}`);
       const pkg = JSON.parse(readFileSync(path.join(dir, "template.json"), "utf8")) as TemplatePackage;
       const css = readFileSync(path.join(dir, "theme.css"), "utf8");
       cache.set(key, pkg.slug === slug && pkg.version === version ? { pkg, css } : null);

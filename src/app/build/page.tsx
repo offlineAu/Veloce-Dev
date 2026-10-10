@@ -35,7 +35,8 @@ function reviewInfo(slug: string | undefined): ReviewInfo | undefined {
   if (!showDrafts() || !t || version === undefined) return undefined;
   let report = "";
   try {
-    report = readFileSync(path.join(process.cwd(), "src/content/builder-templates/reports", `${t.slug}-v${version}.md`), "utf8");
+    // Development only (see showDrafts above), so the production bundle doesn't need to include the reports.
+    report = readFileSync(path.join(/*turbopackIgnore: true*/ process.cwd(), "src/content/builder-templates/reports", `${t.slug}-v${version}.md`), "utf8");
   } catch {
     /* imported without a report */
   }
