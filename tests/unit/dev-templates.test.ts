@@ -88,8 +88,10 @@ describe("bundle isolation", () => {
       }
     };
     walk("src");
-    const importers = files.filter((f) => !f.startsWith(path.join("src", "lib", "builder", "import")) && /["']@\/lib\/builder\/import["']/.test(readFileSync(f, "utf8")));
-    expect(importers).toEqual([path.join("src", "server", "builder", "upload-service.ts")]);
+    const importers = files.filter((f) => !f.startsWith(path.join("src", "lib", "builder", "import")) && /^(import(?! type)[^;]*?from|.*import\()\s*["']@\/lib\/builder\/import(\/[\w-]+)?["']/m.test(readFileSync(f, "utf8")));
+    // (Type-only imports don't count: they never reach a bundle.) The upload service, plus the builder's server-only helpers: compiling added classes, reading Edit HTML.
+    expect(importers.sort()).toEqual(["css-service.ts", "html-pieces.ts", "upload-service.ts"].map((f) => path.join("src", "server", "builder", f)));
+    for (const f of importers) expect(readFileSync(f, "utf8")).toMatch(/^import "server-only";/);
     const services = files.filter((f) => /["']@\/server\/builder\/upload-service["']/.test(readFileSync(f, "utf8")));
     expect(services).toEqual([path.join("src", "app", "api", "dev", "templates", "route.ts")]);
   });

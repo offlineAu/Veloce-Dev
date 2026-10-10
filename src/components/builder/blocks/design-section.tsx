@@ -2,7 +2,7 @@ import type { ComponentConfig, Field, Fields } from "@puckeditor/core";
 import { findSection, type FieldDef, type TemplateSection } from "@/lib/builder/template-package";
 import { linkField } from "../links";
 import { renderNode } from "../node-tree";
-import { EditLayoutButton } from "../edit-layout";
+import { EditLayoutButton, SectionAdvanced } from "../edit-layout";
 import type { LoadedTemplate } from "../template-registry";
 
 /**
@@ -36,7 +36,12 @@ const objectOf = (defs: FieldDef[]) => Object.fromEntries(defs.map((d) => [d.id,
 function fieldsFor(section: TemplateSection): Fields<DesignSectionProps> {
   const fields: Record<string, Field> = {
     // Not a value: a way into "Edit layout", shown first.
-    editLayout: { type: "custom", label: "Layout", render: () => <EditLayoutButton /> } as Field,
+    editLayout: { type: "custom", label: "Layout", render: () => (
+        <div className="flex flex-col gap-2">
+          <EditLayoutButton />
+          <SectionAdvanced />
+        </div>
+      ) } as Field,
   };
   if (section.fields.length) fields.values = { type: "object", label: "Content", objectFields: objectOf(section.fields) };
   if (section.repeaters.length) {

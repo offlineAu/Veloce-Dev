@@ -64,6 +64,10 @@ async function requestedDoc(requested: string | undefined, templates: TemplateLi
   return { doc: docFromTemplate(pkg), templateId: imported.slug };
 }
 
+// Stable across renders: Puck re-runs its viewport setup when this object changes, and on a fresh history that
+// overwrites the starting point, so the first edit couldn't be undone.
+const IFRAME = { enabled: true, waitForStyles: true };
+
 export default function BuilderApp({ companyName, contactEmail, refToken, requestedTemplate, templates, review }: BuilderAppProps) {
   // The editor only ever renders in the browser, so a saved draft can be read while setting up state.
   // A saved draft wins over a template link, so the link never wipes someone's work: the picker opens instead.
@@ -255,7 +259,7 @@ export default function BuilderApp({ companyName, contactEmail, refToken, reques
                 headerTitle={active.title}
                 headerPath={active.path}
                 height="100%"
-                iframe={{ enabled: true, waitForStyles: true }}
+                iframe={IFRAME}
               >
                 {/* Dialogs that edit the open page need the editor's state, so they live inside <Puck>. */}
                 <SectionsDialog open={panel === "sections"} onOpenChange={(o) => setPanel(o ? "sections" : null)} template={template?.pkg} />

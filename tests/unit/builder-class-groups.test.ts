@@ -4,7 +4,6 @@ import { pieceClasses } from "@/lib/builder/elements";
 import { missingFrom, themeFromCss } from "@/lib/builder/theme-vars";
 import { validClasses } from "@/server/builder/css-service";
 
-vi.mock("server-only", () => ({}));
 vi.mock("@/server/db", () => ({ db: {} }));
 
 const css = "[data-vt=x]{--vt-color-primary:#f2ca50;--vt-color-surface-dim:#111;--vt-text-display:4rem;--vt-text-display--line-height:1;--vt-font-headline:Newsreader;--vt-radius-card:12px}";

@@ -6,6 +6,7 @@ import { readStyle, scalesFromCss, showClasses, storeClasses, writeStyle, type S
 import { normalizeTheme, type ThemeTokens } from "@/lib/builder/theme";
 import { siteThemeCss } from "@/lib/builder/theme-vars";
 import { usePuck } from "./editor-hooks";
+import { EditHtmlButton } from "./html-editor-dialog";
 import { TemplateContext } from "./template-registry";
 
 /*
@@ -53,7 +54,7 @@ function setAdvanced(on: boolean) {
   }
   listeners.forEach((l) => l());
 }
-const useAdvanced = () =>
+export const useAdvanced = () =>
   useSyncExternalStore(
     (l) => (listeners.add(l), () => listeners.delete(l)),
     readAdvanced,
@@ -176,12 +177,25 @@ export function StyleField({ value, onChange, readOnly, controls }: { value: str
         ) : null}
       </fieldset>
 
-      <label className="mt-2 flex items-center gap-2 text-xs opacity-80">
-        <input type="checkbox" checked={advanced} onChange={(e) => setAdvanced(e.target.checked)} />
-        <span>Show class names (advanced)</span>
-      </label>
-      {advanced ? <RawClasses key={value} value={value} onChange={onChange} readOnly={readOnly} /> : null}
+      <AdvancedToggle />
+      {advanced ? (
+        <>
+          <RawClasses key={value} value={value} onChange={onChange} readOnly={readOnly} />
+          {readOnly ? null : <EditHtmlButton />}
+        </>
+      ) : null}
     </div>
+  );
+}
+
+/** The per-browser "advanced" switch: class names and Edit HTML. */
+export function AdvancedToggle() {
+  const advanced = useAdvanced();
+  return (
+    <label className="mt-2 flex items-center gap-2 text-xs opacity-80">
+      <input type="checkbox" checked={advanced} onChange={(e) => setAdvanced(e.target.checked)} />
+      <span>Show class names (advanced)</span>
+    </label>
   );
 }
 

@@ -8,6 +8,8 @@ import { sectionToElements } from "@/lib/builder/elements";
 import { findSection } from "@/lib/builder/template-package";
 import { usePuck } from "./editor-hooks";
 import { TemplateContext } from "./template-registry";
+import { EditHtmlButton } from "./html-editor-dialog";
+import { AdvancedToggle, useAdvanced } from "./style-field";
 
 /**
  * Takes the selected locked design section apart into design pieces, in place, as one undoable step. Everything the
@@ -29,6 +31,8 @@ export function useEditLayout() {
     dispatch({
       type: "setData",
       data: (prev) => ({ ...prev, content: swap(prev.content as BlockItem[]) as typeof prev.content }),
+      // setData isn't an undo step unless asked.
+      recordHistory: true,
     });
     dispatch({ type: "setUi", ui: { itemSelector: null }, recordHistory: false });
   }, [selected, section, dispatch]);
@@ -59,5 +63,16 @@ export function EditLayoutButton() {
       </button>
       <p className="text-xs opacity-70">Its parts become blocks you can drag, duplicate, delete and style. Undo brings the section back.</p>
     </div>
+  );
+}
+
+/** Behind the "advanced" switch: the whole section as HTML. */
+export function SectionAdvanced() {
+  const advanced = useAdvanced();
+  return (
+    <>
+      <AdvancedToggle />
+      {advanced ? <EditHtmlButton /> : null}
+    </>
   );
 }

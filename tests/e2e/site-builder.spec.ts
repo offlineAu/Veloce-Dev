@@ -230,6 +230,41 @@ test.describe("site builder", () => {
     expect(await sent.evaluate((e) => getComputedStyle(e).letterSpacing)).not.toBe("normal");
   });
 
+  test("edit HTML: change a section's markup and classes, and unsafe parts are removed", async ({ page }) => {
+    await page.goto("/build?template=noir-needle");
+    const frame = canvas(page);
+    await frame.getByText("Selected Permanent Archives").click({ timeout: 30_000 });
+    const panel = (name: string | RegExp) => page.getByLabel(name).filter({ visible: true });
+    await panel("Show class names (advanced)").check();
+    await page.getByRole("button", { name: "Edit HTML" }).filter({ visible: true }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Edit HTML" });
+    const code = dialog.getByRole("textbox", { name: /HTML/ });
+    const html = await code.inputValue();
+    expect(html).toContain("Selected Permanent Archives");
+    expect(html).not.toContain("vt:");
+    await code.fill(
+      html
+        .replace("Selected Permanent Archives", "Our Favourite Pieces")
+        .replace(/<h2 class="/, '<h2 onclick="alert(1)" class="tracking-[0.4em] ')
+        .replace("</h2>", '</h2><script>alert(1)</script><a href="javascript:alert(1)">Bad link</a>'),
+    );
+    await dialog.getByRole("button", { name: "Apply" }).click();
+    await expect(dialog).toBeHidden();
+
+    const heading = frame.getByText("Our Favourite Pieces");
+    await expect(heading).toBeVisible();
+    await expect(frame.getByText("Selected Permanent Archives")).toHaveCount(0);
+    await expect.poll(() => heading.evaluate((e) => getComputedStyle(e).letterSpacing)).not.toBe("normal");
+    expect(await heading.getAttribute("onclick")).toBeNull();
+    await expect(frame.locator("script")).toHaveCount(0);
+    expect((await frame.getByText("Bad link").getAttribute("href")) ?? "").not.toContain("javascript");
+
+    // One undo brings the locked section back.
+    await page.locator('button[title="undo"]').first().click();
+    await expect(frame.getByText("Selected Permanent Archives")).toBeVisible();
+  });
+
   test("reviewing an imported template shows its report and a section checklist", async ({ page }) => {
     await page.goto("/build?template=noir-needle&review=1");
     const review = page.getByRole("region", { name: "Template review" });
