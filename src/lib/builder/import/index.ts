@@ -226,7 +226,8 @@ export async function importTemplate(src: ImportSource, opts: ImportOptions): Pr
     slug: opts.slug,
     version: opts.version,
     name: opts.name,
-    description: opts.description ?? `${outPages.length}-page design imported from ${pages[0]!.dir}.`,
+    // The page's own summary reads better than a file name.
+    description: (opts.description || pages[0]!.parsed.description || pages[0]!.parsed.title || `${outPages.length}-page imported design.`).slice(0, 300),
     websiteType: opts.websiteType,
     theme,
     pages: outPages,
