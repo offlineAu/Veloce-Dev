@@ -154,3 +154,23 @@ export function sectionToElements(section: TemplateSection, values: Values = {},
   const it = { ...Object.fromEntries(section.repeaters.map((r) => [r.id, r.defaults])), ...items };
   return toPiece(section.tree, v, it)[0]!;
 }
+
+const PIECE_SET = new Set<string>(ELEMENT_TYPES);
+const isSlotValue = (v: unknown): v is BlockItem[] => Array.isArray(v) && v.every((x) => !!x && typeof x === "object" && "type" in x && "props" in x);
+
+/** Every class name used by design pieces on a page (including inside other blocks), for compiling missing ones. */
+export function pieceClasses(content: BlockItem[]): string[] {
+  const out = new Set<string>();
+  const add = (c: unknown) => typeof c === "string" && c.split(/\s+/).forEach((t) => t && out.add(t));
+  const visit = (items: BlockItem[]) => {
+    for (const b of items) {
+      if (PIECE_SET.has(b.type)) {
+        add(b.props.className);
+        if (Array.isArray(b.props.runs)) for (const r of b.props.runs as TextRun[]) add(r.className);
+      }
+      for (const v of Object.values(b.props)) if (isSlotValue(v)) visit(v);
+    }
+  };
+  visit(content);
+  return [...out].filter((c) => c.startsWith("vt:")).sort();
+}

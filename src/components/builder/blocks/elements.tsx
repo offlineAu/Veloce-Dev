@@ -5,6 +5,7 @@ import { BOX_TAGS, FIELD_TAGS, INLINE_TAGS, PIECE_ATTRS, TEXT_TAGS, type TextRun
 import type { ElementNode } from "@/lib/builder/template-package";
 import { linkField, linkProps } from "../links";
 import { renderNode } from "../node-tree";
+import { styleField } from "../style-field";
 
 /*
  * Design pieces: one block per element of an imported section ("Edit layout"), or added from the drawer. Each renders
@@ -62,8 +63,8 @@ export type BoxProps = { tag: string; className: string; attrs?: Attrs; style?: 
 export const Box: ComponentConfig<BoxProps> = {
   label: "Group",
   inline: true,
-  fields: { items: { type: "slot" } } as unknown as ComponentConfig<BoxProps>["fields"],
-  defaultProps: { tag: "div", className: "flex flex-col gap-4 p-4", items: [] },
+  fields: { className: styleField(["layout", "spacing", "size", "colours", "text", "look", "visibility"]), items: { type: "slot" } } as unknown as ComponentConfig<BoxProps>["fields"],
+  defaultProps: { tag: "div", className: "vt:flex vt:flex-col vt:gap-4 vt:p-4", items: [] },
   render: ({ tag, className, attrs, style, items: Items, puck }) => (
     <Items as={pick(tag, BOX_TAGS, "div") as "div"} className={className} style={safeStyle(style)} ref={withAttrs(puck.dragRef, attrs)} minEmptyHeight={48} />
   ),
@@ -88,6 +89,7 @@ export const DText: ComponentConfig<DTextProps> = {
       arrayFields: { text: { type: "text", label: "Text" } },
       getItemSummary: (r: TextRun) => (r.tag === "br" ? "Line break" : r.text || "Part"),
     },
+    className: styleField(["text", "colours", "spacing", "size", "visibility"]),
   } as unknown as ComponentConfig<DTextProps>["fields"],
   // Plain text is edited in place; text with mixed styling (a highlighted word, a line break) part by part.
   resolveFields: (data, { fields }) => {
@@ -116,8 +118,9 @@ export const DImage: ComponentConfig<DImageProps> = {
   fields: {
     src: { type: "text", label: "Image address", placeholder: "https://…" },
     alt: { type: "text", label: "Description (for screen readers)" },
+    className: styleField(["size", "look", "visibility"]),
   } as unknown as ComponentConfig<DImageProps>["fields"],
-  defaultProps: { className: "w-full rounded-xl object-cover", src: "", alt: "" },
+  defaultProps: { className: "vt:w-full vt:rounded-xl vt:object-cover", src: "", alt: "" },
   render: ({ className, src, alt, attrs, style, puck }) =>
     SAFE_SRC.test(src) ? (
       <img src={src} alt={alt} className={className} style={safeStyle(style)} ref={withAttrs(puck.dragRef, attrs)} />
@@ -147,13 +150,14 @@ export const DLink: ComponentConfig<DLinkProps> = {
     text: { type: "text", label: "Text", contentEditable: true },
     href: linkField("Link"),
     items: { type: "slot", disallow: ["DLink"] },
+    className: styleField(["colours", "text", "spacing", "look", "layout", "visibility"]),
   } as unknown as ComponentConfig<DLinkProps>["fields"],
   // A text-only link is edited as text; a link holding an icon and text (or anything else) holds pieces.
   resolveFields: (data, { fields }) => {
     const { text, items, ...rest } = fields as Record<string, unknown>;
     return (data.props.textOnly ? { text, ...rest } : { ...rest, items }) as typeof fields;
   },
-  defaultProps: { tag: "a", className: "inline-flex items-center gap-2 rounded-full bg-black px-5 py-2.5 text-white", href: "#", textOnly: true, text: "Button", items: [] },
+  defaultProps: { tag: "a", className: "vt:inline-flex vt:items-center vt:gap-2 vt:rounded-full vt:bg-black vt:px-5 vt:py-2.5 vt:text-white", href: "#", textOnly: true, text: "Button", items: [] },
   render: ({ tag, className, href, textOnly, text, attrs, style, items: Items, puck }) => {
     const link = linkProps(href, puck) as { href: string; tabIndex?: number; onClick?: (e: unknown) => void; "data-page-link"?: string };
     const isButton = tag === "button";
@@ -180,7 +184,7 @@ export type DIconProps = { tag: string; className: string; name: string; attrs?:
 export const DIcon: ComponentConfig<DIconProps> = {
   label: "Icon",
   inline: true,
-  fields: { name: { type: "text", label: "Icon name (Material Symbols)" } } as unknown as ComponentConfig<DIconProps>["fields"],
+  fields: { name: { type: "text", label: "Icon name (Material Symbols)" }, className: styleField(["text", "colours", "visibility"]) } as unknown as ComponentConfig<DIconProps>["fields"],
   defaultProps: { tag: "span", className: "vt-material-symbols-outlined", name: "star" },
   render: ({ tag, className, name, attrs, style, puck }) =>
     createElement(pick(tag, INLINE_TAGS, "span"), { className, style: safeStyle(style), ref: withAttrs(puck.dragRef, { ...attrs, "aria-hidden": true }) }, /^[a-z0-9_]{1,40}$/.test(name) ? name : ""),

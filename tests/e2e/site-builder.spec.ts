@@ -189,6 +189,47 @@ test.describe("site builder", () => {
     await expect(page.getByRole("navigation", { name: "Pages in this design" }).locator('[aria-current="page"]')).toHaveText("Resident Artists");
   });
 
+  test("edit layout: style a piece with plain controls and new classes, and the team preview matches", async ({ page }) => {
+    const email = uniqueEmail("style");
+    await page.goto("/build?template=noir-needle");
+    const frame = canvas(page);
+    await frame.getByText("Selected Permanent Archives").click({ timeout: 30_000 });
+    await page.getByRole("button", { name: "Edit layout" }).click();
+
+    // Now a piece of its own: plain controls change its classes, using the design's scale.
+    const heading = frame.getByText("Selected Permanent Archives");
+    await heading.click();
+    // (The editor keeps a hidden copy of the panel; only the visible one counts.)
+    const panel = (name: string | RegExp) => page.getByLabel(name).filter({ visible: true });
+    await panel(/^Size/).selectOption("9xl");
+    await expect.poll(() => heading.evaluate((e) => getComputedStyle(e).fontSize)).toBe("128px");
+
+    // Advanced: a class the design never used is compiled on demand with the design's own colours.
+    await panel("Show class names (advanced)").check();
+    const classes = panel(/^Classes \(Tailwind\)/);
+    await classes.fill(`${await classes.inputValue()} tracking-[0.3em] bg-primary/20`);
+    await classes.press("Enter");
+    await expect.poll(() => heading.evaluate((e) => getComputedStyle(e).letterSpacing)).not.toBe("normal");
+    await expect.poll(() => heading.evaluate((e) => getComputedStyle(e).backgroundColor)).toMatch(/^(oklab|color|rgba)\(/);
+
+    await page.waitForTimeout(1000); // the draft saves shortly after the last change
+    await page.getByRole("button", { name: "Send design" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel(/^Name/).fill("Studio Owner");
+    await dialog.getByLabel(/^Email/).fill(email);
+    await dialog.getByLabel(/What are you looking to build/).fill("This, restyled");
+    await dialog.getByLabel(/I agree that/).check();
+    await page.waitForTimeout(1700);
+    await dialog.getByRole("button", { name: "Send project inquiry" }).click();
+    await expect(dialog.getByRole("heading", { name: "Inquiry received" })).toBeVisible();
+
+    const [row] = await query<{ token: string }>(`SELECT d.token FROM "Lead" l JOIN "SiteDraft" d ON d."leadId"=l.id WHERE l.email=$1`, [email]);
+    await page.goto(`/build/preview/${row!.token}`);
+    const sent = page.getByText("Selected Permanent Archives");
+    expect(await sent.evaluate((e) => getComputedStyle(e).fontSize)).toBe("128px");
+    expect(await sent.evaluate((e) => getComputedStyle(e).letterSpacing)).not.toBe("normal");
+  });
+
   test("reviewing an imported template shows its report and a section checklist", async ({ page }) => {
     await page.goto("/build?template=noir-needle&review=1");
     const review = page.getByRole("region", { name: "Template review" });

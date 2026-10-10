@@ -77,10 +77,11 @@ export const builderConfig: Config<BuilderComponents, BuilderRoot> & { component
     defaultProps: { title: "My new website", theme: DEFAULT_THEME },
     render: ({ children, theme, accent, font, frame, puck }) => {
       const t = theme ? normalizeTheme(theme) : themeFromLegacy({ accent, font });
-      const template = (puck.metadata as { template?: LoadedTemplate }).template;
+      const { template, extraCss } = puck.metadata as { template?: LoadedTemplate; extraCss?: string };
       return (
         <div
-          data-vt={template?.pkg.slug}
+          // Sites without a template are scoped "site", for classes a visitor adds (compiled against the site theme).
+          data-vt={template?.pkg.slug ?? "site"}
           data-vt-dark={template?.pkg.theme.scheme === "dark" ? "" : undefined}
           // The editor canvas inherits this site's stylesheet; reset its heading font so the visitor's choice applies.
           className="min-h-full bg-(--site-bg) text-(--site-fg) antialiased [&_:is(h1,h2,h3,h4)]:[font-family:var(--site-heading)]"
@@ -90,6 +91,8 @@ export const builderConfig: Config<BuilderComponents, BuilderRoot> & { component
           {/* The template's compiled stylesheet: scoped to [data-vt] and prefixed, so it can't restyle anything else. */}
           {template ? <style>{template.css}</style> : null}
           <style>{PIECE_CSS}</style>
+          {/* Classes added in the Style panel or Edit HTML that the template's stylesheet lacks (/api/builder/css). */}
+          {extraCss ? <style>{extraCss}</style> : null}
           {frame && template ? <div className={frame}>{children}</div> : children}
         </div>
       );

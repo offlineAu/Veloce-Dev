@@ -28,15 +28,20 @@ const nextConfig: NextConfig = {
   // module (lightningcss). Bundling it fails, so these load from node_modules at runtime instead...
   serverExternalPackages: ["@tailwindcss/node", "@tailwindcss/oxide", "lightningcss", "sharp"],
   // ...and the files they read from disk are shipped with the upload route on Vercel.
-  outputFileTracingIncludes: {
-    "/api/dev/templates": [
-      "./node_modules/tailwindcss/*.css",
-      "./node_modules/tailwindcss/package.json",
-      "./node_modules/lightningcss/**/*",
-      "./node_modules/lightningcss-*/**/*",
-      "./node_modules/@tailwindcss/node/**/*",
-    ],
-  },
+  outputFileTracingIncludes: Object.fromEntries(
+    // Routes that compile Tailwind on the server: template uploads, and extra classes added in the builder (editor
+    // and the team's design preview).
+    ["/api/dev/templates", "/api/builder/css", "/build/preview/[token]"].map((route) => [
+      route,
+      [
+        "./node_modules/tailwindcss/*.css",
+        "./node_modules/tailwindcss/package.json",
+        "./node_modules/lightningcss/**/*",
+        "./node_modules/lightningcss-*/**/*",
+        "./node_modules/@tailwindcss/node/**/*",
+      ],
+    ]),
+  ),
   async headers() {
     return [
       {
