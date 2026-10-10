@@ -72,9 +72,9 @@ async function HomeContent({ searchParams }: HomePageProps) {
     { href: "#capabilities", label: "Capabilities" },
     { href: "#offer", label: "Offer" },
   ];
-  const heroPhoto = photo("hero-office.webp");
+  const heroPhoto = photo("hero-overhead.webp");
   const teamPhoto = photo("card-builders.webp");
-  const reviewPhoto = photo("card-team.webp");
+  const reviewPhoto = photo("card-office.webp");
   const contactPhoto = photo("contact-code.webp");
   const search = buildSearchEntries({
     links,

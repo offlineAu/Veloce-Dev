@@ -1,8 +1,14 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { readFileSync } from 'node:fs';
 import { resetFixtures, query, TOKENS, uniqueEmail } from './helpers';
-const enabled = process.env.E2E_BOOKING_ENABLED === 'true';
+// The scheduler round-trip tests need the explicit Cal fixture server, never a real Cal account: opt in with E2E_BOOKING_ENABLED=true.
+const fixtureServer = process.env.E2E_BOOKING_ENABLED === 'true';
+// Whether the server under test has booking switched on. Read from the page rather than from env files: Next layers
+// .env.development.local / .env.local over .env, which the test runner does not see, so the two can disagree.
+const MEETING_BUTTON = /^(Book|Request) a meeting with Veloce$/;
+const bookingLive = async (page: Page) =>
+  (await page.locator('[data-contact-cta]').getByRole('button', { name: MEETING_BUTTON }).textContent())?.startsWith('Book') ?? false;
 test.beforeAll(resetFixtures);
 
 test('sample choices never book and meeting entry restores the example', async ({ page }) => {
@@ -27,7 +33,7 @@ test('sample choices never book and meeting entry restores the example', async (
 test('direct meeting entry needs no demo and has no overflow or axe violations', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
-  await page.locator('[data-contact-cta]').getByRole('button', { name: enabled ? 'Book a meeting with Veloce' : 'Request a meeting with Veloce', exact: true }).click();
+  await page.locator('[data-contact-cta]').getByRole('button', { name: MEETING_BUTTON }).click();
   await expect(page.locator('#veloce-meeting-title')).toBeFocused();
   await expect(page.locator('[data-meeting-panel]')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0);
@@ -35,9 +41,9 @@ test('direct meeting entry needs no demo and has no overflow or axe violations',
 });
 
 test('meeting request validates and persists a request, never an appointment', async ({ page }) => {
-  test.skip(enabled, 'This checks the unconfigured-calendar fallback');
   const email = uniqueEmail('meeting-request');
   await page.goto(`/?ref=${TOKENS.active}`);
+  test.skip(await bookingLive(page), 'This checks the unconfigured-calendar fallback; this server has booking on');
   await page.locator('[data-workbench-meeting]').click();
   const panel = page.locator('[data-meeting-panel]');
   await panel.getByRole('button', { name: 'Send meeting request' }).click();
@@ -55,7 +61,7 @@ test('meeting request validates and persists a request, never an appointment', a
 
 for (const status of ['CONFIRMED', 'REQUESTED'] as const) {
   test(`enabled scheduler verifies ${status} and preserves a single embed`, async ({ page }) => {
-    test.skip(!enabled, 'Run against the explicit Cal fixture server');
+    test.skip(!fixtureServer, 'Run against the explicit Cal fixture server');
     await page.route('https://app.cal.com/embed/embed.js', route => route.fulfill({ contentType: 'application/javascript', body: readFileSync('tests/fixtures/cal-embed.js', 'utf8') }));
     await page.goto(`/?ref=${TOKENS.active}`);
     const workbench = page.locator('[data-approach-workbench]');

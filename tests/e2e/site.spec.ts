@@ -41,6 +41,19 @@ async function fillInquiry(page: Page, email: string) {
   await page.getByLabel(/What are you looking to build/).fill("Online booking for our clinic");
 }
 
+/**
+ * Ctrl K only works once the page has hydrated (the listener is attached on mount); a press before that is dropped,
+ * which on a dev server can be several seconds after "load". Retry the shortcut until the search dialog is open.
+ */
+async function openSearchWithShortcut(page: Page) {
+  const dialog = page.getByRole("dialog", { name: "Search this site" });
+  await expect(async () => {
+    if (!(await dialog.isVisible())) await page.keyboard.press("Control+k");
+    await expect(dialog).toBeVisible({ timeout: 1500 });
+  }).toPass({ timeout: 20_000 });
+  return dialog;
+}
+
 test.describe("sales page", () => {
   test("renders content and no offer without a referral", async ({ page }) => {
     await page.goto("/");
@@ -389,9 +402,7 @@ test.describe("navigation, search and motion", () => {
 
   test("search palette finds a capability and jumps to its section", async ({ page }) => {
     await page.goto("/");
-    await page.keyboard.press("Control+k");
-    const dialog = page.getByRole("dialog", { name: "Search this site" });
-    await expect(dialog).toBeVisible();
+    const dialog = await openSearchWithShortcut(page);
     await dialog.getByRole("combobox").fill("booking");
     await expect(dialog.getByRole("option", { name: /Booking systems/ })).toBeVisible();
     await page.keyboard.press("Enter");
@@ -422,8 +433,8 @@ test.describe("navigation, search and motion", () => {
 
   test("search palette can open the contact form", async ({ page }) => {
     await page.goto("/");
-    await page.keyboard.press("Control+k");
-    await page.getByRole("dialog", { name: "Search this site" }).getByRole("combobox").fill("start a conversation");
+    const dialog = await openSearchWithShortcut(page);
+    await dialog.getByRole("combobox").fill("start a conversation");
     await page.keyboard.press("Enter");
     await expect(page.getByRole("dialog", { name: "Tell us about your project" })).toBeVisible();
   });
@@ -474,8 +485,12 @@ test.describe("navigation, search and motion", () => {
     await expect(slot).toHaveCSS("opacity", "1");
     await expect(toggle).toHaveAttribute("aria-expanded", "false");
     await expect(panel).toHaveAttribute("inert", "");
-    if (test.info().project.name === "mobile") {
+    // Hover only opens it on wide, fine-pointer screens (1024px+, see HOVER_QUERY in conversation-fab.tsx); smaller screens open it by tap or click.
+    const project = test.info().project.name;
+    if (project === "mobile") {
       await toggle.tap();
+    } else if (project === "tablet") {
+      await toggle.click();
     } else {
       await toggle.hover();
     }

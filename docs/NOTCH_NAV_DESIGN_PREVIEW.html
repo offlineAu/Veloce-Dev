@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Veloce active notch — design study</title>
+  <style>
+    :root { --bg:#f6f4ee; --surface:#faf9f5; --ink:#111612; --muted:#4f5650; --line:#e5e2d6; --inverse:#111612; --on-inverse:#f6f4ee; --accent:#d9f5ab; }
+    :root[data-theme="periwinkle"] { --bg:#f7f7ff; --surface:#eef0ff; --ink:#16192d; --muted:#44476f; --line:#d6d8ff; --inverse:#16192d; --on-inverse:#f7f7ff; --accent:#9fa1ff; }
+    :root[data-theme="ember"] { --bg:#171010; --surface:#2b2b2b; --ink:#f3eae6; --muted:#c6bfbc; --line:#423f3e; --inverse:#171010; --on-inverse:#f3eae6; --accent:#e8afa1; }
+    * { box-sizing:border-box; }
+    body { margin:0; padding:40px 24px; background:var(--bg); color:var(--ink); font:15px/1.6 system-ui,sans-serif; }
+    main { max-width:1100px; margin:auto; }
+    h1 { font-size:clamp(26px,4vw,40px); line-height:1.2; letter-spacing:-.035em; margin:12px 0; }
+    p { color:var(--muted); max-width:70ch; }
+    .eyebrow { font:600 11px/1.5 monospace; letter-spacing:.13em; text-transform:uppercase; }
+    .controls { display:flex; gap:10px; align-items:center; margin:24px 0 40px; flex-wrap:wrap; }
+    select { padding:9px; border:1px solid var(--line); border-radius:8px; background:var(--surface); color:var(--ink); font:inherit; }
+    .study { padding:28px 18px 34px; background:var(--surface); border:1px solid var(--line); border-radius:24px; }
+    .links { display:flex; justify-content:center; gap:14px; flex-wrap:wrap; }
+    .links button { position:relative; isolation:isolate; min-height:48px; padding:0 26px 6px; border:0; background:transparent; color:var(--muted); font:500 15px/1.4 system-ui,sans-serif; cursor:pointer; }
+    .links button svg { position:absolute; inset:0; width:100%; height:100%; z-index:-1; opacity:0; overflow:visible; }
+    .links button[aria-pressed="true"] { color:var(--on-inverse); font-weight:600; }
+    .links button[aria-pressed="true"] svg { opacity:1; }
+    .links button:hover { text-decoration:underline; text-underline-offset:4px; }
+    button:focus-visible, select:focus-visible { outline:2px solid var(--ink); outline-offset:5px; border-radius:3px; }
+    .phone { margin-top:24px; max-width:350px; padding:10px; border:1px solid var(--line); background:var(--surface); border-radius:24px; }
+    .phone button { display:flex; width:100%; min-height:48px; gap:10px; justify-content:center; align-items:center; border:1px solid var(--accent); border-radius:16px; background:var(--inverse); color:var(--on-inverse); font:600 14px/1.4 system-ui,sans-serif; }
+    small { display:block; color:var(--muted); margin-top:24px; }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">Navigation design study</p>
+    <h1>Make the current section look like a notch.</h1>
+    <p>Choose a section to preview a solid active tab with curved shoulders. This illustration shows the proposed selection treatment, separately from the production header.</p>
+    <div class="controls"><label for="theme">Palette</label><select id="theme"><option value="pistachio">Pistachio</option><option value="periwinkle">Periwinkle</option><option value="ember">Ember</option></select></div>
+    <div class="study">
+      <div class="links" role="group" aria-label="Preview active section">
+        <button type="button" aria-pressed="true">Services</button>
+        <button type="button" aria-pressed="false">Our approach</button>
+        <button type="button" aria-pressed="false">Capabilities</button>
+        <button type="button" aria-pressed="false">Offer</button>
+      </div>
+    </div>
+    <p>On phones, show the current section on the collapsed menu button.</p>
+    <div class="phone"><button type="button" aria-label="Menu label illustration"><span aria-hidden="true">☰</span><span id="phone-label">Services</span><span aria-hidden="true">⌃</span></button></div>
+    <small>Concept preview only. The phone control is an illustration. Production scroll tracking, link navigation, and menus are unchanged.</small>
+  </main>
+  <script>
+    const buttons = [...document.querySelectorAll('.links button')];
+    for (const button of buttons) {
+      const label = button.textContent;
+      button.insertAdjacentHTML('afterbegin', '<svg aria-hidden="true" viewBox="0 0 160 48" preserveAspectRatio="none"><path d="M0 0 H160 V26 C141 26 146 47 126 47 H34 C14 47 19 26 0 26 Z" fill="var(--inverse)" stroke="var(--accent)" stroke-width="1.2" /></svg>');
+      button.addEventListener('click', () => {
+        for (const item of buttons) item.setAttribute('aria-pressed', String(item === button));
+        document.getElementById('phone-label').textContent = label;
+      });
+    }
+    document.getElementById('theme').addEventListener('change', event => document.documentElement.dataset.theme = event.target.value);
+  </script>
+</body>
+</html>
