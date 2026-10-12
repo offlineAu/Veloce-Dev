@@ -1,14 +1,13 @@
 /* eslint-disable @next/next/no-img-element -- visitor images are arbitrary external URLs */
 import type { ComponentConfig, PuckContext } from "@puckeditor/core";
 import { linkField, linkProps } from "../links";
-import {
-  accentTextOn, alignClass, alignOptions, cardOn, cardRadius, headingFont, labelClass, mutedOn, siteButton, toneClass, toneOptions,
-  type Align, type Tone,
-} from "./shared";
+import { alignClass, alignOptions, cardRadius, kitFor, looks, toneClass, toneOptions, withLook, type Align, type Look, type Tone } from "./shared";
 
-const cta = (label: string, href: string, tone: Tone, variant: "solid" | "outline", puck: PuckContext) =>
+type Looks = ReturnType<typeof looks>;
+
+const cta = (label: string, href: string, l: Looks, variant: "solid" | "outline", puck: PuckContext, on?: Tone) =>
   label ? (
-    <a {...linkProps(href, puck)} className={siteButton(tone, variant)}>
+    <a {...linkProps(href, puck)} className={l.button(variant, on)}>
       {label}
     </a>
   ) : null;
@@ -24,9 +23,10 @@ export type HeroProps = {
   image: string;
   layout: "split" | "centered";
   tone: Tone;
+  look?: Look;
 };
 
-export const Hero: ComponentConfig<HeroProps> = {
+export const Hero: ComponentConfig<HeroProps> = withLook({
   label: "Hero",
   fields: {
     eyebrow: { type: "text", label: "Small label above", contentEditable: true },
@@ -52,35 +52,38 @@ export const Hero: ComponentConfig<HeroProps> = {
     layout: "split",
     tone: "tinted",
   },
-  render: ({ eyebrow, title, subtitle, primaryLabel, primaryHref, secondaryLabel, secondaryHref, image, layout, tone, puck }) => {
+  render: ({ eyebrow, title, subtitle, primaryLabel, primaryHref, secondaryLabel, secondaryHref, image, layout, tone, look, puck }) => {
     const centred = layout === "centered";
-    const media = /^https?:\/\//i.test(image) ? (
-      <img src={image} alt="" className={`aspect-[4/3] w-full object-cover ${cardRadius}`} />
+    const l = looks(kitFor(puck, look), tone);
+    const media = /^(https?:\/\/|\/build\/t\/|\/builder-templates\/)/i.test(image) ? (
+      <img src={image} alt="" className={`aspect-[4/3] ${l.image}`} />
     ) : (
       <div aria-hidden className={`aspect-[4/3] w-full bg-(--site-accent) opacity-20 ${cardRadius}`} />
     );
     return (
-      <section className={`${toneClass[tone]} px-6 py-20 md:py-28`}>
-        <div className={`mx-auto grid max-w-6xl items-center gap-12 ${centred ? "" : "md:grid-cols-2"}`}>
-          <div className={`flex flex-col gap-5 ${centred ? "mx-auto max-w-3xl items-center text-center" : "items-start"}`}>
-            {eyebrow ? <span className={`${labelClass} ${accentTextOn(tone)}`}>{eyebrow}</span> : null}
-            <h1 className={`${headingFont} text-5xl leading-[1.05] tracking-tight md:text-6xl`}>{title}</h1>
-            <p className={`max-w-[50ch] text-lg leading-relaxed ${mutedOn(tone)}`}>{subtitle}</p>
-            <div className="mt-2 flex flex-wrap gap-3">
-              {cta(primaryLabel, primaryHref, tone, "solid", puck)}
-              {cta(secondaryLabel, secondaryHref, tone, "outline", puck)}
+      <section className={`${l.section} py-20 md:py-28`}>
+        <div className={l.container}>
+          <div className={`grid items-center gap-12 ${centred ? "" : "md:grid-cols-2"}`}>
+            <div className={`flex flex-col gap-5 ${centred ? "mx-auto max-w-3xl items-center text-center" : "items-start"}`}>
+              {eyebrow ? <span className={l.label}>{eyebrow}</span> : null}
+              <h1 className={l.h1}>{title}</h1>
+              <p className={`max-w-[50ch] ${l.lead}`}>{subtitle}</p>
+              <div className="mt-2 flex flex-wrap gap-3">
+                {cta(primaryLabel, primaryHref, l, "solid", puck)}
+                {cta(secondaryLabel, secondaryHref, l, "outline", puck)}
+              </div>
             </div>
+            {centred ? null : media}
           </div>
-          {centred ? null : media}
         </div>
       </section>
     );
   },
-};
+}, ["tone"]);
 
-export type FeaturesProps = { title: string; intro: string; columns: "2" | "3" | "4"; tone: Tone; items: { icon: string; title: string; body: string }[] };
+export type FeaturesProps = { title: string; intro: string; columns: "2" | "3" | "4"; tone: Tone; items: { icon: string; title: string; body: string }[]; look?: Look };
 
-export const Features: ComponentConfig<FeaturesProps> = {
+export const Features: ComponentConfig<FeaturesProps> = withLook({
   label: "Features grid",
   fields: {
     title: { type: "text", label: "Title", contentEditable: true },
@@ -106,34 +109,40 @@ export const Features: ComponentConfig<FeaturesProps> = {
       { icon: "🛡️", title: "Reliable", body: "Clear prices, honest timelines, no surprises." },
     ],
   },
-  render: ({ title, intro, columns, tone, items }) => (
-    <section className={`${toneClass[tone]} px-6 py-16 md:py-24`}>
-      <div className="mx-auto flex max-w-6xl flex-col gap-10">
-        <div className="flex max-w-2xl flex-col gap-3">
-          <h2 className={`${headingFont} text-4xl tracking-tight`}>{title}</h2>
-          {intro ? <p className={`text-lg ${mutedOn(tone)}`}>{intro}</p> : null}
-        </div>
-        <div className={`grid gap-6 sm:grid-cols-2 ${columns === "4" ? "lg:grid-cols-4" : columns === "3" ? "lg:grid-cols-3" : ""}`}>
-          {items.map((f, i) => (
-            <div key={i} className={`flex flex-col gap-3 p-6 ${cardOn(tone)}`}>
-              <span aria-hidden className="text-3xl">{f.icon}</span>
-              <h3 className="text-xl font-semibold">{f.title}</h3>
-              <p className={mutedOn(tone)}>{f.body}</p>
+  render: ({ title, intro, columns, tone, items, look, puck }) => {
+    const l = looks(kitFor(puck, look), tone);
+    return (
+      <section className={l.section}>
+        <div className={l.container}>
+          <div className="flex flex-col gap-10">
+            <div className="flex max-w-2xl flex-col gap-3">
+              <h2 className={l.h2}>{title}</h2>
+              {intro ? <p className={l.lead}>{intro}</p> : null}
             </div>
-          ))}
+            <div className={`grid gap-6 sm:grid-cols-2 ${columns === "4" ? "lg:grid-cols-4" : columns === "3" ? "lg:grid-cols-3" : ""}`}>
+              {items.map((f, i) => (
+                <div key={i} className={`flex flex-col gap-3 ${l.card}`}>
+                  <span aria-hidden className="text-3xl">{f.icon}</span>
+                  <h3 className={l.h3}>{f.title}</h3>
+                  <p className={l.text}>{f.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
-    </section>
-  ),
-};
+      </section>
+    );
+  },
+}, ["tone"]);
 
 export type PricingProps = {
   title: string;
   tone: Tone;
   plans: { name: string; price: string; period: string; features: string; cta: string; highlighted: boolean }[];
+  look?: Look;
 };
 
-export const Pricing: ComponentConfig<PricingProps> = {
+export const Pricing: ComponentConfig<PricingProps> = withLook({
   label: "Pricing table",
   fields: {
     title: { type: "text", label: "Title", contentEditable: true },
@@ -163,30 +172,37 @@ export const Pricing: ComponentConfig<PricingProps> = {
       { name: "Pro", price: "$149", period: "/month", features: "Unlimited locations\nDedicated manager", cta: "Talk to us", highlighted: false },
     ],
   },
-  render: ({ title, tone, plans, puck }) => (
-    <section className={`${toneClass[tone]} px-6 py-16 md:py-24`}>
-      <div className="mx-auto flex max-w-6xl flex-col items-center gap-10">
-        <h2 className={`${headingFont} text-center text-4xl tracking-tight`}>{title}</h2>
-        <div className={`grid w-full gap-6 ${plans.length >= 3 ? "md:grid-cols-3" : "md:grid-cols-2"} ${plans.length === 4 ? "lg:grid-cols-4" : ""}`}>
-          {plans.map((p, i) => (
-            <div key={i} className={`flex flex-col gap-4 border border-(--site-line) bg-(--site-bg) p-8 text-(--site-fg) ${cardRadius} ${p.highlighted ? "ring-4 ring-(--site-accent)" : ""}`}>
-              <h3 className="text-lg font-semibold">{p.name}</h3>
-              <p><span className={`${headingFont} text-5xl`}>{p.price}</span><span className="text-(--site-muted)">{p.period}</span></p>
-              <ul className="flex flex-1 flex-col gap-2 text-(--site-muted)">
-                {p.features.split("\n").filter(Boolean).map((f) => <li key={f} className="flex gap-2"><span aria-hidden className="text-(--site-accent)">✓</span>{f}</li>)}
-              </ul>
-              {cta(p.cta, "#contact", "light", p.highlighted ? "solid" : "outline", puck)}
+  render: ({ title, tone, plans, look, puck }) => {
+    const k = kitFor(puck, look);
+    const l = looks(k, tone);
+    const card = k?.card ?? `border border-(--site-line) bg-(--site-bg) p-8 text-(--site-fg) ${cardRadius}`;
+    return (
+      <section className={l.section}>
+        <div className={l.container}>
+          <div className="flex flex-col items-center gap-10">
+            <h2 className={`${l.h2} text-center`}>{title}</h2>
+            <div className={`grid w-full gap-6 ${plans.length >= 3 ? "md:grid-cols-3" : "md:grid-cols-2"} ${plans.length === 4 ? "lg:grid-cols-4" : ""}`}>
+              {plans.map((p, i) => (
+                <div key={i} className={`flex flex-col gap-4 ${card} ${p.highlighted ? "ring-4 ring-(--site-accent)" : ""}`}>
+                  <h3 className={l.h3}>{p.name}</h3>
+                  <p><span className={k ? l.h2 : "font-[family-name:var(--site-heading)] text-5xl"}>{p.price}</span><span className={k ? l.text : "text-(--site-muted)"}>{p.period}</span></p>
+                  <ul className={`flex flex-1 flex-col gap-2 ${k ? l.text : "text-(--site-muted)"}`}>
+                    {p.features.split("\n").filter(Boolean).map((f) => <li key={f} className="flex gap-2"><span aria-hidden className="text-(--site-accent)">✓</span>{f}</li>)}
+                  </ul>
+                  {cta(p.cta, "#contact", l, p.highlighted ? "solid" : "outline", puck, "light")}
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
-      </div>
-    </section>
-  ),
-};
+      </section>
+    );
+  },
+}, ["tone"]);
 
-export type TestimonialsProps = { title: string; tone: Tone; quotes: { quote: string; name: string; role: string }[] };
+export type TestimonialsProps = { title: string; tone: Tone; quotes: { quote: string; name: string; role: string }[]; look?: Look };
 
-export const Testimonials: ComponentConfig<TestimonialsProps> = {
+export const Testimonials: ComponentConfig<TestimonialsProps> = withLook({
   label: "Testimonials",
   fields: {
     title: { type: "text", label: "Title", contentEditable: true },
@@ -207,26 +223,32 @@ export const Testimonials: ComponentConfig<TestimonialsProps> = {
       { quote: "Our bookings doubled within two months.", name: "Sam T.", role: "Manager, City Physio" },
     ],
   },
-  render: ({ title, tone, quotes }) => (
-    <section className={`${toneClass[tone]} px-6 py-16 md:py-24`}>
-      <div className="mx-auto flex max-w-6xl flex-col gap-10">
-        <h2 className={`${headingFont} text-4xl tracking-tight`}>{title}</h2>
-        <div className="grid gap-6 md:grid-cols-2">
-          {quotes.map((q, i) => (
-            <figure key={i} className={`flex flex-col gap-4 p-8 ${cardOn(tone)}`}>
-              <blockquote className="text-xl leading-relaxed">“{q.quote}”</blockquote>
-              <figcaption className={`text-sm ${mutedOn(tone)}`}><strong className="font-semibold">{q.name}</strong>{q.role ? ` · ${q.role}` : ""}</figcaption>
-            </figure>
-          ))}
+  render: ({ title, tone, quotes, look, puck }) => {
+    const k = kitFor(puck, look);
+    const l = looks(k, tone);
+    return (
+      <section className={l.section}>
+        <div className={l.container}>
+          <div className="flex flex-col gap-10">
+            <h2 className={l.h2}>{title}</h2>
+            <div className="grid gap-6 md:grid-cols-2">
+              {quotes.map((q, i) => (
+                <figure key={i} className={`flex flex-col gap-4 ${l.card}`}>
+                  <blockquote className={k ? l.lead : "text-xl leading-relaxed"}>“{q.quote}”</blockquote>
+                  <figcaption className={k ? (k.label ?? l.text) : `text-sm ${l.text}`}><strong className="font-semibold">{q.name}</strong>{q.role ? ` · ${q.role}` : ""}</figcaption>
+                </figure>
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
-    </section>
-  ),
-};
+      </section>
+    );
+  },
+}, ["tone"]);
 
-export type FaqProps = { title: string; align: Align; items: { question: string; answer: string }[] };
+export type FaqProps = { title: string; align: Align; items: { question: string; answer: string }[]; look?: Look };
 
-export const Faq: ComponentConfig<FaqProps> = {
+export const Faq: ComponentConfig<FaqProps> = withLook({
   label: "FAQ",
   fields: {
     title: { type: "text", label: "Title", contentEditable: true },
@@ -247,29 +269,35 @@ export const Faq: ComponentConfig<FaqProps> = {
       { question: "Do you offer refunds?", answer: "Yes, within 30 days if you're not happy." },
     ],
   },
-  render: ({ title, align, items }) => (
-    <section className="bg-(--site-bg) px-6 py-16 text-(--site-fg) md:py-24">
-      <div className={`mx-auto flex max-w-3xl flex-col gap-8 ${alignClass[align]}`}>
-        <h2 className={`${headingFont} text-4xl tracking-tight`}>{title}</h2>
-        <div className="flex w-full flex-col divide-y divide-(--site-line) text-left">
-          {items.map((q, i) => (
-            <details key={i} className="group py-4">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-lg font-semibold">
-                {q.question}
-                <span aria-hidden className="text-(--site-accent) transition-transform group-open:rotate-45">+</span>
-              </summary>
-              <p className="mt-3 text-(--site-muted)">{q.answer}</p>
-            </details>
-          ))}
+  render: ({ title, align, items, look, puck }) => {
+    const k = kitFor(puck, look);
+    const l = looks(k);
+    return (
+      <section className={k ? l.section : "bg-(--site-bg) px-6 py-16 text-(--site-fg) md:py-24"}>
+        <div className={k ? l.container : ""}>
+          <div className={`mx-auto flex max-w-3xl flex-col gap-8 ${alignClass[align]}`}>
+            <h2 className={l.h2}>{title}</h2>
+            <div className="flex w-full flex-col divide-y divide-(--site-line) text-left">
+              {items.map((q, i) => (
+                <details key={i} className="group py-4">
+                  <summary className={`flex cursor-pointer list-none items-center justify-between gap-4 ${k ? l.h3 : "text-lg font-semibold"}`}>
+                    {q.question}
+                    <span aria-hidden className="text-(--site-accent) transition-transform group-open:rotate-45">+</span>
+                  </summary>
+                  <p className={`mt-3 ${k ? l.text : "text-(--site-muted)"}`}>{q.answer}</p>
+                </details>
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
-    </section>
-  ),
-};
+      </section>
+    );
+  },
+});
 
-export type CtaBandProps = { title: string; body: string; buttonLabel: string; buttonHref: string; tone: Tone };
+export type CtaBandProps = { title: string; body: string; buttonLabel: string; buttonHref: string; tone: Tone; look?: Look };
 
-export const CtaBand: ComponentConfig<CtaBandProps> = {
+export const CtaBand: ComponentConfig<CtaBandProps> = withLook({
   label: "Call to action",
   fields: {
     title: { type: "text", label: "Title", contentEditable: true },
@@ -279,20 +307,38 @@ export const CtaBand: ComponentConfig<CtaBandProps> = {
     tone: { type: "select", label: "Background", options: [...toneOptions] },
   },
   defaultProps: { title: "Ready when you are", body: "Tell us what you need and we'll reply within a day.", buttonLabel: "Get started", buttonHref: "#contact", tone: "accent" },
-  render: ({ title, body, buttonLabel, buttonHref, tone, puck }) => (
-    <section className="px-6 py-12">
-      <div className={`${toneClass[tone]} mx-auto flex max-w-6xl flex-col items-center gap-5 px-8 py-16 text-center ${cardRadius}`}>
-        <h2 className={`${headingFont} text-4xl tracking-tight md:text-5xl`}>{title}</h2>
-        <p className={`max-w-[50ch] text-lg ${mutedOn(tone)}`}>{body}</p>
-        {cta(buttonLabel, buttonHref, tone, "solid", puck)}
-      </div>
-    </section>
-  ),
-};
+  render: ({ title, body, buttonLabel, buttonHref, tone, look, puck }) => {
+    const k = kitFor(puck, look);
+    const l = looks(k, tone);
+    // Matching the design: one of its cards, holding its heading, text and main button.
+    if (k) {
+      return (
+        <section className={l.section}>
+          <div className={l.container}>
+            <div className={`flex flex-col items-center gap-5 text-center ${l.card}`}>
+              <h2 className={l.h2}>{title}</h2>
+              <p className={`max-w-[50ch] ${l.lead}`}>{body}</p>
+              {cta(buttonLabel, buttonHref, l, "solid", puck)}
+            </div>
+          </div>
+        </section>
+      );
+    }
+    return (
+      <section className="px-6 py-12">
+        <div className={`${toneClass[tone]} mx-auto flex max-w-6xl flex-col items-center gap-5 px-8 py-16 text-center ${cardRadius}`}>
+          <h2 className={`${l.h2} md:text-5xl`}>{title}</h2>
+          <p className={`max-w-[50ch] ${l.lead}`}>{body}</p>
+          {cta(buttonLabel, buttonHref, l, "solid", puck)}
+        </div>
+      </section>
+    );
+  },
+}, ["tone"]);
 
-export type ContactProps = { title: string; body: string; email: string; phone: string; address: string; showForm: boolean; tone: Tone };
+export type ContactProps = { title: string; body: string; email: string; phone: string; address: string; showForm: boolean; tone: Tone; look?: Look };
 
-export const Contact: ComponentConfig<ContactProps> = {
+export const Contact: ComponentConfig<ContactProps> = withLook({
   label: "Contact",
   fields: {
     title: { type: "text", label: "Title", contentEditable: true },
@@ -304,12 +350,16 @@ export const Contact: ComponentConfig<ContactProps> = {
     tone: { type: "select", label: "Background", options: [...toneOptions] },
   },
   defaultProps: { title: "Get in touch", body: "We usually reply within one working day.", email: "hello@yourbusiness.com", phone: "", address: "", showForm: true, tone: "tinted" },
-  render: ({ title, body, email, phone, address, showForm, tone }) => (
-    <section id="contact" className={`${toneClass[tone]} px-6 py-16 md:py-24`}>
-      <div className={`mx-auto grid max-w-6xl gap-12 ${showForm ? "md:grid-cols-2" : ""}`}>
+  render: ({ title, body, email, phone, address, showForm, tone, look, puck }) => {
+    const k = kitFor(puck, look);
+    const l = looks(k, tone);
+    return (
+    <section id="contact" className={l.section}>
+      <div className={l.container}>
+      <div className={`grid gap-12 ${showForm ? "md:grid-cols-2" : ""}`}>
         <div className="flex flex-col gap-4">
-          <h2 className={`${headingFont} text-4xl tracking-tight`}>{title}</h2>
-          <p className={`text-lg ${mutedOn(tone)}`}>{body}</p>
+          <h2 className={l.h2}>{title}</h2>
+          <p className={l.lead}>{body}</p>
           <dl className="mt-2 flex flex-col gap-2">
             {email ? <div><dt className="sr-only">Email</dt><dd className="font-semibold">{email}</dd></div> : null}
             {phone ? <div><dt className="sr-only">Phone</dt><dd>{phone}</dd></div> : null}
@@ -318,17 +368,19 @@ export const Contact: ComponentConfig<ContactProps> = {
         </div>
         {showForm ? (
           // A visual stand-in: the working form is built with the real site.
-          <div aria-label="Contact form preview" role="group" className={`flex flex-col gap-3 border border-(--site-line) bg-(--site-bg) p-6 text-(--site-fg) ${cardRadius}`}>
+          <div aria-label="Contact form preview" role="group" className={`flex flex-col gap-3 ${k ? l.card : `border border-(--site-line) bg-(--site-bg) p-6 text-(--site-fg) ${cardRadius}`}`}>
             {["Name", "Email", "Message"].map((f) => (
               <div key={f} className="flex flex-col gap-1">
                 <span className="text-sm font-semibold">{f}</span>
                 <div className={`rounded-[min(var(--site-button-radius),0.75rem)] border border-(--site-line) ${f === "Message" ? "h-24" : "h-11"}`} />
               </div>
             ))}
-            <span className={`${siteButton("light")} mt-2 self-start`}>Send message</span>
+            <span className={`${l.button("solid", "light")} mt-2 self-start`}>Send message</span>
           </div>
         ) : null}
       </div>
+      </div>
     </section>
-  ),
-};
+    );
+  },
+}, ["tone"]);

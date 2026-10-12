@@ -373,3 +373,10 @@ model BuilderTemplateAsset {
 
   @@unique([versionId, path])
 }
+
+/// Compiled CSS for classes visitors added (Style panel, Edit HTML) that a template's stylesheet didn't have.
+model BuilderCssCache {
+  key       String   @id
+  css       String
+  createdAt DateTime @default(now())
+}

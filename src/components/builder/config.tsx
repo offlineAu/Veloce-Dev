@@ -7,7 +7,12 @@ import {
   type ContactProps, type CtaBandProps, type FaqProps, type FeaturesProps, type HeroProps, type PricingProps, type TestimonialsProps,
 } from "./blocks/marketing";
 import { CustomHtml, type CustomHtmlProps } from "./blocks/custom-html";
+import { PIECE_CSS } from "./blocks/elements";
 import { DesignSection, type DesignSectionProps } from "./blocks/design-section";
+import {
+  Box, DField, DIcon, DImage, DLink, DRaw, DText,
+  type BoxProps, type DFieldProps, type DIconProps, type DImageProps, type DLinkProps, type DRawProps, type DTextProps,
+} from "./blocks/elements";
 import type { LoadedTemplate } from "./template-registry";
 import { DEFAULT_THEME, normalizeTheme, themeFromLegacy, themeToCssVars, type ThemeTokens } from "@/lib/builder/theme";
 import { ThemeField } from "./theme-field";
@@ -31,6 +36,13 @@ export type BuilderComponents = {
   Contact: ContactProps;
   CustomHtml: CustomHtmlProps;
   DesignSection: DesignSectionProps;
+  Box: BoxProps;
+  DText: DTextProps;
+  DImage: DImageProps;
+  DLink: DLinkProps;
+  DIcon: DIconProps;
+  DField: DFieldProps;
+  DRaw: DRawProps;
 };
 
 export type BuilderRoot = {
@@ -52,6 +64,8 @@ export const builderConfig: Config<BuilderComponents, BuilderRoot> & { component
     content: { title: "Content", components: ["Heading", "Text", "Image", "ButtonLink", "List"] },
     marketing: { title: "Ready-made sections", components: ["Hero", "Features", "Pricing", "Testimonials", "Faq", "CtaBand", "Contact"] },
     advanced: { title: "Advanced", components: ["CustomHtml"] },
+    // The pieces a design section is made of ("Edit layout" takes a section apart into these).
+    pieces: { title: "Design pieces", components: ["Box", "DText", "DImage", "DLink", "DIcon"], defaultExpanded: false },
     // Imported sections are added from "Add a section", which knows the template; an empty one would be meaningless.
     other: { visible: false },
   },
@@ -63,10 +77,11 @@ export const builderConfig: Config<BuilderComponents, BuilderRoot> & { component
     defaultProps: { title: "My new website", theme: DEFAULT_THEME },
     render: ({ children, theme, accent, font, frame, puck }) => {
       const t = theme ? normalizeTheme(theme) : themeFromLegacy({ accent, font });
-      const template = (puck.metadata as { template?: LoadedTemplate }).template;
+      const { template, extraCss } = puck.metadata as { template?: LoadedTemplate; extraCss?: string };
       return (
         <div
-          data-vt={template?.pkg.slug}
+          // Sites without a template are scoped "site", for classes a visitor adds (compiled against the site theme).
+          data-vt={template?.pkg.slug ?? "site"}
           data-vt-dark={template?.pkg.theme.scheme === "dark" ? "" : undefined}
           // The editor canvas inherits this site's stylesheet; reset its heading font so the visitor's choice applies.
           className="min-h-full bg-(--site-bg) text-(--site-fg) antialiased [&_:is(h1,h2,h3,h4)]:[font-family:var(--site-heading)]"
@@ -75,10 +90,13 @@ export const builderConfig: Config<BuilderComponents, BuilderRoot> & { component
         >
           {/* The template's compiled stylesheet: scoped to [data-vt] and prefixed, so it can't restyle anything else. */}
           {template ? <style>{template.css}</style> : null}
+          <style>{PIECE_CSS}</style>
+          {/* Classes added in the Style panel or Edit HTML that the template's stylesheet lacks (/api/builder/css). */}
+          {extraCss ? <style>{extraCss}</style> : null}
           {frame && template ? <div className={frame}>{children}</div> : children}
         </div>
       );
     },
   },
-  components: { Section, Columns, Spacer, Divider, Heading, Text, Image, ButtonLink, List, Hero, Features, Pricing, Testimonials, Faq, CtaBand, Contact, CustomHtml, DesignSection },
+  components: { Section, Columns, Spacer, Divider, Heading, Text, Image, ButtonLink, List, Hero, Features, Pricing, Testimonials, Faq, CtaBand, Contact, CustomHtml, DesignSection, Box, DText, DImage, DLink, DIcon, DField, DRaw },
 };

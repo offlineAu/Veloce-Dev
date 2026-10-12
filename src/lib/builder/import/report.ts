@@ -17,6 +17,11 @@ export class Report {
     this.notes.push(message);
   }
 
+  /** What was removed or changed, one line each (for showing in the editor). */
+  lines(): string[] {
+    return [...[...this.counts].map(([m, n]) => `${m}: ${n}`), ...[...this.warnings].map(([m, n]) => (n > 1 ? `${m} (×${n})` : m))];
+  }
+
   get warningCount() {
     return this.warnings.size;
   }

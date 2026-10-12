@@ -123,6 +123,33 @@ Commit the manifest and the package folder.
   - lists are capped in length
 - **Theme.** The design's theme also becomes builder theme tokens (`src/lib/builder/theme.ts`). Native blocks dropped into an imported template match its colours and fonts.
 
+## Building with blocks and HTML together
+
+Visitors can mix a template's sections with the builder's own blocks, and change the inside of a section.
+
+- **Match design.** Native blocks (Heading, Button, Pricing…) on a template site have a *Style: Match design / Simple* option. "Match design" uses the template's own classes for headings, text, buttons, cards, sections and images. These are derived from its sections by `deriveKit()` in `src/lib/builder/template-kit.ts`.
+- **Edit layout.** A locked `DesignSection` can be taken apart into **design pieces**, one block per element, in one undoable step:
+  - the pieces are `Box`, `DText`, `DImage`, `DLink`, `DIcon`, `DField` and `DRaw` (`src/components/builder/blocks/elements.tsx`)
+  - they're built by `sectionToElements()` in `src/lib/builder/elements.ts`
+  - pieces and builder blocks nest inside each other freely, except that links never hold links
+  - a section taken apart renders exactly like the locked one (unit-tested on every Noir section)
+- **Style panel.** Each piece gets plain controls (`src/components/builder/style-field.tsx`):
+  - arrangement, columns that become one column on phones, spacing, width
+  - colours, text size, weight and font, corners, shadow
+  - which screens it shows on
+
+  They use the template's own colours, type scale and radii, read from its CSS. Each control rewrites only its own group of classes (`src/lib/builder/class-groups.ts`), so the design's other classes and its hover and dark variants stay put.
+- **Advanced.** "Show class names (advanced)", remembered per browser, adds:
+  - a raw **Classes** field, written without the `vt:` prefix
+  - **Edit HTML** for a piece or a whole locked section. The server reads the HTML back through the importer's sanitiser (`src/server/builder/html-pieces.ts`, rate-limited, 50 KB, at most 1,500 elements). Builder blocks inside show as `<!--block:…-->` markers and are put back where the markers are.
+- **New classes.** Classes a template's stylesheet doesn't have are compiled on demand:
+  - by `POST /api/builder/css` (`src/server/builder/css-service.ts`), against the template's own theme
+  - sites without a template compile against the site theme, scoped `[data-vt="site"]`
+  - results are cached in memory and in the `BuilderCssCache` table
+  - the team's design preview compiles them on the server
+  - sites store only class names, never CSS
+- **Checks on submit.** `src/server/builder/piece-validation.ts` checks every piece: tags, attributes, class tokens, text length, links, image addresses, and limits of 3,000 pieces and depth 40.
+
 ## Image rights
 
 Images in an export (e.g. Stitch's) may be AI-generated or stock. Swap in licensed or client photography before using a template for real client work.

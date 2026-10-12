@@ -28,7 +28,11 @@ export function PrivacyNote({ children }: { children: ReactNode }) {
 
 export function SuccessPanel({ title, children, onDone }: { title: string; children: ReactNode; onDone: () => void }) {
   const ref = useRef<HTMLHeadingElement>(null);
-  useEffect(() => ref.current?.focus(), []);
+  useEffect(() => {
+    // The form it replaces was usually scrolled to its Send button; start the message at the top.
+    ref.current?.closest<HTMLElement>("[data-slot=dialog-content]")?.scrollTo({ top: 0 });
+    ref.current?.focus({ preventScroll: true });
+  }, []);
   return (
     <div className="flex flex-col items-start gap-4 py-2" role="status">
       <span className="grid size-16 place-items-center rounded-full bg-sage-100 text-sage-700">

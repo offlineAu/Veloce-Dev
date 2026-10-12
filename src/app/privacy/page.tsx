@@ -1,8 +1,8 @@
-import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import { LegalPage } from "@/components/site/legal-page";
 
 export const revalidate = 300;
-export const metadata: Metadata = { title: "Privacy notice", alternates: { canonical: "/privacy" } };
+export const metadata = pageMetadata("Privacy notice", "Read how Veloce handles website enquiries, referral information, and the personal data submitted through this website.", "/privacy");
 
 export default function PrivacyPage() {
   return (

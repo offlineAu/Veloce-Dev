@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
+import { servicePageHref } from "@/content/seo";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { landing, servicePaths, type ServiceItem } from "@/content/site";
@@ -15,7 +17,7 @@ import { cn } from "@/lib/utils";
  */
 const categoryOf = (slug: string) => servicePaths.find((p) => (p.slugs as readonly string[]).includes(slug))?.label ?? "Custom work";
 
-export function ServicesCarousel({ services, photo, closingPhoto }: { services: ServiceItem[]; photo?: string; closingPhoto?: string }) {
+export function ServicesCarousel({ services, photo, closingPhoto, refToken }: { services: ServiceItem[]; photo?: string; closingPhoto?: string; refToken?: string }) {
   const track = React.useRef<HTMLUListElement>(null);
   const [edge, setEdge] = React.useState({ start: true, end: false });
 
@@ -65,7 +67,7 @@ export function ServicesCarousel({ services, photo, closingPhoto }: { services: 
       >
         <li className="relative flex min-h-[380px] w-[78vw] max-w-[300px] shrink-0 snap-start flex-col justify-between overflow-hidden rounded-2xl bg-inverse p-6 text-on-inverse shadow-sm sm:w-[calc((100%-2*20px)/3)] lg:w-[calc((100%-3*20px)/4)] lg:max-w-none">
           {photo ? (
-            <Image src={photo} unoptimized alt="" fill sizes="(min-width: 1024px) 300px, 78vw" className="object-cover opacity-80" />
+            <Image src={photo} alt="" fill sizes="(min-width: 1024px) 300px, 78vw" className="object-cover opacity-80" />
           ) : (
             <div aria-hidden className="ring-pattern absolute -bottom-40 -right-40 size-[520px] rounded-full opacity-60 invert" />
           )}
@@ -88,7 +90,7 @@ export function ServicesCarousel({ services, photo, closingPhoto }: { services: 
               <span className="mb-6 rounded border border-line bg-neutral-100 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-muted">
                 {categoryOf(s.slug)}
               </span>
-              <h3 className="mb-5 text-lg font-bold leading-snug tracking-tight text-ink">{s.title}</h3>
+              <h3 className="mb-5 text-lg font-bold leading-snug tracking-tight text-ink">{servicePageHref(s.slug, refToken) ? <Link href={servicePageHref(s.slug, refToken)!} className="hover:underline">{s.title}</Link> : s.title}</h3>
               <div aria-hidden className="flex h-28 w-16 flex-col items-center justify-between rounded-xl border-2 border-line bg-neutral-100 p-2 shadow-inner transition-colors group-hover:border-ink/30">
                 <span className="h-1.5 w-6 rounded-full bg-ink/15" />
                 <span className="grid size-9 place-items-center rounded-lg bg-inverse text-accent">
@@ -112,7 +114,7 @@ export function ServicesCarousel({ services, photo, closingPhoto }: { services: 
           </li>
         ))}
         <li className="relative flex min-h-[380px] w-[78vw] max-w-[300px] shrink-0 snap-start flex-col justify-end overflow-hidden rounded-2xl bg-inverse p-6 text-on-inverse shadow-sm sm:w-[calc((100%-2*20px)/3)] lg:w-[calc((100%-3*20px)/4)] lg:max-w-none">
-          {closingPhoto ? <Image src={closingPhoto} unoptimized alt="" fill sizes="(min-width: 1024px) 300px, 78vw" className="object-cover opacity-80" /> : null}
+          {closingPhoto ? <Image src={closingPhoto} alt="" fill sizes="(min-width: 1024px) 300px, 78vw" className="object-cover opacity-80" /> : null}
           <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-transparent" />
           <div className="relative flex flex-col gap-3">
             <h3 className="text-xl font-bold tracking-tight text-on-inverse">{landing.closing.title}</h3>

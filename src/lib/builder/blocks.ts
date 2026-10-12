@@ -19,6 +19,14 @@ export const BLOCK_TYPES = [
   "Contact",
   "CustomHtml",
   "DesignSection",
+  // Design pieces (lib/builder/elements.ts)
+  "Box",
+  "DText",
+  "DImage",
+  "DLink",
+  "DIcon",
+  "DField",
+  "DRaw",
 ] as const;
 
 export type BlockType = (typeof BLOCK_TYPES)[number];
@@ -32,7 +40,7 @@ const isBlock = (v: unknown): v is BlockItem =>
   !!v && typeof v === "object" && typeof (v as BlockItem).type === "string" && !!(v as BlockItem).props && typeof (v as BlockItem).props === "object";
 
 /** Slot props (nested blocks) are arrays of block items. */
-const isSlot = (v: unknown): v is BlockItem[] => Array.isArray(v) && v.length > 0 && v.every(isBlock);
+export const isSlot = (v: unknown): v is BlockItem[] => Array.isArray(v) && v.length > 0 && v.every(isBlock);
 
 /** Calls `visit` on every block, including those nested in slots. `visit` may return a replacement. */
 export function mapBlocks(items: BlockItem[], visit: (b: BlockItem) => BlockItem): BlockItem[] {

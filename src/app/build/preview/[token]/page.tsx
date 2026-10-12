@@ -4,6 +4,9 @@ import { notFound } from "next/navigation";
 import { DraftRender } from "@/components/builder/draft-render";
 import { migrateDoc, pageRefs } from "@/lib/builder/site-doc";
 import { isWellFormedToken } from "@/lib/token";
+import { pieceClasses } from "@/lib/builder/elements";
+import type { BlockItem } from "@/lib/builder/blocks";
+import { compileExtraCss, validClasses } from "@/server/builder/css-service";
 import { readTemplate } from "@/server/builder/template-registry";
 import { db } from "@/server/db";
 
@@ -28,6 +31,11 @@ export default async function DraftPreviewPage({ params, searchParams }: Props) 
   const page = doc.pages.find((p) => p.path === wanted) ?? doc.pages[0]!;
   // Designs stay on the template version they were made with, even after the template is updated.
   const template = doc.templateRef ? ((await readTemplate(doc.templateRef.slug, doc.templateRef.version, { requirePublished: false, includeDrafts: true })) ?? undefined) : undefined;
+  // Classes the visitor added that the template's stylesheet lacks, compiled (and cached) on the server.
+  const classes = validClasses(pieceClasses((page.data.content ?? []) as BlockItem[]));
+  const extraCss = classes.length
+    ? ((await compileExtraCss(doc.templateRef && template ? doc.templateRef : { site: doc.theme }, classes, { includeDrafts: true }).catch(() => null)) ?? "")
+    : "";
 
   return (
     <>
@@ -53,7 +61,7 @@ export default async function DraftPreviewPage({ params, searchParams }: Props) 
         ) : null}
       </div>
       <main id="main" className="pb-24">
-        <DraftRender page={page} pages={pageRefs(doc)} template={template} />
+        <DraftRender page={page} pages={pageRefs(doc)} template={template} extraCss={extraCss} />
       </main>
     </>
   );

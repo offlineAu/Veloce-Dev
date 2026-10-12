@@ -24,6 +24,10 @@ import { SAVE_SECTION_EVENT, usePuck } from "./editor-hooks";
 import { PagesContext, type BuilderMetadata } from "./links";
 import { PageTabs, type PageAction, type PageSource } from "./page-tabs";
 import { ReviewBanner, type ReviewInfo } from "./review-banner";
+import { EditLayoutAction } from "./edit-layout";
+import { useExtraCss, type ExtraCssTarget } from "./extra-css";
+import { pieceClasses } from "@/lib/builder/elements";
+import type { BlockItem } from "@/lib/builder/blocks";
 import { TemplateContext, loadTemplate, useTemplate } from "./template-registry";
 import { findSection, type TemplateListing } from "@/lib/builder/template-package";
 
@@ -60,6 +64,10 @@ async function requestedDoc(requested: string | undefined, templates: TemplateLi
   return { doc: docFromTemplate(pkg), templateId: imported.slug };
 }
 
+// Stable across renders: Puck re-runs its viewport setup when this object changes, and on a fresh history that
+// overwrites the starting point, so the first edit couldn't be undone.
+const IFRAME = { enabled: true, waitForStyles: true };
+
 export default function BuilderApp({ companyName, contactEmail, refToken, requestedTemplate, templates, review }: BuilderAppProps) {
   // The editor only ever renders in the browser, so a saved draft can be read while setting up state.
   // A saved draft wins over a template link, so the link never wipes someone's work: the picker opens instead.
@@ -81,6 +89,12 @@ export default function BuilderApp({ companyName, contactEmail, refToken, reques
   const latest = useRef<Session | null>(initial);
   const saveTimer = useRef<number | undefined>(undefined);
   const template = useTemplate(session?.doc.templateRef);
+  const sessionRef = useRef(session);
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
+  // Piece classes on the open page (and the site theme, for sites without a template), for compiling added classes.
+  const [edited, setEdited] = useState<{ on: Session; classes: string[]; theme: ThemeTokens } | null>(null);
 
   const save = useCallback(() => {
     const s = latest.current;
@@ -138,6 +152,9 @@ export default function BuilderApp({ companyName, contactEmail, refToken, reques
       const theme = data.root.props?.theme as ThemeTokens | undefined;
       if (theme && JSON.stringify(theme) !== JSON.stringify(s.doc.theme)) doc = withTheme(doc, normalizeTheme(theme));
       latest.current = { ...s, doc };
+      const classes = pieceClasses(data.content as BlockItem[]);
+      const on = sessionRef.current;
+      setEdited((e) => (e && e.on === on && e.classes.join(" ") === classes.join(" ") && e.theme === doc.theme ? e : on ? { on, classes, theme: doc.theme } : null));
       window.clearTimeout(saveTimer.current);
       saveTimer.current = window.setTimeout(save, 800);
     },
@@ -193,9 +210,21 @@ export default function BuilderApp({ companyName, contactEmail, refToken, reques
     [template],
   );
 
-  const metadata = useMemo<BuilderMetadata & { template?: typeof template }>(
-    () => ({ pages, template, navigate: (id) => onPageAction({ type: "select", id }) }),
-    [pages, template, onPageAction],
+  // A fresh editor (another page, a new site) starts from the page it opens; edits on it then update `edited`.
+  const added = edited && edited.on === session ? edited : null;
+  const openClasses = useMemo(() => {
+    const page = session?.doc.pages.find((p) => p.id === session.activeId);
+    return page ? pieceClasses(((page.data as PageData).content ?? []) as BlockItem[]) : [];
+  }, [session]);
+  const cssTarget = useMemo<ExtraCssTarget | null>(
+    () => (template ? { slug: template.pkg.slug, version: template.pkg.version } : session ? { theme: added?.theme ?? session.doc.theme } : null),
+    [template, session, added?.theme],
+  );
+  const extraCss = useExtraCss(cssTarget, added?.classes ?? openClasses);
+
+  const metadata = useMemo<BuilderMetadata & { template?: typeof template; extraCss?: string }>(
+    () => ({ pages, template, extraCss, navigate: (id) => onPageAction({ type: "select", id }) }),
+    [pages, template, extraCss, onPageAction],
   );
 
   const overrides = useMemo<Partial<Overrides>>(
@@ -230,7 +259,7 @@ export default function BuilderApp({ companyName, contactEmail, refToken, reques
                 headerTitle={active.title}
                 headerPath={active.path}
                 height="100%"
-                iframe={{ enabled: true, waitForStyles: true }}
+                iframe={IFRAME}
               >
                 {/* Dialogs that edit the open page need the editor's state, so they live inside <Puck>. */}
                 <SectionsDialog open={panel === "sections"} onOpenChange={(o) => setPanel(o ? "sections" : null)} template={template?.pkg} />
@@ -311,6 +340,7 @@ function BlockActionBar({ label, parentAction, children }: { label?: string; par
     <ActionBar label={name}>
       <ActionBar.Group>{parentAction}</ActionBar.Group>
       <ActionBar.Group>
+        <EditLayoutAction />
         <SaveSectionAction />
         {children}
       </ActionBar.Group>

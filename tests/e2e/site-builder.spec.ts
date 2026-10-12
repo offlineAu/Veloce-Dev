@@ -189,6 +189,82 @@ test.describe("site builder", () => {
     await expect(page.getByRole("navigation", { name: "Pages in this design" }).locator('[aria-current="page"]')).toHaveText("Resident Artists");
   });
 
+  test("edit layout: style a piece with plain controls and new classes, and the team preview matches", async ({ page }) => {
+    const email = uniqueEmail("style");
+    await page.goto("/build?template=noir-needle");
+    const frame = canvas(page);
+    await frame.getByText("Selected Permanent Archives").click({ timeout: 30_000 });
+    await page.getByRole("button", { name: "Edit layout" }).click();
+
+    // Now a piece of its own: plain controls change its classes, using the design's scale.
+    const heading = frame.getByText("Selected Permanent Archives");
+    await heading.click();
+    // (The editor keeps a hidden copy of the panel; only the visible one counts.)
+    const panel = (name: string | RegExp) => page.getByLabel(name).filter({ visible: true });
+    await panel(/^Size/).selectOption("9xl");
+    await expect.poll(() => heading.evaluate((e) => getComputedStyle(e).fontSize)).toBe("128px");
+
+    // Advanced: a class the design never used is compiled on demand with the design's own colours.
+    await panel("Show class names (advanced)").check();
+    const classes = panel(/^Classes \(Tailwind\)/);
+    await classes.fill(`${await classes.inputValue()} tracking-[0.3em] bg-primary/20`);
+    await classes.press("Enter");
+    await expect.poll(() => heading.evaluate((e) => getComputedStyle(e).letterSpacing)).not.toBe("normal");
+    await expect.poll(() => heading.evaluate((e) => getComputedStyle(e).backgroundColor)).toMatch(/^(oklab|color|rgba)\(/);
+
+    await page.waitForTimeout(1000); // the draft saves shortly after the last change
+    await page.getByRole("button", { name: "Send design" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel(/^Name/).fill("Studio Owner");
+    await dialog.getByLabel(/^Email/).fill(email);
+    await dialog.getByLabel(/What are you looking to build/).fill("This, restyled");
+    await dialog.getByLabel(/I agree that/).check();
+    await page.waitForTimeout(1700);
+    await dialog.getByRole("button", { name: "Send project inquiry" }).click();
+    await expect(dialog.getByRole("heading", { name: "Inquiry received" })).toBeVisible();
+
+    const [row] = await query<{ token: string }>(`SELECT d.token FROM "Lead" l JOIN "SiteDraft" d ON d."leadId"=l.id WHERE l.email=$1`, [email]);
+    await page.goto(`/build/preview/${row!.token}`);
+    const sent = page.getByText("Selected Permanent Archives");
+    expect(await sent.evaluate((e) => getComputedStyle(e).fontSize)).toBe("128px");
+    expect(await sent.evaluate((e) => getComputedStyle(e).letterSpacing)).not.toBe("normal");
+  });
+
+  test("edit HTML: change a section's markup and classes, and unsafe parts are removed", async ({ page }) => {
+    await page.goto("/build?template=noir-needle");
+    const frame = canvas(page);
+    await frame.getByText("Selected Permanent Archives").click({ timeout: 30_000 });
+    const panel = (name: string | RegExp) => page.getByLabel(name).filter({ visible: true });
+    await panel("Show class names (advanced)").check();
+    await page.getByRole("button", { name: "Edit HTML" }).filter({ visible: true }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Edit HTML" });
+    const code = dialog.getByRole("textbox", { name: /HTML/ });
+    const html = await code.inputValue();
+    expect(html).toContain("Selected Permanent Archives");
+    expect(html).not.toContain("vt:");
+    await code.fill(
+      html
+        .replace("Selected Permanent Archives", "Our Favourite Pieces")
+        .replace(/<h2 class="/, '<h2 onclick="alert(1)" class="tracking-[0.4em] ')
+        .replace("</h2>", '</h2><script>alert(1)</script><a href="javascript:alert(1)">Bad link</a>'),
+    );
+    await dialog.getByRole("button", { name: "Apply" }).click();
+    await expect(dialog).toBeHidden();
+
+    const heading = frame.getByText("Our Favourite Pieces");
+    await expect(heading).toBeVisible();
+    await expect(frame.getByText("Selected Permanent Archives")).toHaveCount(0);
+    await expect.poll(() => heading.evaluate((e) => getComputedStyle(e).letterSpacing)).not.toBe("normal");
+    expect(await heading.getAttribute("onclick")).toBeNull();
+    await expect(frame.locator("script")).toHaveCount(0);
+    expect((await frame.getByText("Bad link").getAttribute("href")) ?? "").not.toContain("javascript");
+
+    // One undo brings the locked section back.
+    await page.locator('button[title="undo"]').first().click();
+    await expect(frame.getByText("Selected Permanent Archives")).toBeVisible();
+  });
+
   test("reviewing an imported template shows its report and a section checklist", async ({ page }) => {
     await page.goto("/build?template=noir-needle&review=1");
     const review = page.getByRole("region", { name: "Template review" });

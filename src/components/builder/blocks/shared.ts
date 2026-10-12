@@ -1,3 +1,6 @@
+import { kitOf, type DesignKit } from "@/lib/builder/template-kit";
+import type { LoadedTemplate } from "../template-registry";
+
 /*
  * Styling shared by the builder's blocks. A visitor's page is not the Veloce site, so blocks never use the site's
  * own palette: every colour, font and radius comes from the page theme as --site-* variables (lib/builder/theme.ts),
@@ -59,6 +62,60 @@ export const siteButton = (tone: Tone = "light", variant: "solid" | "outline" = 
   if (tone === "accent") return `${base} bg-(--site-on-accent) text-(--site-accent)`;
   return `${base} bg-(--site-accent) text-(--site-on-accent)`;
 };
+
+/**
+ * "Match design" (default) or "Simple". On a site built from a designer template, matching blocks use the template's
+ * own classes (its design kit) so they look like the rest of the page; Simple keeps the theme-based look above.
+ */
+export type Look = "design" | "simple";
+
+/** The design kit when this block should match the template; undefined for a Simple block or a site without one. */
+export function kitFor(puck: { metadata?: unknown }, look?: Look): DesignKit | undefined {
+  if (look === "simple") return undefined;
+  const t = (puck.metadata as { template?: LoadedTemplate } | undefined)?.template;
+  return t ? kitOf(t.pkg, t.css) : undefined;
+}
+
+/**
+ * Adds the Style choice to a block. It only shows on template sites, and while matching the design it hides the
+ * options the design decides (background, sizes…).
+ */
+export function withLook<C extends { fields?: object }>(config: C, decidedByDesign: string[] = []): C {
+  return {
+    ...config,
+    fields: {
+      ...config.fields,
+      look: { type: "radio", label: "Style", options: [{ label: "Match design", value: "design" }, { label: "Simple", value: "simple" }] },
+    },
+    resolveFields: (data: { props: { look?: Look } }, params: { fields: Record<string, unknown>; metadata: unknown }) => {
+      const fields = { ...params.fields };
+      if (!(params.metadata as { template?: unknown } | undefined)?.template) {
+        delete fields.look;
+        return fields;
+      }
+      if (data.props.look !== "simple") for (const k of decidedByDesign) delete fields[k];
+      return fields;
+    },
+  };
+}
+
+/** Class strings for a block, from the design kit when matching it, otherwise from the theme. */
+export function looks(k: DesignKit | undefined, tone: Tone = "light") {
+  return {
+    section: k ? (k.section ?? "py-16") : `${toneClass[tone]} px-6 py-16 md:py-24`,
+    container: k ? (k.container ?? "mx-auto max-w-6xl px-6") : "mx-auto max-w-6xl",
+    h1: k?.h1 ?? `${headingFont} text-5xl leading-[1.05] tracking-tight md:text-6xl`,
+    h2: k?.h2 ?? `${headingFont} text-4xl tracking-tight`,
+    h3: k?.h3 ?? "text-xl font-semibold",
+    text: k?.text ?? mutedOn(tone),
+    lead: k?.text ?? `text-lg leading-relaxed ${mutedOn(tone)}`,
+    label: k?.label ?? `${labelClass} ${accentTextOn(tone)}`,
+    card: k?.card ?? `${cardOn(tone)} p-6`,
+    image: k?.image ?? `w-full object-cover ${cardRadius}`,
+    button: (variant: "solid" | "outline" = "solid", on: Tone = tone) =>
+      k ? ((variant === "outline" ? (k.buttonAlt ?? k.button) : k.button) ?? siteButton(on, variant)) : siteButton(on, variant),
+  };
+}
 
 /** Links on a draft go nowhere while designing; only http(s), mailto, tel, anchors and site paths are kept. */
 export function safeHref(href: string | undefined): string {

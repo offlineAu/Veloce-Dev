@@ -4,7 +4,8 @@ import { env } from "@/config/env";
 export default function robots(): MetadataRoute.Robots {
   const base = env().NEXT_PUBLIC_SITE_URL;
   return {
-    rules: { userAgent: "*", allow: "/", disallow: ["/refer/", "/admin/", "/api/"] },
+    // Referral, builder, and preview pages remain crawlable so their noindex tags can be read.
+    rules: { userAgent: "*", allow: "/", disallow: ["/admin/", "/api/"] },
     sitemap: `${base}/sitemap.xml`,
   };
 }

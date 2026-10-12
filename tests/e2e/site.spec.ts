@@ -4,8 +4,6 @@ import { TOKENS, query, resetFixtures, uniqueEmail } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
   await resetFixtures();
-  // The first-visit loader covers the page for ~2s; these tests are about the page itself (see boot-loader.spec.ts).
-  await page.addInitScript(() => { try { sessionStorage.setItem("veloce-booted", "1"); } catch {} });
 });
 
 /** Scroll through the page so once-only scroll reveals have run, then return to the top. */
@@ -61,7 +59,7 @@ test.describe("sales page", () => {
     await expect(page.getByText("Build fast. Build what works.").first()).toBeVisible();
     await expect(page.locator("[data-services-explorer]").getByRole("heading", { name: "Business websites" })).toBeVisible();
     await expect(page.getByText("Special offer")).toHaveCount(0);
-    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", /localhost:3000\/?$/);
+    expect(new URL((await page.locator('link[rel="canonical"]').getAttribute("href"))!).pathname).toBe("/");
   });
 
   test("active referral shows offer, expiry and referrer", async ({ page }) => {
@@ -336,8 +334,8 @@ test.describe("security and exposure", () => {
     expect(res.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
   });
 
-  test("robots and sitemap exclude personal pages", async ({ request }) => {
-    expect(await (await request.get("/robots.txt")).text()).toContain("Disallow: /refer/");
+  test("personal pages are excluded from the sitemap but remain crawlable for noindex", async ({ request }) => {
+    expect(await (await request.get("/robots.txt")).text()).not.toContain("Disallow: /refer/");
     expect(await (await request.get("/sitemap.xml")).text()).not.toContain("/refer/");
   });
 });

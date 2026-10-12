@@ -7,10 +7,11 @@ import type { BuilderMetadata } from "./links";
 import type { LoadedTemplate } from "./template-registry";
 
 /** One page of a submitted design, as the editor showed it but without editing tools. Links between pages work. */
-export function DraftRender({ page, pages, template }: { page: SitePage; pages: PageRef[]; template?: LoadedTemplate }) {
-  const metadata: BuilderMetadata & { template?: LoadedTemplate } = {
+export function DraftRender({ page, pages, template, extraCss }: { page: SitePage; pages: PageRef[]; template?: LoadedTemplate; extraCss?: string }) {
+  const metadata: BuilderMetadata & { template?: LoadedTemplate; extraCss?: string } = {
     pages,
     template,
+    extraCss,
     pageHref: (p) => `?page=${encodeURIComponent(p.path)}`,
   };
   return <Render config={builderConfig} data={page.data as Partial<BuilderData>} metadata={metadata} />;

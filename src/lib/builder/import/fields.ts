@@ -53,7 +53,7 @@ const REACT_NAMES: Record<string, string> = {
   viewbox: "viewBox", "xlink:href": "xlinkHref", gradientunits: "gradientUnits", gradienttransform: "gradientTransform",
   preserveaspectratio: "preserveAspectRatio", clippath: "clipPath",
 };
-const SVG_TAG_CASE: Record<string, string> = { lineargradient: "linearGradient", radialgradient: "radialGradient", clippath: "clipPath" };
+export const SVG_TAG_CASE: Record<string, string> = { lineargradient: "linearGradient", radialgradient: "radialGradient", clippath: "clipPath" };
 
 /** Visible words of an element, leaving out icon ligatures ("arrow_forward"). */
 const wordsOf = (n: IRNode): string =>
@@ -74,7 +74,7 @@ function parseStyle(style: string): Record<string, string> {
   return out;
 }
 
-function reactAttrs(el: IREl, env: FieldEnv, svg: boolean): Record<string, AttrValue> {
+export function reactAttrs(el: IREl, env: FieldEnv, svg: boolean): Record<string, AttrValue> {
   const out: Record<string, AttrValue> = {};
   for (const [name, value] of Object.entries(el.attrs)) {
     if (name.startsWith("data-") || name === "srcset" || name === "sizes") continue; // consumed here or not imported

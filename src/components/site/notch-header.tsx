@@ -97,8 +97,12 @@ export function NotchHeader({
   companyName,
   links,
   menuCta,
+  homeHref = "/",
+  compactOnScroll = true,
 }: {
   companyName: string;
+  homeHref?: string;
+  compactOnScroll?: boolean;
   links: NavLink[];
   /** Labelled call to action shown at the bottom of the mobile menu. */
   menuCta?: React.ReactNode;
@@ -109,11 +113,11 @@ export function NotchHeader({
   // Same threshold as the quick dock: once it is on screen, the header keeps only the logo and the conversation button.
   const [compact, setCompact] = React.useState(false);
   React.useEffect(() => {
-    const on = () => setCompact(window.scrollY > 480);
+    const on = () => setCompact(compactOnScroll && window.scrollY > 480);
     on();
     window.addEventListener("scroll", on, { passive: true });
     return () => window.removeEventListener("scroll", on);
-  }, []);
+  }, [compactOnScroll]);
   // Sliding pill: one absolutely positioned element, moved to the active link's box (links live in two nav groups).
   const barRef = React.useRef<HTMLDivElement>(null);
   const items = React.useRef(new Map<string, HTMLElement>());
@@ -247,7 +251,7 @@ export function NotchHeader({
                 </SheetContent>
               </Sheet>
 
-              <Link href="/" className="flex shrink-0 items-center gap-2.5 font-heading text-lg text-ink" aria-label={`${companyName} home`}>
+              <Link href={homeHref} className="flex shrink-0 items-center gap-2.5 font-heading text-lg text-ink" aria-label={`${companyName} home`}>
                 <LogoMark className="size-7" />
                 <span>{companyName}</span>
               </Link>
