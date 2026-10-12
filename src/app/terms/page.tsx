@@ -1,8 +1,8 @@
-import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import { LegalPage } from "@/components/site/legal-page";
 
 export const revalidate = 300;
-export const metadata: Metadata = { title: "Terms of use", alternates: { canonical: "/terms" } };
+export const metadata = pageMetadata("Terms of use", "Read the terms for using Veloce’s website, sending enquiries, and discussing proposed development work.", "/terms");
 
 export default function TermsPage() {
   return (

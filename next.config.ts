@@ -24,6 +24,14 @@ const csp = buildCsp();
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  async redirects() {
+    return [{
+      source: "/:path*",
+      has: [{ type: "host", value: "www.veloceapp.dev" }],
+      destination: "https://veloceapp.dev/:path*",
+      permanent: true,
+    }];
+  },
   // The template importer (only loaded by /api/dev/templates) compiles CSS with Tailwind, which uses a native
   // module (lightningcss). Bundling it fails, so these load from node_modules at runtime instead...
   serverExternalPackages: ["@tailwindcss/node", "@tailwindcss/oxide", "lightningcss", "sharp"],

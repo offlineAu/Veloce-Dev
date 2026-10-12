@@ -21,8 +21,8 @@ export function Brand({ name }: { name: string }) {
   );
 }
 
-export function SiteHeader({ companyName, links, menuCta }: { companyName: string; links: NavLink[]; menuCta?: ReactNode }) {
-  return <NotchHeader companyName={companyName} links={links} menuCta={menuCta} />;
+export function SiteHeader({ companyName, links, menuCta, homeHref, compactOnScroll }: { companyName: string; links: NavLink[]; menuCta?: ReactNode; homeHref?: string; compactOnScroll?: boolean }) {
+  return <NotchHeader companyName={companyName} links={links} menuCta={menuCta} homeHref={homeHref} compactOnScroll={compactOnScroll} />;
 }
 
 export interface FooterColumn {

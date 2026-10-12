@@ -1,6 +1,8 @@
 "use client";
 
 import { useId, useState } from "react";
+import Link from "next/link";
+import { servicePageHref } from "@/content/seo";
 import { ArrowRight, ChevronDown, Globe, RefreshCw, Workflow } from "lucide-react";
 import { servicePaths, type ServiceItem } from "@/content/site";
 import { LogoMark } from "@/components/brand/logo";
@@ -9,7 +11,7 @@ import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import styles from "./veloce-bento.module.css";
 
-export function ServicesExplorer({ services }: { services: ServiceItem[] }) {
+export function ServicesExplorer({ services, refToken }: { services: ServiceItem[]; refToken?: string }) {
   const [path, setPath] = useState("all");
   const [open, setOpen] = useState<string | null>(services[0]?.slug ?? null);
   const id = useId();
@@ -58,6 +60,7 @@ export function ServicesExplorer({ services }: { services: ServiceItem[] }) {
                   <span className={styles.serviceGlyph}><Icon name={s.icon} /></span><span>{s.title}</span><ChevronDown aria-hidden className={styles.chevron} />
                 </button></h3>
                 {s.benefit ? <p className={styles.serviceBenefit}>{s.benefit}</p> : null}
+                {servicePageHref(s.slug, refToken) ? <Link href={servicePageHref(s.slug, refToken)!} className="px-5 py-3 text-sm font-semibold underline underline-offset-4">Explore {s.title.toLowerCase()} →</Link> : null}
                 <div id={detailId} hidden={!expanded} className={styles.serviceDetail}>
                   <p>{s.description}</p>
                   <OpenInquiryButton service={{ slug: s.slug, title: s.title }} variant="ghost" size="sm" className={styles.inquiry} aria-label={`Ask about ${s.title}`}>Ask about this <ArrowRight aria-hidden className="size-4" /></OpenInquiryButton>

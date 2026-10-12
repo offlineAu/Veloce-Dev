@@ -1,9 +1,7 @@
-import type { Metadata } from "next";
-import { Suspense } from "react";
-import { PageLoading } from "@/components/site/page-loading";
 import { CardRibbons } from "@/components/brand/card-ribbons";
 import { ArrowRight, ArrowUpRight, Check, Minus, MessageCircleMore } from "lucide-react";
 import { HeroHeadline } from "@/components/motion/hero-headline";
+import { HeroSlideshow } from "@/components/motion/hero-slideshow";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import Image from "next/image";
@@ -36,26 +34,19 @@ import { getCompanyProfile } from "@/server/services/company";
 import { getServices } from "@/server/services/services";
 import { MeetingProvider, OpenMeetingButton } from "@/components/booking/meeting-provider";
 import { publicMeetingConfig } from "@/server/booking/config";
+import { servicePages, servicePageHref, withReferral } from "@/content/seo";
+import { pageMetadata } from "@/lib/seo";
+import { OrganizationData } from "@/components/site/structured-data";
 
-export const metadata: Metadata = {
-  alternates: { canonical: "/" },
-  // Same page for every ?ref= value; only the canonical URL is indexed.
-};
+// Same page for every referral or tracking query; only the clean URL is canonical.
+export const metadata = pageMetadata("Business Website Design & Development", "Custom business websites, website redesign, and e-commerce development from Veloce. Practical websites built around your customers and business needs.", "/");
 
 /** Owner-supplied photography: drop files at these paths in public/ and the hero / featured card pick them up. */
 const photo = (file: string) => (existsSync(join(process.cwd(), "public", "images", file)) ? `/images/${file}` : undefined);
 
 type HomePageProps = { searchParams: Promise<{ ref?: string | string[] }> };
 
-export default function HomePage(props: HomePageProps) {
-  return (
-    <Suspense fallback={<PageLoading />}>
-      <HomeContent {...props} />
-    </Suspense>
-  );
-}
-
-async function HomeContent({ searchParams }: HomePageProps) {
+export default async function HomePage({ searchParams }: HomePageProps) {
   const sp = await searchParams;
   const ref = Array.isArray(sp.ref) ? sp.ref[0] : sp.ref;
   const [company, services, campaign] = await Promise.all([
@@ -71,8 +62,10 @@ async function HomeContent({ searchParams }: HomePageProps) {
     { href: "#approach", label: "Our approach" },
     { href: "#capabilities", label: "Capabilities" },
     { href: "#offer", label: "Offer" },
+    { href: withReferral("/about", campaign?.token), label: "About" },
   ];
-  const heroPhoto = photo("hero-overhead.webp");
+  // Hero carousel, in order.
+  const heroPhotos = [photo("hero-ar-dashboard.webp"), photo("hero-dev-pair.webp"), photo("card-office.webp")].filter((src): src is string => !!src);
   const teamPhoto = photo("card-builders.webp");
   const reviewPhoto = photo("card-office.webp");
   const contactPhoto = photo("contact-code.webp");
@@ -87,7 +80,8 @@ async function HomeContent({ searchParams }: HomePageProps) {
   return (
     <InquiryProvider companyName={company.name} contactEmail={company.contactEmail} refToken={campaign?.token} introducedBy={introducedBy}>
     <MeetingProvider config={publicMeetingConfig()} refToken={campaign?.token} contactEmail={company.contactEmail}>
-      <SiteHeader companyName={company.name} links={links}
+      <OrganizationData company={company} />
+      <SiteHeader companyName={company.name} homeHref={withReferral("/", campaign?.token)} links={links}
         menuCta={<OpenInquiryButton className="w-full">Start a conversation</OpenInquiryButton>} />
       <div className="relative isolate">
       <Aura />
@@ -96,8 +90,8 @@ async function HomeContent({ searchParams }: HomePageProps) {
         <section className="relative px-3 pb-6 pt-3 md:pb-10" aria-labelledby="hero-title">
           <div className="relative isolate flex min-h-[max(580px,calc(100svh-5rem))] flex-col justify-between overflow-hidden rounded-[32px] bg-gradient-to-br from-[#1a2e3b] via-[#244252] to-[#12202a] px-6 py-10 text-white shadow-lg sm:p-12 sm:rounded-[40px] lg:px-[max(4rem,calc((100%-80rem)/2+4rem))] lg:py-16">
             <div aria-hidden className="absolute inset-0 -z-10">
-              {heroPhoto ? (
-                <Image src={heroPhoto} unoptimized alt="" fill priority sizes="100vw" className="object-cover object-center opacity-60 mix-blend-overlay brightness-95" />
+              {heroPhotos.length ? (
+                <HeroSlideshow photos={heroPhotos} className="object-cover object-center opacity-60 mix-blend-overlay brightness-95" />
               ) : (
                 <div className="ring-pattern absolute -right-48 -top-48 size-[860px] rounded-full opacity-25 invert" />
               )}
@@ -122,6 +116,7 @@ async function HomeContent({ searchParams }: HomePageProps) {
               <h1 id="hero-title" className="text-[clamp(44px,6.4vw,76px)] leading-[0.95] text-white">
                 <HeroHeadline text={brand.value} bold={3} />
               </h1>
+              <p className="max-w-lg text-lg leading-relaxed text-white/85">Custom business website design and development, website redesign, and e-commerce websites for businesses working with us remotely.</p>
             </div>
 
             <div className="grid items-end gap-8 pt-16 lg:grid-cols-12">
@@ -170,7 +165,7 @@ async function HomeContent({ searchParams }: HomePageProps) {
             eyebrow={landing.servicesEyebrow}
             titleId="services-carousel-title" title={landing.servicesTitle} bold={6} className="max-w-5xl"
           />
-          <ServicesCarousel services={services} photo={teamPhoto} closingPhoto={reviewPhoto} />
+          <ServicesCarousel services={services} photo={teamPhoto} closingPhoto={reviewPhoto} refToken={campaign?.token} />
         </section>
 
         <section className="relative py-10" aria-labelledby="fit-title">
@@ -295,7 +290,7 @@ async function HomeContent({ searchParams }: HomePageProps) {
             titleId="services-title" title="Practical systems, built around your business." bold={4}
             lead="Websites, customer applications, and business tools. Explore the work you need, then talk with us about the right scope."
           />
-          <ServicesExplorer services={services} />
+          <ServicesExplorer services={services} refToken={campaign?.token} />
         </section>
 
         <section id="offer" className="relative py-12 md:py-20" aria-label="Offer">
@@ -334,7 +329,7 @@ async function HomeContent({ searchParams }: HomePageProps) {
             <BorderBeam />
             {contactPhoto ? (
               <div aria-hidden className="absolute inset-0 -z-10">
-                <Image src={contactPhoto} unoptimized alt="" fill sizes="100vw" className="object-cover opacity-25 mix-blend-luminosity" />
+                <Image src={contactPhoto} alt="" fill sizes="(min-width: 1280px) 1152px, 100vw" className="object-cover opacity-25 mix-blend-luminosity" />
                 <div className="absolute inset-0 bg-gradient-to-r from-inverse via-inverse/85 to-inverse/40" />
               </div>
             ) : null}
@@ -383,7 +378,7 @@ async function HomeContent({ searchParams }: HomePageProps) {
       <SiteFooter
         showContacts={false} name={company.name} description={company.description} email={company.contactEmail} websiteUrl={company.websiteUrl} channels={company.channels}
         contactHref="#contact"
-        columns={[{ title: "What we build", links: services.slice(0, 5).map((sv) => ({ label: sv.title, href: "#services" })) }]}
+        columns={[{ title: "Website services", links: servicePages.map((page) => ({ label: page.label, href: servicePageHref(page.serviceSlug, campaign?.token)! })) }, { title: "Veloce", links: [{ label: "About", href: withReferral("/about", campaign?.token) }] }]}
       />
       <QuickDock
         shortcuts={links}
