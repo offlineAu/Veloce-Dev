@@ -171,6 +171,11 @@ describe("rendering imported sections", () => {
     expect(out).toContain('class="vt:');
   });
 
+  it("drops whitespace inside tables, which the HTML parser would remove and break hydration", () => {
+    const tree: ElementNode = { t: "table", c: ["\n  ", { t: "tbody", c: [" ", { t: "tr", c: ["\n", { t: "td", c: [" Cell "] }, "\n"] }] }, "\n"] };
+    expect(html(tree)).toBe("<table><tbody><tr><td> Cell </td></tr></tbody></table>");
+  });
+
   it("refuses script, handlers and unsafe links even in a hand-edited package", () => {
     const evil: ElementNode = {
       t: "div",

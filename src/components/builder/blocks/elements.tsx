@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element -- design images are package files or visitor URLs */
 import { cloneElement, createElement, isValidElement, type CSSProperties, type ReactNode } from "react";
 import type { ComponentConfig, Slot } from "@puckeditor/core";
+import { bgImage } from "@/lib/builder/bg-image";
 import { BOX_TAGS, FIELD_TAGS, INLINE_TAGS, PIECE_ATTRS, TEXT_TAGS, type TextRun } from "@/lib/builder/elements";
 import type { ElementNode } from "@/lib/builder/template-package";
 import { linkField, linkProps } from "../links";
@@ -58,15 +59,26 @@ const pick = (tag: string, allowed: Set<string>, fallback: string) => (allowed.h
  */
 export const PIECE_CSS = "[data-piece][data-piece]{width:revert-layer;height:revert-layer;position:revert-layer}";
 
-export type BoxProps = { tag: string; className: string; attrs?: Attrs; style?: Record<string, string>; items: Slot };
+export type BoxProps = { tag: string; className: string; bg?: string; attrs?: Attrs; style?: Record<string, string>; items: Slot };
+
+/** A group's style with its background photo (from an imported `background-image`) added back. */
+function boxStyle(style: unknown, bg: string | undefined): CSSProperties | undefined {
+  const image = bgImage(bg);
+  const base = safeStyle(style);
+  return image ? { ...base, backgroundImage: image } : base;
+}
 
 export const Box: ComponentConfig<BoxProps> = {
   label: "Group",
   inline: true,
-  fields: { className: styleField(["layout", "spacing", "size", "colours", "text", "look", "visibility"]), items: { type: "slot" } } as unknown as ComponentConfig<BoxProps>["fields"],
+  fields: {
+    className: styleField(["layout", "spacing", "size", "colours", "text", "look", "visibility"]),
+    bg: { type: "text", label: "Background image address", placeholder: "https://…" },
+    items: { type: "slot" },
+  } as unknown as ComponentConfig<BoxProps>["fields"],
   defaultProps: { tag: "div", className: "vt:flex vt:flex-col vt:gap-4 vt:p-4", items: [] },
-  render: ({ tag, className, attrs, style, items: Items, puck }) => (
-    <Items as={pick(tag, BOX_TAGS, "div") as "div"} className={className} style={safeStyle(style)} ref={withAttrs(puck.dragRef, attrs)} minEmptyHeight={48} />
+  render: ({ tag, className, bg, attrs, style, items: Items, puck }) => (
+    <Items as={pick(tag, BOX_TAGS, "div") as "div"} className={className} style={boxStyle(style, bg)} ref={withAttrs(puck.dragRef, attrs)} minEmptyHeight={48} />
   ),
 };
 

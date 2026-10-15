@@ -71,6 +71,7 @@ npm run template:import -- ~/Downloads/stitch_export.zip --slug noir-needle --na
 **What the importer does:**
 
 - **Downloads everything into the package.** That includes Google Fonts (only the icon font's used icons) and every image, re-encoded as WebP. A template never loads anything from another site.
+- **Keeps background photos.** A photo set as an inline `style="background-image: url(…)"` becomes an editable "Background image" field. This also works on a design piece's group once a section is taken apart.
 - **Compiles the design's Tailwind classes** with Tailwind v4 into `theme.css`. Classes are prefixed (`vt:`) and scoped to the template, so they can't affect the site or other templates.
 - **Removes scripts, `on…` handlers, `javascript:` links and non-https embeds.** Interactive parts show their first state: tabs, filters, sliders, multi-step forms. Sections that are hidden until a script shows them, such as modals, are left out.
 
@@ -110,6 +111,26 @@ Commit the manifest and the package folder.
 
 - New sites start from the newest published version.
 - Designs already submitted keep rendering with the version they were made with, even after it's unpublished.
+
+## 4. Showcase it as a sample website (optional)
+
+The home page's "Tailored services" section shows sample websites in a diagonal carousel. To add a template to it, add an entry to `SAMPLE_SITES` in `src/content/samples.ts`:
+
+- a new token, from `node -e "console.log(require('crypto').randomBytes(16).toString('base64url'))"`
+- the slug and version
+- a title and a one-line description
+
+**What the entry does:**
+
+- `/build/preview/<token>` renders the whole template as a read-only sample. No database row or lead is involved.
+- The carousel shows each page's landing screen. With `npm run dev` running, capture them with `npm run samples:screens` (add a slug to capture just that sample). Each one is the first screen of the live preview at tablet size, saved to `public/images/samples/`. Pages without a capture fall back to the template thumbnail, and a unit test fails until every page has one.
+- Hovering any slide shows a card with the sample's second page.
+
+**When samples appear:**
+
+- The carousel needs at least two samples that are visible. Otherwise the section keeps the service cards.
+- In production, only published versions count.
+- A sample whose pinned version isn't the template's latest import is skipped. The manifest only lists thumbnails for the latest version.
 
 ## How it fits together
 

@@ -9,7 +9,7 @@ import { collectFonts, collectImages, thumbnail, type FetchLike } from "./assets
 import { rewriteClassList, type ClassContext } from "./classes";
 import { compileTemplateCss } from "./css";
 import { ASSET, convertSection, type FieldEnv } from "./fields";
-import { classList, parsePage, textOf, walk, type IREl, type ParsedPage } from "./ir";
+import { classList, parsePage, textOf, walk, type IREl, type IRNode, type ParsedPage } from "./ir";
 import { validatePackage } from "./package-schema";
 import { Report } from "./report";
 import { splitSections } from "./sections";
@@ -52,6 +52,9 @@ export interface ImportResult {
 }
 
 const ICON_CLASS = /^material-(symbols|icons)/;
+/** A link's visible words without icon ligatures, so "grid_view Portfolio" names the page "Portfolio". */
+const labelOf = (node: IRNode): string =>
+  node.kind === "text" ? node.text : node.kind === "el" && !classList(node).some((c) => ICON_CLASS.test(c)) ? node.children.map(labelOf).join(" ").replace(/\s+/g, " ").trim() : "";
 const humanize = (key: string) => key.replace(/-/g, " ").replace(/^\w/, (c) => c.toUpperCase());
 
 interface PageInfo {
@@ -154,7 +157,7 @@ export async function importTemplate(src: ImportSource, opts: ImportOptions): Pr
   const rank = (p: PageInfo) => (navOrder.includes(p.path!) ? navOrder.indexOf(p.path!) : navOrder.length + pages.indexOf(p));
   if (!opts.keepOrder) pages.sort((a, b) => rank(a) - rank(b));
   const keyOf = new Map(pages.map((p, i) => [p.path!, i === 0 ? "" : slugify(p.path!)]));
-  const navText = new Map(navLinks(pages[0]!.parsed.body).map((l) => [l.attrs["data-path"]!, textOf(l)]));
+  const navText = new Map(navLinks(pages[0]!.parsed.body).map((l) => [l.attrs["data-path"]!, labelOf(l)]));
   const missing = new Set<string>();
 
   const classes: ClassContext = { custom: new Set(), radiusDefault: "DEFAULT" in tokens.radius };

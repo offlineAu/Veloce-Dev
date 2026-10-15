@@ -1,4 +1,5 @@
 import { createElement, type FormEvent, type ReactNode } from "react";
+import { bgImage } from "@/lib/builder/bg-image";
 import type { AttrValue, ElementNode, TreeNode } from "@/lib/builder/template-package";
 import { linkProps } from "./links";
 
@@ -19,6 +20,9 @@ export interface RenderContext {
 const VOID = new Set(["area", "br", "col", "hr", "img", "input", "source", "track", "wbr"]);
 const BLOCKED = new Set(["script", "style", "object", "embed", "link", "meta", "base", "noscript", "template", "frame", "frameset"]);
 const FORM_FIELDS = new Set(["input", "textarea", "select"]);
+
+/** Elements whose content model has no text: whitespace inside them is dropped by the HTML parser, breaking hydration. */
+const NO_TEXT = new Set(["table", "thead", "tbody", "tfoot", "tr", "colgroup"]);
 
 const isElement = (n: TreeNode): n is ElementNode => typeof n === "object" && "t" in n;
 
@@ -44,6 +48,10 @@ function renderElement(node: ElementNode, ctx: RenderContext, key: number | stri
     const value = ctx.values[fieldId] ?? "";
     if (attr === "href") Object.assign(props, linkProps(value, ctx.puck));
     else if (attr === "src") props.src = value || undefined;
+    else if (attr === "bg") {
+      const image = bgImage(value);
+      if (image) props.style = { ...(props.style as object | undefined), backgroundImage: image };
+    }
     else props[attr] = value;
   }
   if (tag === "a" && !node.b?.href) Object.assign(props, linkProps(String(props.href ?? ""), ctx.puck));
@@ -65,7 +73,8 @@ function renderElement(node: ElementNode, ctx: RenderContext, key: number | stri
   }
 
   if (VOID.has(tag)) return createElement(tag, props);
-  return createElement(tag, props, ...renderChildren(node.c, ctx));
+  const children = NO_TEXT.has(tag) ? node.c?.filter((c) => typeof c !== "string" || c.trim()) : node.c;
+  return createElement(tag, props, ...renderChildren(children, ctx));
 }
 
 function renderChildren(children: TreeNode[] | undefined, ctx: RenderContext): ReactNode[] {

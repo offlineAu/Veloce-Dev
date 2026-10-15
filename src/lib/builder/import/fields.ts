@@ -6,6 +6,7 @@
  *   - runs of 3+ structurally identical siblings (cards, steps, nav links) become a list visitors can add to.
  * Icon ligatures (Material Symbols) and form option text stay as they are.
  */
+import { backgroundUrl } from "../bg-image";
 import type { AttrValue, ElementNode, FieldDef, RepeaterDef, TreeNode } from "../template-package";
 import { rewriteClassList, type ClassContext } from "./classes";
 import { classList, textOf, type IREl, type IRNode } from "./ir";
@@ -139,7 +140,7 @@ function signature(node: IRNode, depth = 0): string {
 }
 
 const hasEditable = (el: IREl): boolean =>
-  el.tag === "img" || el.tag === "a" || el.children.some((c) => (c.kind === "text" ? !!c.text.trim() : c.kind === "el" && hasEditable(c)));
+  el.tag === "img" || el.tag === "a" || !!backgroundUrl(el.attrs.style) || el.children.some((c) => (c.kind === "text" ? !!c.text.trim() : c.kind === "el" && hasEditable(c)));
 
 function itemLabel(el: IREl): string {
   if (el.tag === "a" || "data-path" in el.attrs) return "Link";
@@ -232,6 +233,14 @@ function convertElement(el: IREl, scope: Scope, env: FieldEnv, inSvg: boolean, i
     b.alt = addField(scope, "text", "t", "Image description", el.attrs.alt || el.attrs["data-alt"] || "");
     delete a.src;
     delete a.alt;
+  }
+  // An inline background photo becomes an image field; the rest of the style attribute is kept without it.
+  const bg = svg ? undefined : backgroundUrl(el.attrs.style);
+  if (bg) {
+    const remote = /^https?:\/\//i.test(bg);
+    if (remote) env.images.add(bg);
+    else if (!bg.startsWith("data:image/")) env.report.warn(`Background image with a relative address (${bg.slice(0, 60)}) has no file in the export.`);
+    b.bg = addField(scope, "image", "i", "Background image", remote ? `${ASSET}${bg}` : "");
   }
   if (tag === "a") {
     const path = el.attrs["data-path"];

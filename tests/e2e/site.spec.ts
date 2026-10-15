@@ -57,7 +57,7 @@ test.describe("sales page", () => {
     await page.goto("/");
     await expect(page.getByRole("heading", { level: 1 })).toContainText("idea shouldn't stay an idea");
     await expect(page.getByText("Build fast. Build what works.").first()).toBeVisible();
-    await expect(page.locator("[data-services-explorer]").getByRole("heading", { name: "Business websites" })).toBeVisible();
+    await expect(page.locator("[data-services-book]").getByRole("heading", { name: /Explore every service|Business websites/ })).toBeVisible();
     await expect(page.getByText("Special offer")).toHaveCount(0);
     expect(new URL((await page.locator('link[rel="canonical"]').getAttribute("href"))!).pathname).toBe("/");
   });
@@ -630,7 +630,7 @@ test.describe("navigation, search and motion", () => {
     await page.goto("/");
     await revealAll(page);
     await expect(page.getByRole("heading", { name: "Practical systems, built around your business." })).toBeVisible();
-    await expect(page.locator("[data-services-explorer]").getByRole("heading", { name: "Business websites" })).toBeVisible();
+    await expect(page.locator("[data-services-book]").getByRole("heading", { name: "Business websites", exact: true })).toBeVisible();
     expect(await page.evaluate(() => getComputedStyle(document.querySelector(".aura-a")!).animationPlayState)).toBe("paused");
     await ctx.close();
   });
@@ -639,5 +639,35 @@ test.describe("navigation, search and motion", () => {
     const html = await (await request.get("/")).text();
     expect(html).toContain("Practical systems, built around your business.");
     expect(html).toContain("Business websites");
+  });
+});
+
+test.describe("sample websites", () => {
+  test("a sample's preview renders the whole template with the sample banner", async ({ page }) => {
+    const { SAMPLE_SITES } = await import("../../src/content/samples");
+    const { findImported } = await import("../../src/content/builder-templates");
+    // A multi-page sample, so the page navigation is covered too.
+    const sample = SAMPLE_SITES.find((s) => (findImported(s.slug)?.pages.length ?? 0) > 1) ?? SAMPLE_SITES[0]!;
+    const pageCount = findImported(sample.slug)!.pages.length;
+    await page.goto(`/build/preview/${sample.token}`);
+    await expect(page.getByText("Sample design. Links and forms are placeholders.")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Start from this design" })).toHaveAttribute("href", `/build?template=${sample.slug}`);
+    if (pageCount > 1) await expect(page.getByRole("navigation", { name: "Pages in this design" }).getByRole("link")).toHaveCount(pageCount);
+  });
+
+  test("the home carousel rotates and its active slide opens the preview", async ({ page }) => {
+    await page.goto("/");
+    const carousel = page.getByRole("region", { name: "Sample websites", exact: true });
+    test.skip((await carousel.count()) === 0, "fewer than two published samples: the service cards are shown instead");
+    await carousel.scrollIntoViewIfNeeded();
+    await carousel.focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(page.getByText(/Sample website 2 \//i)).toBeVisible();
+    await carousel.getByRole("link", { name: /^Open / }).click();
+    await expect(page).toHaveURL(/\/build\/preview\//);
+    // Back lands on the same sample.
+    await page.getByRole("link", { name: "Back to samples" }).click();
+    await expect(page).toHaveURL(/[?&]sample=/);
+    await expect(page.getByText(/Sample website 2 \//i)).toBeVisible();
   });
 });
