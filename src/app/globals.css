@@ -55,6 +55,8 @@
   --color-on-danger: #ffffff; /* text on danger fills */
   --color-inverse: #201e1d; /* dark feature panels: hero, closing CTA, footer */
   --color-on-inverse: #f5ead8; /* text on inverse panels */
+  /* deep brand tone for solid shapes (discs, ribbons): dark in every palette, tinted toward the accent text colour */
+  --color-deep: color-mix(in srgb, var(--color-accent-700) 55%, var(--color-inverse));
 
   /*
    * shadcn/ui aliases. Components under src/components/ui use these names; they point at the brand tokens above,
@@ -108,9 +110,9 @@
     scroll-behavior: auto;
   }
   /* The aura and shimmer are frozen where they are (below) instead of being snapped to their end state, so switching is not a visible jump. */
-  :root[data-motion="reduced"] :not(.aura-blob, .shimmer, .border-beam),
-  :root[data-motion="reduced"] :not(.aura-blob, .shimmer, .border-beam)::before,
-  :root[data-motion="reduced"] :not(.aura-blob, .shimmer, .border-beam)::after {
+  :root[data-motion="reduced"] :not(.aura-blob, .shimmer, .border-beam, .marquee-track),
+  :root[data-motion="reduced"] :not(.aura-blob, .shimmer, .border-beam, .marquee-track)::before,
+  :root[data-motion="reduced"] :not(.aura-blob, .shimmer, .border-beam, .marquee-track)::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
@@ -119,9 +121,9 @@
     :root:not([data-motion="full"]) {
       scroll-behavior: auto;
     }
-    :root:not([data-motion="full"]) :not(.aura-blob, .shimmer, .border-beam),
-    :root:not([data-motion="full"]) :not(.aura-blob, .shimmer, .border-beam)::before,
-    :root:not([data-motion="full"]) :not(.aura-blob, .shimmer, .border-beam)::after {
+    :root:not([data-motion="full"]) :not(.aura-blob, .shimmer, .border-beam, .marquee-track),
+    :root:not([data-motion="full"]) :not(.aura-blob, .shimmer, .border-beam, .marquee-track)::before,
+    :root:not([data-motion="full"]) :not(.aura-blob, .shimmer, .border-beam, .marquee-track)::after {
       animation-duration: 0.001ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.001ms !important;
@@ -234,6 +236,7 @@
 }
 
 :root[data-motion="reduced"] .aura-blob,
+:root[data-motion="reduced"] .marquee-track,
 :root[data-motion="reduced"] .shimmer {
   animation-play-state: paused !important;
 }
@@ -242,6 +245,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   :root:not([data-motion="full"]) .aura-blob,
+  :root:not([data-motion="full"]) .marquee-track,
   :root:not([data-motion="full"]) .shimmer {
     animation-play-state: paused !important;
   }
@@ -279,10 +283,11 @@
 
 /*
  * Low-power devices (data-perf="lite": set before paint by themeInitScript, or at runtime by PerfMonitor when frames run slow):
- * drop the costly decoration. Aura and shimmer freeze where they are (no jump), the beam is removed, and the film-grain
+ * drop the costly decoration. Aura, shimmer and the keyword ribbon freeze where they are (no jump), the beam is removed, and the film-grain
  * overlays (SVG turbulence + blend modes) are removed. "Always play" keeps the motion.
  */
 :root[data-perf="lite"]:not([data-motion="full"]) .aura-blob,
+:root[data-perf="lite"]:not([data-motion="full"]) .marquee-track,
 :root[data-perf="lite"]:not([data-motion="full"]) .shimmer {
   animation-play-state: paused !important;
 }
@@ -341,10 +346,14 @@
   .modal-scroll::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, currentColor 45%, transparent); }
 }
 
-/* Section backdrops: a soft colour glow (+ optional faint dots) bleeding to the viewport edges behind a section. */
+/*
+ * Section backdrops: a soft, slightly uneven colour glow over paper grain, bleeding to the viewport edges behind a section,
+ * with an optional hand-drawn motif (contour lines or sketch doodles; see SectionBackdrop). Deliberately no dot/square grids.
+ */
 .section-backdrop {
   --bd-x: 15%;
   --bd-tone: var(--color-accent);
+  --bd-ink: var(--color-accent-700);
   position: absolute;
   inset-block: 0;
   left: 50%;
@@ -356,21 +365,84 @@
   /* feather the top and bottom so neighbouring sections (and the hero grid) blend instead of meeting at a hard edge */
   mask-image: linear-gradient(to bottom, transparent, black 160px, black calc(100% - 160px), transparent);
 }
-.section-backdrop[data-tone="sage"] { --bd-tone: var(--color-sage); }
+.section-backdrop[data-tone="sage"] { --bd-tone: var(--color-sage); --bd-ink: var(--color-sage-700); }
 .section-backdrop[data-side="center"] { --bd-x: 50%; }
 .section-backdrop[data-side="right"] { --bd-x: 85%; }
-.section-backdrop::before,
-.section-backdrop::after {
+.section-backdrop::before {
   content: "";
   position: absolute;
   inset: 0;
+  /* two offset glows instead of one perfect ellipse, so the wash looks brushed on rather than computed */
+  background:
+    radial-gradient(48% 58% at var(--bd-x) 30%, color-mix(in srgb, var(--bd-tone) 22%, transparent), transparent 70%),
+    radial-gradient(34% 42% at calc(var(--bd-x) + 12%) 62%, color-mix(in srgb, var(--bd-tone) 14%, transparent), transparent 72%);
 }
-.section-backdrop::before {
-  background: radial-gradient(60% 75% at var(--bd-x) 35%, color-mix(in srgb, var(--bd-tone) 24%, transparent), transparent 72%);
+/* Paper grain: static fractal noise used as a mask over the ink colour, so it works on light and dark palettes alike. */
+.section-backdrop-grain {
+  position: absolute;
+  inset: 0;
+  background: var(--color-ink);
+  opacity: 0.07;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1.4 -.35'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0 / 220px 220px;
 }
-.section-backdrop[data-dots]::after {
-  background: radial-gradient(circle, color-mix(in srgb, var(--color-ink) 22%, transparent) 1.2px, transparent 1.6px) 0 0 / 26px 26px;
-  mask-image: radial-gradient(55% 70% at var(--bd-x) 35%, black, transparent 80%);
+.section-backdrop-contours,
+.section-backdrop-doodles {
+  position: absolute;
+  stroke: color-mix(in srgb, var(--bd-ink) 30%, transparent);
+}
+.section-backdrop-contours {
+  top: 40px;
+  width: min(900px, 75vw);
+  left: calc(var(--bd-x) - min(450px, 37.5vw));
+  mask-image: radial-gradient(closest-side, black 55%, transparent);
+}
+.section-backdrop-doodles {
+  top: 150px;
+  right: max(24px, calc((100vw - 80rem) / 2 + 2rem));
+  width: clamp(200px, 26vw, 380px);
+  stroke: color-mix(in srgb, var(--bd-ink) 42%, transparent);
+}
+@media (max-width: 767px) {
+  .section-backdrop-doodles { display: none; }
+}
+
+/* Section band: a solid tinted panel inset from the viewport edges with rounded corners, like the hero card (see SectionBand). */
+.section-band {
+  position: absolute;
+  inset-block: 0;
+  left: 50%;
+  width: calc(100vw - 24px);
+  translate: -50% 0;
+  z-index: -10;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: 32px;
+  background: color-mix(in srgb, var(--color-accent-200) 45%, var(--color-neutral-200));
+}
+@media (min-width: 640px) {
+  .section-band { border-radius: 40px; }
+}
+
+/* Keyword ribbon along the top of a band, above a hairline (see KeywordMarquee); the ends fade into the band. */
+.marquee-strip {
+  position: relative;
+  left: 50%;
+  width: calc(100vw - 24px);
+  translate: -50% 0;
+  overflow: hidden;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-ink) 12%, transparent);
+  mask-image: linear-gradient(to right, transparent, black min(10%, 8rem), black max(90%, calc(100% - 8rem)), transparent);
+}
+/* Second row: a dashed rule from the main row. */
+.marquee-row-rule { border-top: 1px dashed color-mix(in srgb, var(--color-ink) 12%, transparent); }
+.marquee-track { animation: marquee var(--marquee-duration, 38s) linear infinite; will-change: transform; }
+.marquee-track-reverse { animation-direction: reverse; }
+/* Hold a row still while the pointer is on it, so a word can be read (or hovered) without chasing it. */
+@media (hover: hover) {
+  .marquee-row:hover .marquee-track { animation-play-state: paused; }
+}
+@keyframes marquee {
+  to { transform: translateX(-50%); }
 }
 
 /* Home hero: text beside the dashboard image from 768px up, stacked below. */

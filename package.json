@@ -18,7 +18,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "template:import": "tsx scripts/import-template.ts",
     "template:publish": "tsx scripts/publish-template.ts",
-    "template:password": "tsx scripts/template-password.ts"
+    "template:password": "tsx scripts/template-password.ts",
+    "samples:screens": "tsx scripts/sample-screens.ts"
   },
   "dependencies": {
     "@calcom/embed-react": "^1.5.3",

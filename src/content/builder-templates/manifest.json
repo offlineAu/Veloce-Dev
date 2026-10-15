@@ -34,5 +34,97 @@
       "thumb-booking-consultation.webp"
     ],
     "importedAt": "2026-10-09T17:59:53.765Z"
+  },
+  {
+    "slug": "aurelia-advisory",
+    "name": "Advisory firm",
+    "description": "A refined marketing site for a professional services firm: practice areas, case results and a consultation request form.",
+    "websiteType": "BUSINESS",
+    "scheme": "light",
+    "versions": [
+      1
+    ],
+    "published": [
+      1
+    ],
+    "pages": [
+      {
+        "key": "",
+        "title": "Overview"
+      }
+    ],
+    "thumbnails": [
+      "thumb-home.webp"
+    ],
+    "importedAt": "2026-10-14T11:28:05.611Z"
+  },
+  {
+    "slug": "aurelia-insights",
+    "name": "Executive dashboard",
+    "description": "A business intelligence dashboard: live KPIs, revenue against forecast, report builder and an audit feed.",
+    "websiteType": "WEB_APP",
+    "scheme": "light",
+    "versions": [
+      1
+    ],
+    "published": [
+      1
+    ],
+    "pages": [
+      {
+        "key": "",
+        "title": "Intelligence & Models"
+      }
+    ],
+    "thumbnails": [
+      "thumb-home.webp"
+    ],
+    "importedAt": "2026-10-14T11:29:55.648Z"
+  },
+  {
+    "slug": "aurelia-portal",
+    "name": "Client portal",
+    "description": "A secure client portal: engagement progress, a document vault, a direct line to the assigned advisor and an activity log.",
+    "websiteType": "WEB_APP",
+    "scheme": "light",
+    "versions": [
+      1
+    ],
+    "published": [
+      1
+    ],
+    "pages": [
+      {
+        "key": "",
+        "title": "Portfolio Telemetry"
+      }
+    ],
+    "thumbnails": [
+      "thumb-home.webp"
+    ],
+    "importedAt": "2026-10-14T11:29:58.862Z"
+  },
+  {
+    "slug": "aurelia-store",
+    "name": "Homeware store",
+    "description": "An online store for handcrafted homeware: curated categories, product grid, shoppable room scene and reviews.",
+    "websiteType": "ECOMMERCE_STORE",
+    "scheme": "light",
+    "versions": [
+      1
+    ],
+    "published": [
+      1
+    ],
+    "pages": [
+      {
+        "key": "",
+        "title": "Overview"
+      }
+    ],
+    "thumbnails": [
+      "thumb-home.webp"
+    ],
+    "importedAt": "2026-10-14T14:50:36.157Z"
   }
 ]

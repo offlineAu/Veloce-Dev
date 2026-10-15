@@ -112,6 +112,18 @@ export const landing = {
     body: "Tell us what needs to work better. We'll suggest a first version worth building, in plain language.",
     cta: "Work with us",
   },
+  /** Sample websites carousel (src/content/samples.ts), shown in place of the service cards when there are enough. */
+  samplesTitle: "Sample websites, built the way we'd build yours.",
+  samples: {
+    label: "Sample website",
+    hint: "Click to open the live preview.",
+    selectHint: "Click to bring it to the front.",
+    back: "Back to samples",
+    previewCta: "View live preview",
+    startCta: "Start from this design",
+    inquiryCta: "Work with us",
+    exploreCta: "Explore every service",
+  },
   /** Last card in the carousel: a photo card pointing to the full service list. */
   closing: {
     title: "Not sure where it fits?",

@@ -67,6 +67,7 @@ function checkPiece(b: BlockItem, pkg: TemplatePackage | undefined, pageIds: Set
   if (!classes(p.className) || !attrs(p.attrs) || !style(p.style)) return "styling not allowed";
   switch (b.type) {
     case "Box":
+      if (!src(p.bg, pkg)) return "image address not allowed";
       return typeof p.tag === "string" && BOX_TAGS.has(p.tag) ? null : "unknown element";
     case "DText": {
       if (typeof p.tag !== "string" || (p.tag !== "" && !TEXT_TAGS.has(p.tag))) return "unknown element";

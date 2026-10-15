@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 import { DraftRender } from "@/components/builder/draft-render";
-import { migrateDoc, pageRefs } from "@/lib/builder/site-doc";
+import { findSample } from "@/content/samples";
+import { landing } from "@/content/site";
+import { migrateDoc, pageRefs, type SiteDoc } from "@/lib/builder/site-doc";
+import { docFromTemplate } from "@/lib/builder/template-doc";
 import { isWellFormedToken } from "@/lib/token";
 import { pieceClasses } from "@/lib/builder/elements";
 import type { BlockItem } from "@/lib/builder/blocks";
@@ -20,12 +24,27 @@ export const metadata: Metadata = {
 
 type Props = { params: Promise<{ token: string }>; searchParams: Promise<{ page?: string | string[] }> };
 
+/** What the preview shows: a visitor's submitted design, or one of the home page's sample sites (src/content/samples.ts). */
+type Preview = { doc: SiteDoc; note: string; startSlug?: string };
+
+async function loadPreview(token: string): Promise<Preview | null> {
+  const sample = findSample(token);
+  if (sample) {
+    const loaded = await readTemplate(sample.slug, sample.version, { requirePublished: false });
+    return loaded ? { doc: docFromTemplate(loaded.pkg), note: "Sample design.", startSlug: sample.slug } : null;
+  }
+  const draft = await db.siteDraft.findUnique({ where: { token }, select: { data: true, createdAt: true } });
+  const doc = draft ? migrateDoc(draft.data) : null;
+  if (!draft || !doc) return null;
+  return { doc, note: `Design preview, submitted ${draft.createdAt.toLocaleDateString("en", { dateStyle: "medium" })}.` };
+}
+
 export default async function DraftPreviewPage({ params, searchParams }: Props) {
   const [{ token }, sp] = await Promise.all([params, searchParams]);
   if (!isWellFormedToken(token)) notFound();
-  const draft = await db.siteDraft.findUnique({ where: { token }, select: { data: true, createdAt: true } });
-  const doc = draft ? migrateDoc(draft.data) : null;
-  if (!draft || !doc) notFound();
+  const preview = await loadPreview(token);
+  if (!preview) notFound();
+  const { doc } = preview;
 
   const wanted = Array.isArray(sp.page) ? sp.page[0] : sp.page;
   const page = doc.pages.find((p) => p.path === wanted) ?? doc.pages[0]!;
@@ -41,7 +60,14 @@ export default async function DraftPreviewPage({ params, searchParams }: Props) 
     <>
       {/* Pinned to the bottom: designs often have their own fixed header at the top. */}
       <div className="fixed inset-x-0 bottom-0 z-[100] flex flex-wrap items-center justify-center gap-x-4 gap-y-2 bg-ink px-4 py-2 text-sm text-bg shadow-lg">
-        <p>Design preview, submitted {draft.createdAt.toLocaleDateString("en", { dateStyle: "medium" })}. Links and forms are placeholders.</p>
+        {preview.startSlug ? (
+          // Back to the home page's samples, with this sample in front.
+          <Link href={`/?sample=${encodeURIComponent(token)}#services`} className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-semibold hover:bg-bg/15">
+            <ArrowLeft aria-hidden className="size-4" />
+            {landing.samples.back}
+          </Link>
+        ) : null}
+        <p>{preview.note} Links and forms are placeholders.</p>
         {doc.pages.length > 1 ? (
           <nav aria-label="Pages in this design">
             <ul className="flex flex-wrap gap-1">
@@ -58,6 +84,11 @@ export default async function DraftPreviewPage({ params, searchParams }: Props) 
               ))}
             </ul>
           </nav>
+        ) : null}
+        {preview.startSlug ? (
+          <Link href={`/build?template=${encodeURIComponent(preview.startSlug)}`} className="rounded-full bg-bg px-3 py-1 font-semibold text-ink hover:opacity-90">
+            Start from this design
+          </Link>
         ) : null}
       </div>
       <main id="main" className="pb-24">

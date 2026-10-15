@@ -4,6 +4,7 @@
  * the locked DesignSection renders, with the visitor's current values filled in. Shared by the editor and the server
  * validator: no React.
  */
+import { bgImage } from "./bg-image";
 import type { BlockItem } from "./blocks";
 import type { AttrValue, ElementNode, TemplateSection, TreeNode } from "./template-package";
 
@@ -123,13 +124,13 @@ export function toPiece(node: TreeNode, values: Values, items: Record<string, Va
     const options = node.t === "select" ? (node.c ?? []).filter(isEl).filter((o) => o.t === "option").map((o) => ({ value: String(o.a?.value ?? textOf(o, values)), label: textOf(o, values) })) : [];
     return [{ type: "DField", props: { id: newId("DField"), tag: node.t, className, attrs, style, options } }];
   }
-  if (isTextLike(node)) {
+  if (isTextLike(node) && !node.b?.bg) {
     const runs = runsOf(node, values);
     const plain = runs.length === 1 && !runs[0]!.tag;
     return [{ type: "DText", props: { id: newId("DText"), tag: node.t, className, text: plain ? runs[0]!.text : "", runs: plain ? [] : runs, attrs, style } }];
   }
   if (BOX_TAGS.has(node.t)) {
-    return [{ type: "Box", props: { id: newId("Box"), tag: node.t, className, attrs, style, items: children() } }];
+    return [{ type: "Box", props: { id: newId("Box"), tag: node.t, className, ...(node.b?.bg ? { bg: bound("bg") } : {}), attrs, style, items: children() } }];
   }
   // Anything else (SVG drawings, video…) stays as it is, but can still be moved and deleted.
   return [{ type: "DRaw", props: { id: newId("DRaw"), tree: fill(node, values, items) } }];
@@ -138,7 +139,10 @@ export function toPiece(node: TreeNode, values: Values, items: Record<string, Va
 /** A tree with the field values written in, for pieces kept whole (DRaw). */
 function fill(node: ElementNode, values: Values, items: Record<string, Values[]>): ElementNode {
   const a: Record<string, AttrValue> = { ...(node.a ?? {}) };
-  for (const [attr, f] of Object.entries(node.b ?? {})) a[attr] = values[f] ?? "";
+  for (const [attr, f] of Object.entries(node.b ?? {})) {
+    if (attr !== "bg") a[attr] = values[f] ?? "";
+    else if (bgImage(values[f])) a.style = { ...(a.style as Record<string, string> | undefined), backgroundImage: bgImage(values[f])! };
+  }
   const c: TreeNode[] = (node.c ?? []).flatMap((ch): TreeNode[] => {
     if (typeof ch === "string") return [ch];
     if ("f" in ch) return [values[ch.f] ?? ""];

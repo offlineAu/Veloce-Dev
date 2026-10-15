@@ -14,14 +14,17 @@ import { BorderBeam } from "@/components/motion/border-beam";
 import { ExpectationsAccordion } from "@/components/site/expectations-accordion";
 import { buildSearchEntries } from "@/lib/search";
 import { CapabilityTabs } from "@/components/site/capability-tabs";
-import { SectionBackdrop } from "@/components/site/section-backdrop";
+import { SectionBackdrop, SectionBand } from "@/components/site/section-backdrop";
+import { KeywordMarquee } from "@/components/marketing/keyword-marquee";
 import { SiteFooter, SiteHeader } from "@/components/site/site-chrome";
 import { InquiryProvider, OpenInquiryButton } from "@/components/forms/inquiry";
 import { OfferSplit, ReferralBadge, SectionHeading } from "@/components/marketing/cards";
 import { BuilderGuide } from "@/components/marketing/builder-guide";
-import { ServicesExplorer } from "@/components/marketing/services-explorer";
+import { ServicesBook } from "@/components/marketing/services-book";
 import { ApproachWorkbench } from "@/components/marketing/approach-workbench";
 import { ServicesCarousel } from "@/components/marketing/services-carousel";
+import { SampleSites } from "@/components/marketing/sample-sites";
+import { MIN_SHOWCASE, showcaseSamples } from "@/content/samples";
 import { ApproachRings } from "@/components/marketing/approach-rings";
 import { ModernTools } from "@/components/marketing/modern-tools";
 import { buttonVariants } from "@/components/ui/button";
@@ -44,7 +47,7 @@ export const metadata = pageMetadata("Business Website Design & Development", "C
 /** Owner-supplied photography: drop files at these paths in public/ and the hero / featured card pick them up. */
 const photo = (file: string) => (existsSync(join(process.cwd(), "public", "images", file)) ? `/images/${file}` : undefined);
 
-type HomePageProps = { searchParams: Promise<{ ref?: string | string[] }> };
+type HomePageProps = { searchParams: Promise<{ ref?: string | string[]; sample?: string | string[] }> };
 
 export default async function HomePage({ searchParams }: HomePageProps) {
   const sp = await searchParams;
@@ -55,6 +58,13 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     ref ? getPublicCampaign(ref) : Promise.resolve(null),
   ]);
 
+  // Sample websites replace the service cards once there are enough to fill the carousel.
+  const samples = showcaseSamples(undefined, undefined, (file) => existsSync(join(process.cwd(), "public", file)));
+  const showSamples = samples.length >= MIN_SHOWCASE;
+  // Coming back from a sample's preview (?sample=<token>) puts that sample in front.
+  const sampleToken = Array.isArray(sp.sample) ? sp.sample[0] : sp.sample;
+  const activeSample = Math.max(0, samples.findIndex((s) => s.token === sampleToken));
+
   const offer = campaign?.offer.state === "active" ? campaign.offer : null;
   const introducedBy = campaign?.referrerName ?? null;
   const links = [
@@ -64,8 +74,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     { href: "#offer", label: "Offer" },
     { href: withReferral("/about", campaign?.token), label: "About" },
   ];
-  // Hero carousel, in order.
-  const heroPhotos = [photo("hero-ar-dashboard.webp"), photo("hero-dev-pair.webp"), photo("card-office.webp")].filter((src): src is string => !!src);
+  // Hero carousel, in order. hero-code-review, hero-dev-desk, hero-team-floor and hero-code-closeup are Pexels photos
+  // (Pexels License: free commercial use, no attribution) by Jakub Zerdzicki, Lisa Fotios, cottonbro studio and Pixabay.
+  const heroPhotos = [
+    photo("hero-code-review.webp"), photo("hero-dev-pair.webp"), photo("hero-dev-desk.webp"),
+    photo("hero-team-floor.webp"), photo("card-office.webp"), photo("hero-code-closeup.webp"),
+  ].filter((src): src is string => !!src);
   const teamPhoto = photo("card-builders.webp");
   const reviewPhoto = photo("card-office.webp");
   const contactPhoto = photo("contact-code.webp");
@@ -91,7 +105,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <div className="relative isolate flex min-h-[max(580px,calc(100svh-5rem))] flex-col justify-between overflow-hidden rounded-[32px] bg-gradient-to-br from-[#1a2e3b] via-[#244252] to-[#12202a] px-6 py-10 text-white shadow-lg sm:p-12 sm:rounded-[40px] lg:px-[max(4rem,calc((100%-80rem)/2+4rem))] lg:py-16">
             <div aria-hidden className="absolute inset-0 -z-10">
               {heroPhotos.length ? (
-                <HeroSlideshow photos={heroPhotos} className="object-cover object-center opacity-60 mix-blend-overlay brightness-95" />
+                <HeroSlideshow photos={heroPhotos} variant="flip" className="object-cover object-center opacity-60 mix-blend-overlay brightness-95" />
               ) : (
                 <div className="ring-pattern absolute -right-48 -top-48 size-[860px] rounded-full opacity-25 invert" />
               )}
@@ -160,12 +174,19 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           </section>
         ) : null}
 
-        <section id="services" className="relative py-16" aria-labelledby="services-carousel-title">
-          <SectionHeading
+        <section id="services" className="relative mt-10 pb-20 md:pb-28" aria-labelledby="services-carousel-title">
+          <SectionBand />
+          <KeywordMarquee items={services.map((s) => s.title)} secondary={capabilityGroups.flatMap((g) => g.items.map((c) => c.title))} />
+          <SectionHeading className="mt-16 md:mt-20 max-w-5xl"
             eyebrow={landing.servicesEyebrow}
-            titleId="services-carousel-title" title={landing.servicesTitle} bold={6} className="max-w-5xl"
+            titleId="services-carousel-title" title={showSamples ? landing.samplesTitle : landing.servicesTitle} bold={6}
           />
-          <ServicesCarousel services={services} photo={teamPhoto} closingPhoto={reviewPhoto} refToken={campaign?.token} />
+          {/* Sample stage photo: "lit desk lamp on top of desk" by JC Gellidon, Unsplash License (unsplash.com/photos/EH9f0TI5wco). */}
+          {showSamples ? (
+            <SampleSites samples={samples} photo={photo("samples-night-desk.webp")} initialIndex={activeSample} refToken={campaign?.token} />
+          ) : (
+            <ServicesCarousel services={services} photo={teamPhoto} closingPhoto={reviewPhoto} refToken={campaign?.token} />
+          )}
         </section>
 
         <section className="relative py-10" aria-labelledby="fit-title">
@@ -173,7 +194,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </section>
 
         <section className="relative py-16 md:py-24" aria-labelledby="custom-title">
-          <SectionBackdrop tone="sage" side="right" />
+          <SectionBackdrop tone="sage" side="right" motif="contours" seed={1} />
           <SectionHeading
             eyebrow="Why custom"
             tone="sage"
@@ -218,7 +239,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </section>
 
         <section id="approach" className="relative py-16 md:py-24" aria-labelledby="approach-title">
-          <SectionBackdrop tone="accent" side="right" dots />
+          <SectionBackdrop tone="accent" side="right" motif="doodles" />
           <SectionHeading
             eyebrow="Our approach"
             titleId="approach-title" title="From idea to working system." bold={3}
@@ -274,7 +295,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </section>
 
         <section id="capabilities" className="relative py-16 md:py-24" aria-labelledby="cap-title">
-          <SectionBackdrop tone="sage" side="left" dots />
+          <SectionBackdrop tone="sage" side="left" motif="contours" seed={2} />
           <SectionHeading eyebrow="Capabilities" titleId="cap-title" title="The functionality your business needs." bold={3} />
           <div className="mt-10">
             <CapabilityTabs groups={capabilityGroups} />
@@ -284,13 +305,13 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </section>
 
         <section id="all-services" className="relative py-16 md:py-24" aria-labelledby="services-title">
-          <SectionBackdrop tone="accent" side="left" dots />
+          <SectionBackdrop tone="accent" side="left" motif="doodles" />
           <SectionHeading
             eyebrow="Explore every service"
             titleId="services-title" title="Practical systems, built around your business." bold={4}
             lead="Websites, customer applications, and business tools. Explore the work you need, then talk with us about the right scope."
           />
-          <ServicesExplorer services={services} refToken={campaign?.token} />
+          <ServicesBook services={services} refToken={campaign?.token} />
         </section>
 
         <section id="offer" className="relative py-12 md:py-20" aria-label="Offer">
@@ -319,7 +340,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </section>
 
         <section className="relative py-16 md:py-24" aria-labelledby="expect-title">
-          <SectionBackdrop tone="sage" side="left" />
+          <SectionBackdrop tone="sage" side="left" motif="contours" seed={3} />
           <SectionHeading eyebrow="What you can expect" tone="sage" titleId="expect-title" title="No pressure. Just a clear path forward." bold={5} />
           <ExpectationsAccordion items={expectations} />
         </section>
