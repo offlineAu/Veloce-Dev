@@ -1,6 +1,57 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
+test("the book centers its cover and open spread, and finishes turns before queued navigation", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => { document.documentElement.dataset.motion = "full"; });
+  const book = page.locator("[data-services-book]");
+  const stage = book.locator("[data-cover-phase]");
+  const cover = book.locator("[data-book-cover]");
+  const spread = book.locator('[id$="-page"]');
+  const sheet = book.locator("[data-page-turn]");
+  const pagePosition = () => spread.evaluate(element => element.getBoundingClientRect().left - element.closest("[data-services-book]")!.getBoundingClientRect().left);
+  const centerOffset = (target: typeof cover) => target.evaluate(element => {
+    const box = element.getBoundingClientRect();
+    const stage = element.closest("[data-cover-phase]")!.getBoundingClientRect();
+    return box.left + box.width / 2 - stage.left - stage.width / 2;
+  });
+  await expect.poll(async () => Math.abs(await centerOffset(cover))).toBeLessThan(1);
+  const initialPosition = await pagePosition();
+
+  await book.getByRole("button", { name: "Open service book", exact: true }).click();
+  await expect(stage).toHaveAttribute("data-cover-phase", "opening");
+  await expect(sheet).toHaveCount(0);
+  await expect(cover).toHaveCSS("opacity", "1");
+  await expect(stage).toHaveAttribute("data-cover-phase", "open");
+  await expect.poll(async () => Math.abs(await centerOffset(spread))).toBeLessThan(1);
+  const openPosition = await pagePosition();
+  if ((page.viewportSize()?.width ?? 0) > 600) expect(openPosition).toBeGreaterThan(initialPosition);
+  else expect(openPosition).toBeCloseTo(initialPosition, 0);
+
+  await book.getByRole("button", { name: "Next service", exact: true }).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(sheet).toHaveCount(1);
+  const firstTurn = await sheet.getAttribute("data-page-turn");
+  await page.keyboard.press("ArrowRight");
+  // A second click is accepted without replacing the sheet already in flight.
+  await expect(sheet).toHaveAttribute("data-page-turn", firstTurn!);
+  await expect(book.getByRole("heading", { name: "Customer-facing web applications", exact: true })).toBeVisible();
+  await expect(book.getByRole("heading", { name: "Internal business systems", exact: true })).toBeVisible();
+  await expect(sheet).toHaveCount(0);
+  expect(await pagePosition()).toBeCloseTo(openPosition, 0);
+
+  await book.getByRole("button", { name: "Close book", exact: true }).click();
+  await expect(stage).toHaveAttribute("data-cover-phase", "closing");
+  await expect(sheet).toHaveCount(0);
+  await expect(spread).toHaveCSS("display", "grid");
+  await expect(spread.locator('article[aria-labelledby$="-title"] h3')).toHaveText("Internal business systems");
+  await expect(cover).toHaveCSS("opacity", "1");
+  await expect(stage).toHaveAttribute("data-cover-phase", "closed");
+  await expect.poll(async () => Math.abs(await centerOffset(cover))).toBeLessThan(1);
+  expect(await pagePosition()).toBeCloseTo(initialPosition, 0);
+  await expect(book.getByRole("button", { name: "Open service book", exact: true })).toBeFocused();
+});
+
 test("cover and page surfaces stay clickable across their area and during page turns", async ({ page }) => {
   await page.goto("/");
   await page.evaluate(() => { document.documentElement.dataset.motion = "full"; });

@@ -1,7 +1,10 @@
 import "server-only";
 import type { BlockItem } from "@/lib/builder/blocks";
 import { BOX_TAGS, ELEMENT_TYPES, FIELD_TAGS, INLINE_TAGS, PIECE_ATTRS, TEXT_TAGS } from "@/lib/builder/elements";
-import { PAGE_LINK } from "@/lib/builder/site-doc";
+import { ITEM_PAGE, MAX_ITEMS } from "@/lib/builder/content";
+import { isMediaSrc } from "@/lib/builder/media";
+import { BEHAVIOUR_ATTR, parseBehaviour } from "@/lib/builder/behaviours";
+import { PAGE_LINK, pageLinkTarget } from "@/lib/builder/site-doc";
 import type { TemplatePackage, TreeNode } from "@/lib/builder/template-package";
 import { isOwnAsset } from "./template-registry";
 
@@ -15,6 +18,7 @@ const PIECES = new Set<string>(ELEMENT_TYPES);
 const MAX_PIECES = 3000;
 const MAX_DEPTH = 40;
 const MAX_TEXT = 2000;
+const MAX_RICH = 20_000;
 const CLASS_TOKEN = /^[\w:/[\]().%#,!'"&>*+~=@-]{1,200}$/;
 const SAFE_URL = /^(https?:\/\/|mailto:|tel:|#|\/(?!\/))/i;
 const UNSAFE_CSS = /url\(|expression\(|javascript:|@import/i;
@@ -31,7 +35,13 @@ function classes(v: unknown): boolean {
 function attrs(v: unknown): boolean {
   if (v === undefined) return true;
   if (!isRecord(v) || Object.keys(v).length > 30) return false;
-  return Object.entries(v).every(([k, x]) => PIECE_ATTRS.test(k) && (typeof x === "boolean" || typeof x === "number" || (typeof x === "string" && x.length <= 300)));
+  return Object.entries(v).every(
+    ([k, x]) =>
+      PIECE_ATTRS.test(k) &&
+      (typeof x === "boolean" || typeof x === "number" || (typeof x === "string" && x.length <= 300)) &&
+      // Interactions must be ones the runtime knows, with values it accepts (lib/builder/behaviours.ts).
+      (!BEHAVIOUR_ATTR.test(k) || parseBehaviour(k, x) !== null),
+  );
 }
 
 function style(v: unknown): boolean {
@@ -43,13 +53,31 @@ function style(v: unknown): boolean {
 function href(v: unknown, pageIds: Set<string>): boolean {
   if (v === undefined || v === "") return true;
   if (typeof v !== "string" || v.length > 2000) return false;
-  return v.startsWith(PAGE_LINK) ? pageIds.has(v.slice(PAGE_LINK.length)) : SAFE_URL.test(v);
+  return v.startsWith(PAGE_LINK) ? pageIds.has(pageLinkTarget(v)?.pageId ?? "") : SAFE_URL.test(v);
+}
+
+const BIND_PROPS = new Set(["content", "rich", "src", "href", "bg", "alt"]);
+const FIELD_KEY = /^[a-z][a-z0-9_]{0,31}$/;
+const CONTENT_ID = /^[\w~-]{1,90}$/;
+
+/** Collection content on a piece (content.ts): what it shows of an item, the list it repeats, the menu it follows. */
+function content(p: Record<string, unknown>): boolean {
+  if (p.bind !== undefined && !(isRecord(p.bind) && Object.entries(p.bind).every(([k, v]) => BIND_PROPS.has(k) && (v === undefined || v === ITEM_PAGE || (typeof v === "string" && FIELD_KEY.test(v)))))) return false;
+  if (p.list !== undefined) {
+    const l = p.list;
+    if (!isRecord(l) || typeof l.collection !== "string" || !CONTENT_ID.test(l.collection)) return false;
+    if (l.sort !== undefined && !["newest", "oldest", "title", "manual"].includes(String(l.sort))) return false;
+    if (l.limit !== undefined && !(Number.isInteger(l.limit) && (l.limit as number) >= 1 && (l.limit as number) <= MAX_ITEMS)) return false;
+  }
+  if (p.listCopy !== undefined && typeof p.listCopy !== "boolean") return false;
+  if (p.menu !== undefined && p.menu !== "main" && p.menu !== "footer") return false;
+  return [p.listItem, p.menuItem].every((v) => v === undefined || (typeof v === "string" && CONTENT_ID.test(v)));
 }
 
 function src(v: unknown, pkg: TemplatePackage | undefined): boolean {
   if (v === undefined || v === "") return true;
   if (typeof v !== "string" || v.length > 2000 || v.includes("..")) return false;
-  return /^https:\/\//i.test(v) || (pkg ? isOwnAsset(pkg, v) : false) || /^\/(build\/t|builder-templates)\/[a-z0-9-]+\/v\d+\//.test(v);
+  return /^https:\/\//i.test(v) || isMediaSrc(v) || (pkg ? isOwnAsset(pkg, v) : false) || /^\/(build\/t|builder-templates)\/[a-z0-9-]+\/v\d+\//.test(v);
 }
 
 /** A whole element kept as-is (DRaw): bounded, no handlers, no script-like tags. */
@@ -65,6 +93,17 @@ function rawTree(node: unknown, budget: { n: number }, depth = 0): boolean {
 function checkPiece(b: BlockItem, pkg: TemplatePackage | undefined, pageIds: Set<string>): string | null {
   const p = b.props;
   if (!classes(p.className) || !attrs(p.attrs) || !style(p.style)) return "styling not allowed";
+  if (p.name !== undefined && (typeof p.name !== "string" || p.name.length > 60)) return "layer name too long";
+  // Layer flags (hidden, locked) and group modes (free layout, decoration) are switches.
+  for (const flag of ["hidden", "locked", "free", "decor"]) if (p[flag] !== undefined && typeof p[flag] !== "boolean") return "layer settings not allowed";
+  // A text style it follows, its part in a component (and the key matching it to the main one's part).
+  if (p.textStyle !== undefined && (typeof p.textStyle !== "string" || !/^[a-z0-9-]{1,40}$/.test(p.textStyle))) return "text style not allowed";
+  if (!content(p)) return "collection settings not allowed";
+  if (p.ckey !== undefined && (typeof p.ckey !== "string" || !/^k-[a-z0-9]{1,16}$/.test(p.ckey))) return "component not allowed";
+  if (p.component !== undefined) {
+    const c = p.component as { id?: unknown; main?: unknown };
+    if (!isRecord(c) || typeof c.id !== "string" || !/^c-[a-z0-9]{4,16}$/.test(c.id) || (c.main !== undefined && typeof c.main !== "boolean")) return "component not allowed";
+  }
   switch (b.type) {
     case "Box":
       if (!src(p.bg, pkg)) return "image address not allowed";
@@ -92,6 +131,9 @@ function checkPiece(b: BlockItem, pkg: TemplatePackage | undefined, pageIds: Set
     }
     case "DRaw":
       return rawTree(p.tree, { n: 0 }) ? null : "graphic not allowed";
+    case "DRich":
+      // Cleaned to the editor's formatting when the design is stored (sanitizeRichText).
+      return typeof p.html === "string" && p.html.length <= MAX_RICH ? null : "text too long";
     default:
       return null;
   }

@@ -3,8 +3,8 @@
  * request to another site (and the site's security policy can stay strict):
  *   - Google Fonts: the stylesheet is fetched, its woff2 files downloaded, and @font-face rewritten to them.
  *     Icon fonts (Material Symbols) are cut down to the icons the design uses.
- *   - Images: downloaded and re-encoded as WebP, at most 1600px wide. Failures become a neutral placeholder.
- *   - Page screenshots: small WebP thumbnails for the template picker.
+ *   - Images: downloaded at full size and re-encoded as WebP, at most 1600px wide. Uploads reject failures; CLI imports can use a neutral placeholder.
+ *   - Page screenshots: WebP thumbnails for the template picker.
  */
 import { createHash } from "node:crypto";
 import sharp from "sharp";
@@ -118,25 +118,52 @@ export async function collectFonts(opts: {
   return { css: sheets.join("\n"), files, classes };
 }
 
+/**
+ * Google's image host (Stitch exports use it) serves 512px versions unless the address asks for a size; "=s0" asks
+ * for the original (e.g. 1408×768 instead of 512×279). Addresses that already carry a size are left alone.
+ */
+export function fullSizeUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    if (!/(^|\.)googleusercontent\.com$/.test(u.hostname) || u.search || u.pathname.split("/").pop()!.includes("=")) return url;
+    return `${url}=s0`;
+  } catch {
+    return url;
+  }
+}
+
 export interface ImageResult {
   /** Original address → package path. */
   map: Map<string, string>;
   files: Map<string, Buffer>;
 }
 
-export async function collectImages(opts: { urls: Iterable<string>; base: string; fetcher: FetchLike; report: Report; placeholderColor: string }): Promise<ImageResult> {
+export async function collectImages(opts: { urls: Iterable<string>; base: string; fetcher: FetchLike; report: Report; placeholderColor: string; strict?: boolean; storedImageFiles?: ReadonlyMap<string, Buffer> }): Promise<ImageResult> {
   const map = new Map<string, string>();
   const files = new Map<string, Buffer>();
   let placeholder: string | undefined;
-  for (const url of opts.urls) {
+  const failures: string[] = [];
+  for (const url of new Set(opts.urls)) {
     try {
-      const src = await download(opts.fetcher, url);
-      const webp = await sharp(src).rotate().resize({ width: 1600, withoutEnlargement: true }).webp({ quality: 80 }).toBuffer();
       const file = `img/${hash(url)}.webp`;
+      const stored = url.startsWith("https://template-assets.invalid/") ? undefined : opts.storedImageFiles?.get(file);
+      let src = stored;
+      if (!src) {
+        const fullSize = fullSizeUrl(url);
+        try { src = await download(opts.fetcher, fullSize); }
+        catch (e) {
+          if (fullSize === url) throw e;
+          // Some image hosts allow the exported address but reject the original-size variant.
+          src = await download(opts.fetcher, url);
+        }
+      }
+      const webp = stored ?? await sharp(src).rotate().resize({ width: 1600, withoutEnlargement: true }).webp({ quality: 80 }).toBuffer();
       files.set(file, webp);
       map.set(url, `${opts.base}/${file}`);
     } catch (e) {
-      opts.report.warn(`An image couldn't be downloaded (${(e as Error).message}); a placeholder was used. Replace it in the editor.`);
+      const reason = `“${url}”: ${(e as Error).message}`;
+      if (opts.strict) { failures.push(reason); continue; }
+      opts.report.warn(`An image couldn't be downloaded (${reason}); a placeholder was used. Replace it in the editor.`);
       if (!placeholder) {
         placeholder = "img/placeholder.webp";
         files.set(placeholder, await sharp({ create: { width: 1200, height: 900, channels: 3, background: opts.placeholderColor } }).webp().toBuffer());
@@ -144,15 +171,16 @@ export async function collectImages(opts: { urls: Iterable<string>; base: string
       map.set(url, `${opts.base}/${placeholder}`);
     }
   }
+  if (failures.length) throw new Error(`Images could not be imported:\n${failures.join("\n")}\nCorrect these URLs or upload the image files and use their local paths in the HTML.`);
   opts.report.count("images bundled", files.size);
   return { map, files };
 }
 
-/** The top of a full-page screenshot, small, for the template picker. */
+/** The top of a full-page screenshot for the template picker, sized for sharp cards on high-density screens. */
 export async function thumbnail(png: Buffer): Promise<Buffer> {
-  const resized = await sharp(png).resize({ width: 480 }).toBuffer({ resolveWithObject: true });
+  const resized = await sharp(png).resize({ width: 960, withoutEnlargement: true }).toBuffer({ resolveWithObject: true });
   return sharp(resized.data)
-    .extract({ left: 0, top: 0, width: resized.info.width, height: Math.min(resized.info.height, 640) })
+    .extract({ left: 0, top: 0, width: resized.info.width, height: Math.min(resized.info.height, Math.round(resized.info.width * 4 / 3)) })
     .webp({ quality: 78 })
     .toBuffer();
 }

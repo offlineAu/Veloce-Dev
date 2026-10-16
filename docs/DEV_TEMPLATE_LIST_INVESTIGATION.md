@@ -2,6 +2,25 @@
 
 Investigated 2026-10-16 against the supplied screenshot, the current working tree, and the local site at `http://localhost:3000`. This is an investigation and implementation recommendation. Application code was not changed; existing uncommitted work was preserved.
 
+## Implementation follow-up (2026-10-16)
+
+Implemented grouped template cards with latest-version summaries, publication status, author/date metadata, collapsible version history, responsive actions, and a keyboard-accessible Delete menu. The restored HTML source editor remains available for every uploaded version. History expansion, focus, and scroll position are retained when returning from the editor. Mutations provide pending feedback and prevent repeated/conflicting operations.
+
+Review links now include the exact version. The server validates the selection without silently substituting the newest version, and the builder loads the package matching the review banner. Review sessions preserve existing saved designs rather than restoring or overwriting them.
+
+The original work was restored from stash `fd1ffbf710a509427b1fc319962d7536af7c8559` and reconciled with the fix. The stash was retained. Comparison against the restored tracked snapshot showed only the three intended application files changed, plus the new list component/styles, review resolver, regression tests, screenshots, and this follow-up.
+
+Validation:
+
+- TypeScript and scoped ESLint passed; 27 focused tests passed across review version selection, source routes, and developer template behavior.
+- Chromium fixture checks passed at 320px, 390px, 820px, and 1440px; WebKit passed at 390px and 820px. Long names/slugs/authors and mixed publication states stayed within the modal. All visible version action targets retained 44px height.
+- Browser fixture checks exercised history via keyboard, exact-version links/source loading, returning from Edit HTML with history/focus intact, disabled controls while publishing, the Delete menu, deletion refresh, and repository action restrictions. Chromium's scoped WCAG accessibility scan reported no violations. Fixture mutations did not alter database records.
+- An actual local builder review for `oakwell-home` v1 fetched the v1 package even with v2 available, displayed the matching review banner, and preserved an existing saved draft. An invalid explicit version rendered the not-found UI.
+- Production build passed with process-only, non-secret local validation overrides for site URL, company email, hash secret, notification/booking flags, and Cal endpoint configuration. The first attempt exposed invalid pre-existing local environment values; no environment files were edited.
+- Firefox checks were not run because its Playwright browser executable is not installed. The database-resetting developer E2E suite was not run.
+
+Visual artifacts: `artifacts/dev-template-list-1440.png` and `artifacts/dev-template-list-390.png`.
+
 ## Findings
 
 The screenshot shows a structural layout problem. The upload interface has dedicated CSS Module styling, but the Templates view is a minimally styled, automatic-width table. Expanding the modal alone would postpone the wrapping problem.

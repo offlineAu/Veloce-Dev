@@ -1,3 +1,5 @@
+import { parseBehaviour } from "@/lib/builder/behaviours";
+import { effectText, textEffectOf } from "./text-effects";
 import { createElement, type FormEvent, type ReactNode } from "react";
 import { bgImage } from "@/lib/builder/bg-image";
 import type { AttrValue, ElementNode, TreeNode } from "@/lib/builder/template-package";
@@ -30,6 +32,8 @@ function cleanAttrs(attrs: Record<string, AttrValue> | undefined): Record<string
   const out: Record<string, AttrValue> = {};
   for (const [k, v] of Object.entries(attrs ?? {})) {
     if (/^on/i.test(k) || k === "dangerouslySetInnerHTML") continue;
+    // Data attributes: only interactions the runtime understands (and the importer's own page links).
+    if (k.startsWith("data-") && k !== "data-path" && k !== "data-alt" && parseBehaviour(k, v) === null) continue;
     if (typeof v === "string" && /^\s*(javascript|vbscript|data:text\/html)/i.test(v)) continue;
     out[k] = v;
   }
@@ -56,12 +60,15 @@ function renderElement(node: ElementNode, ctx: RenderContext, key: number | stri
   }
   if (tag === "a" && !node.b?.href) Object.assign(props, linkProps(String(props.href ?? ""), ctx.puck));
 
-  // Designs show forms as a visual: they never submit, and they don't take focus while the page is being edited.
+  // Designs' forms never submit; they can be filled in to try them, except while the page is being edited. A
+  // submit button still submits (outside the editor), so a form's check and thank-you message (data-vt-form) run.
   if (tag === "form") props.onSubmit = preventSubmit;
-  if (tag === "button") props.type = "button";
+  if (tag === "button") props.type = props.type === "submit" && !ctx.puck.isEditing ? "submit" : "button";
   if (FORM_FIELDS.has(tag)) {
-    props.readOnly = true;
-    if (ctx.puck.isEditing) props.tabIndex = -1;
+    if (ctx.puck.isEditing) {
+      props.readOnly = true;
+      props.tabIndex = -1;
+    }
     if ("value" in props) {
       props.defaultValue = props.value;
       delete props.value;
@@ -73,6 +80,14 @@ function renderElement(node: ElementNode, ctx: RenderContext, key: number | stri
   }
 
   if (VOID.has(tag)) return createElement(tag, props);
+  // Words that slide in, letters that roll or flip: their spans, as design pieces render them (text-effects.tsx), so
+  // a locked section and the same section taken apart look and move the same.
+  const effect = textEffectOf(node.a);
+  if (effect && (node.c ?? []).every((c) => typeof c === "string" || "f" in (c as object))) {
+    const text = (node.c ?? []).map((c) => (typeof c === "string" ? c : (ctx.values[(c as { f: string }).f] ?? ""))).join("");
+    if (effect !== "split") props["aria-label"] = text;
+    return createElement(tag, props, ...effectText(effect, text));
+  }
   const children = NO_TEXT.has(tag) ? node.c?.filter((c) => typeof c !== "string" || c.trim()) : node.c;
   return createElement(tag, props, ...renderChildren(children, ctx));
 }

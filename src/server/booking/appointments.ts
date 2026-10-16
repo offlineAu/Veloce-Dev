@@ -1,3 +1,6 @@
+import { analyticsConfig } from "@/server/analytics/config";
+import { conversion } from "@/server/analytics/capture";
+import { analyticsContextSchema } from "@/lib/analytics/shared";
 import 'server-only';
 import { db } from '@/server/db';
 import { bookingSettings } from './config';
@@ -11,7 +14,7 @@ export async function syncAppointment(booking: CalBooking) {
   const startAt = new Date(booking.start), endAt = new Date(booking.end), version = new Date(booking.updatedAt);
   if (endAt <= startAt) throw new Error('Invalid booking interval');
   const reference = booking.metadata?.veloceSession;
-  return db.$transaction(async tx => {
+  const row = await db.$transaction(async tx => {
     // Serialize callback, webhook and reconciliation processing for the same booking.
     await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`cal:${booking.uid}`}))::text`;
     const existing = await tx.appointment.findUnique({ where: { provider_providerBookingId: { provider: 'CAL', providerBookingId: booking.uid } } });
@@ -37,10 +40,12 @@ export async function syncAppointment(booking: CalBooking) {
     let leadId = existing?.leadId ?? previous?.leadId;
     if (!leadId) {
       const lead = await tx.lead.create({ data: {
+        analyticsVisitorId: session.analyticsVisitorId, analyticsLinkedAt: session.analyticsLinkedAt,
         companyId: session.companyId, name: attendee.name, email: attendee.email.toLowerCase(),
         projectType: 'OTHER', projectGoals: typeof notes === 'string' && notes.trim() ? notes.slice(0, 1000) : 'Introductory meeting with Veloce',
         intent: 'MEETING', status: status === 'CONFIRMED' ? 'CONSULTATION_SCHEDULED' : 'NEW',
         source: campaign ? 'REFERRAL_VERIFIED' : 'DIRECT', referralCampaignId: campaign?.id,
+        privacyNoticeVersion: session.privacyNoticeVersion, consentPurpose: session.consentPurpose,
         consentAt: session.consentAt, idempotencyKey: `cal:${booking.uid}`,
         attribution: { create: { landingPath: '/', utmSource: session.utmSource, utmMedium: session.utmMedium, utmCampaign: session.utmCampaign } },
       }, select: { id: true } });
@@ -51,9 +56,23 @@ export async function syncAppointment(booking: CalBooking) {
       create: { ...data, providerBookingId: booking.uid, sessionId: session.id, leadId }, update: data,
     });
     if (previous) await tx.appointment.update({ where: { id: previous.id }, data: { status: 'RESCHEDULED', replacementId: booking.uid } });
+    if (status === 'CONFIRMED' && session.analyticsVisitorId) await tx.lead.updateMany({ where: { id: leadId, analyticsBookingConfirmedAt: null }, data: { analyticsBookingConfirmedAt: new Date() } });
     if (status === 'CONFIRMED') await tx.lead.updateMany({ where: { id: leadId, status: { in: ['NEW', 'CONTACTED'] } }, data: { status: 'CONSULTATION_SCHEDULED' } });
     return row;
   }, { timeout: 20_000 });
+  if (row?.status === 'CONFIRMED' && analyticsConfig().enabled) {
+    // One stable acquisition event per lead across booking replacements and repeated syncs.
+    try {
+      const lead = await db.lead.findUnique({ where: { id: row.leadId } });
+      const session = await db.bookingSession.findUnique({ where: { id: row.sessionId } });
+      if (lead && session) conversion({ event: "booking_confirmed", key: lead.id,
+        visitorId: lead.analyticsVisitorId, linkedAt: lead.analyticsLinkedAt,
+        context: analyticsContextSchema.parse(session.analyticsContext), campaignId: lead.referralCampaignId,
+        form: "booking", timestamp: lead.analyticsBookingConfirmedAt ?? row.createdAt,
+      });
+    } catch { console.warn("[analytics] booking capture unavailable"); }
+  }
+  return row;
 }
 export async function verifiedMeeting(reference: string, accessToken: string, uid?: string): Promise<MeetingResult | null> {
   const session = await db.bookingSession.findUnique({ where: { referenceHash: tokenHash(reference) } });

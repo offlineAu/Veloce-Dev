@@ -2,6 +2,7 @@
  * Step 1 of the importer: HTML text → a small, sanitised intermediate tree (IR). Everything later works on the IR.
  * Sanitising is allow-list based: tags and attributes not listed here never reach a template package.
  */
+import { BEHAVIOUR_ATTR, parseBehaviour } from "../behaviours";
 import { parse, type DefaultTreeAdapterMap } from "parse5";
 import type { Report } from "./report";
 
@@ -21,6 +22,8 @@ export interface IREl {
   tag: string;
   attrs: Record<string, string>;
   children: IRNode[];
+  /** The element's data-* attributes, read by the interactions mapper (import/behaviours.ts); never written out. */
+  data?: Record<string, string>;
 }
 export type IRNode = IRText | IRComment | IREl;
 
@@ -33,8 +36,12 @@ export interface ParsedPage {
   tailwindConfig?: string;
   /** Google Fonts stylesheet URLs. */
   fontLinks: string[];
-  /** Contents of <style> blocks (reported, not imported: Stitch only uses them for page boilerplate). */
+  /** Contents of <style> blocks: page boilerplate on Tailwind pages; the whole design on hand-written ones. */
   styles: string[];
+  /** Whether the page is styled with Tailwind (its config, or the Tailwind script). Otherwise its own CSS styles it. */
+  usesTailwind: boolean;
+  /** Inline scripts' source, read (never run) to find which classes they switch on. */
+  scripts: string[];
   body: IREl;
 }
 
@@ -101,8 +108,15 @@ function toIR(node: P5Node, report: Report): IRNode | null {
     return null;
   }
   const attrs: Record<string, string> = {};
+  const data: Record<string, string> = {};
   for (const a of node.attrs) {
     const name = (a.prefix ? `${a.prefix}:${a.name}` : a.name).toLowerCase();
+    if (/^data-[a-z0-9-]+$/.test(name) && a.value.length <= 200) data[name] = a.value;
+    // A design that already uses the builder's interactions keeps them (when they're valid).
+    if (BEHAVIOUR_ATTR.test(name) && parseBehaviour(name, a.value) !== null) {
+      attrs[name] = a.value;
+      continue;
+    }
     if (!allowedAttr(tag, name)) {
       if (/^on/i.test(name)) report.count("inline event handlers removed (onclick…)");
       continue;
@@ -113,6 +127,11 @@ function toIR(node: P5Node, report: Report): IRNode | null {
     }
     attrs[name] = a.value;
   }
+  // A lazy-loaded image keeps its address in data-src (a script copies it over as the image scrolls into view).
+  if (tag === "img" && !attrs.src) {
+    const lazy = data["data-src"] ?? data["data-lazy-src"] ?? data["data-original"] ?? data["data-lazy"];
+    if (lazy && !UNSAFE_URL.test(lazy)) attrs.src = lazy;
+  }
   if (tag === "iframe" && !/^https:\/\//i.test(attrs.src ?? "")) {
     report.count("embeds without https removed");
     return null;
@@ -120,12 +139,23 @@ function toIR(node: P5Node, report: Report): IRNode | null {
   const children = ((node as P5Element).childNodes ?? (node as unknown as { content?: { childNodes: P5Node[] } }).content?.childNodes ?? [])
     .map((c) => toIR(c, report))
     .filter((c): c is IRNode => c !== null);
+  // A dialog (a drawer, a modal) is hidden until its script opens it, as browsers show it: a hidden box in its place.
+  if (tag === "dialog") {
+    report.count("dialogs kept hidden (they open with a script)");
+    return { kind: "el", tag: "div", attrs: { ...attrs, ...("open" in attrs ? {} : { hidden: "" }) }, children };
+  }
   if (!ALLOWED_TAGS.has(tag)) {
     report.warn(`Unsupported <${tag}> replaced by its contents.`);
-    return { kind: "el", tag: "span", attrs: attrs.class ? { class: attrs.class } : {}, children };
+    // Marked, so the design's rules for the tag still style it (`output{…}` → `.vt-as-output`, page-css.ts).
+    const standin = STANDIN_TAGS.includes(tag) ? `as-${tag}` : "";
+    const cls = [attrs.class ?? "", standin].filter(Boolean).join(" ");
+    return { kind: "el", tag: "span", attrs: cls ? { class: cls } : {}, children };
   }
-  return { kind: "el", tag, attrs, children };
+  return { kind: "el", tag, attrs, children, ...(Object.keys(data).length ? { data } : {}) };
 }
+
+/** Tags shown as a <span> whose design rules are kept (a calculator's <output>). */
+export const STANDIN_TAGS = ["output", "meter"];
 
 function find(node: P5Node, pred: (e: P5Element) => boolean): P5Element | undefined {
   if (isElement(node) && pred(node)) return node;
@@ -163,6 +193,8 @@ export function parsePage(html: string, report: Report): ParsedPage {
     tailwindConfig: config,
     fontLinks,
     styles,
+    usesTailwind: !!config || scripts.some((e) => /tailwind/i.test(attr(e, "src") ?? "")),
+    scripts: scripts.filter((e) => !attr(e, "src")).map(text),
     body: bodyIR && bodyIR.kind === "el" ? { ...bodyIR, tag: "div" } : { kind: "el", tag: "div", attrs: {}, children: [] },
   };
 }

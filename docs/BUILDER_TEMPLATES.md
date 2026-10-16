@@ -68,6 +68,43 @@ npm run template:import -- ~/Downloads/stitch_export.zip --slug noir-needle --na
 - optionally a `screen.png` per page, used for the picker thumbnail
 - optionally a `DESIGN.md`; the tokens in its frontmatter override the page's Tailwind config
 
+Or a single hand-written `.html` page, imported as a one-page template.
+
+**Templates whose script builds the page (`--bake`).** Many hand-written designs keep their content in the script, such as product cards, listings, charts, KPI tiles or a client portal's views. They render it into empty containers, and the importer never runs scripts. `--bake` first runs each page once in a headless browser, using the same capture as the developer panel's upload (`src/lib/builder/bake-capture.ts`):
+
+- The capture scrolls through the page, so content that appears on scroll is built too.
+- It waits for count-ups and bars to finish, then imports what the script left behind.
+- It takes a screenshot as the page's thumbnail when the export has none.
+
+Motion the script set inline (a card mid-transform, a measured offset) goes back to the design's own value. Sizes and variables it set from data, such as a bar's width, are kept.
+
+A page that holds several views (an app whose script switches them), or that needs a few steps before capture, gets a **bake recipe** in its hints file:
+
+```json
+{
+  "bake": { "pages": [{ "dir": "overview", "before": "enterApp(); await wait(500); go(\"overview\");" }] },
+  "behaviours": [{ "selector": "#stack", "set": { "data-vt-stack": "swipe status:st-count" } }]
+}
+```
+
+- **Pages:** each recipe page is the export's first page, run with its `before` steps. The steps are an async function body that can call the page's own functions and `await wait(ms)`. Pages come in the recipe's order, and the first is the home page.
+- **Changing the page before capture:** steps can also add a `data-path` to a link so it points at another page, wrap a chart and its table into tab panels, or add a `<style>` for a state the builder sets.
+- **Behaviours:** `behaviours` holds the usual hints.
+
+Examples: `scripts/template-hints/bellbird-portal.json` (six views as six pages), `oakwell-home.json` (a 3D product carousel whose headline and price follow the front card, through `data-vt-carousel`), `ridgeline-dashboard.json` (chart and table tabs) and `wren-vale-property.json` (lazy photos and the thank-you messages a script would write).
+
+**What else the importer does for hand-written pages:**
+
+- **Theme.** It reads the background, text colour and fonts the page actually uses (`body` and `h1` rules, through `var(--…)`). Headings follow the design's own stylesheet, not the builder's heading font (`handWritten` in the package).
+- **Layout.** A block the stylesheet lays out as a grid of cards stays one section, so the cards still line up.
+- **Lists.** Siblings only become an editable list when they look alike: same classes, styles, icons and chosen state. Otherwise the first item's look would be copied onto every row.
+- **Captured states.** A state class a captured page left on an element no interaction runs, such as the current room in a walk-through, stays. The stylesheet matches either that class or the builder's runtime state.
+- **Design data.** `data-*` attributes the stylesheet styles by (`content: attr(data-mark)`) are kept as `data-vt-x-*`.
+- **Count-ups.** A count-up shows the number it counts to (`data-n`, `data-to`…), not the one the capture caught.
+- **Menus.** A menu the design shows with `.on` opens with that state (`data-vt-toggle="menu on"`).
+- **Same in the editor.** A section taken apart into design pieces renders the same markup, inline styles and text effects as the locked section a sample shows (unit-tested on every repo template, `tests/unit/builder-elements.test.ts`).
+- **Stand-ins.** A button that navigates to a page becomes a link that keeps the design's `button` rules (`vt-as-button`). An `<output>` becomes a span that keeps its `output` rules.
+
 **What the importer does:**
 
 - **Downloads everything into the package.** That includes Google Fonts (only the icon font's used icons) and every image, re-encoded as WebP. A template never loads anything from another site.
@@ -90,6 +127,8 @@ npm run template:import -- ~/Downloads/stitch_export.zip --slug noir-needle --na
 | `--map <folder>=<link>` | The report pairs a page folder with the wrong `data-path` link |
 | `--version N --force` | Re-importing a version that hasn't been published yet |
 | `--offline` | Trying an import without the network; fonts and images become placeholders |
+| `--bake` | The page's script builds part of it (see above) |
+| `--hints <file>` | The template has scripted parts the importer can't recognise on its own, or a bake recipe |
 
 ## 2. Review
 
@@ -149,7 +188,12 @@ The home page's "Tailored services" section shows sample websites in a diagonal 
 Visitors can mix a template's sections with the builder's own blocks, and change the inside of a section.
 
 - **Match design.** Native blocks (Heading, Button, Pricing…) on a template site have a *Style: Match design / Simple* option. "Match design" uses the template's own classes for headings, text, buttons, cards, sections and images. These are derived from its sections by `deriveKit()` in `src/lib/builder/template-kit.ts`.
-- **Edit layout.** A locked `DesignSection` can be taken apart into **design pieces**, one block per element, in one undoable step:
+- **Everything is draggable from the start.** When a visitor opens a template in the editor, from the picker, a `?template=` link or **Add page**, every section arrives already taken apart into design pieces. The header, images, buttons, cards and texts can be selected, dragged, duplicated, deleted and styled straight away (`docFromTemplate(pkg, "pieces")` in `src/lib/builder/template-doc.ts`). The team's template review (`&review=1`) and the read-only previews keep whole, locked sections.
+- **The template's own sections in the Blocks panel.** On a template site, the panel starts with a "<template> sections" group: one block per section of the template, with headers and footers that repeat on every page listed once (`src/components/builder/template-blocks.tsx`). Drag one anywhere and it arrives as design pieces, with links to the template's pages pointing at the site's own pages. **Add a section** (toolbar) does the same, at the bottom of the page.
+- **Drops land between sections.** Puck only drops into the innermost zone under the pointer, and a template's pieces fill each section. So a whole page section, whether a ready-made one (Hero, Pricing…), a native Section or a template section, dropped onto a design is moved out beside the section it was dropped on (`tidyDrops`, in the same undo step). Content blocks such as Heading, Text or Button stay where they're dropped. Empty layers the design positions over or behind content (glows, overlays) are marked `decor` and are plain elements, not drop zones.
+- **Ready-made blocks match the design.** With *Style: Match design*, native blocks use the template's heading, text, button, card and section classes. Headings and body text drop the design's text colour, since a headline taken from a dark hero would be white on a light section, and inherit the colour of where they're placed (`kitOf` in `src/lib/builder/template-kit.ts`). Labels and buttons keep theirs.
+- **Pages.** **Add page** starts a page blank or from any page of the template, also as design pieces.
+- **Edit layout.** A locked `DesignSection` (sites saved before this change, or added in review) can still be taken apart into **design pieces**, one block per element, in one undoable step:
   - the pieces are `Box`, `DText`, `DImage`, `DLink`, `DIcon`, `DField` and `DRaw` (`src/components/builder/blocks/elements.tsx`)
   - they're built by `sectionToElements()` in `src/lib/builder/elements.ts`
   - pieces and builder blocks nest inside each other freely, except that links never hold links
@@ -160,6 +204,13 @@ Visitors can mix a template's sections with the builder's own blocks, and change
   - which screens it shows on
 
   They use the template's own colours, type scale and radii, read from its CSS. Each control rewrites only its own group of classes (`src/lib/builder/class-groups.ts`), so the design's other classes and its hover and dark variants stay put.
+- **Per device.** The panel edits the device on the canvas (Desktop, Tablet or Phone). Changes cascade desktop-first, and a device's own value is marked with a **Reset**. It's stored as bare / `md:` / `lg:` classes, and every other device's value is kept (`writeDevice` in `class-groups.ts`). More controls are available too: margins, height, border, opacity, blur, position, stacking, line and letter spacing, and case.
+- **Free layout.** "Arrange contents → Free" on a group turns it into a free canvas. Items are pinned where they were, then dragged, resized and snapped with smart guides; Shift-click selects several, which can be aligned and distributed. Places are `md:` classes, so phones stack (`free-layout.ts`, `free-canvas.tsx`). Layers can be hidden (left out of the design) or locked in the Outline.
+- **Design system.** The Styles tab edits the design's colours, fonts (web fonts served from this site) and text sizes for the whole site. It also holds colour styles and text styles that pieces use by name. Any block can become a component whose copies follow it (Assets tab). See `docs/BUILDER_ROADMAP.md`, phase 3.
+- **Content.** The Content tab holds collections (a ready-made Blog), their items and the site's menus. A Collection list repeats a designed card per item, item pages show one item, groups of links can follow a menu, and pages have search and sharing details. See `docs/BUILDER_ROADMAP.md`, phase 4.
+- **Media and effects.** Pictures can be uploaded (stored privately and re-encoded on the server), cropped to a shape with a focal point, and pieces can animate in as they scroll into view or on hover. There's a Rich text piece, plus Numbers, How it works, Gallery, Team and Logos sections. See `docs/BUILDER_ROADMAP.md`, phase 5.
+- **Interactions.** Templates' scripts never run. The importer recreates what they did with the builder's own interactions: reveals, headings whose words slide in, count-ups, endless photo walls, menus, accordions, tabs, card stacks, scroll-spy navigation and forms. Visitors add and change interactions in the Style panel's Interactions group, and see where every link goes with **Wiring**. For a template's own scripted parts the generic rules don't catch, add a hints file (`scripts/template-hints/<slug>.json`, `--hints`). Hand-written templates (no Tailwind) keep their own stylesheet, scoped and prefixed. Section names are cleaned, and sections are grouped by kind in the Blocks tab. See `docs/BUILDER_ROADMAP.md`, phase 6.
+- **Shortcuts and layers.** ⌘C/X/V copies, cuts and pastes, also between pages. ⌘D duplicates, Alt ↑/↓ moves, Esc selects the parent, and ? lists the shortcuts (`shortcuts.tsx`). The Outline panel names each layer and can rename it (`layers.tsx`, stored as `name`). The plan beyond this is in `docs/BUILDER_ROADMAP.md`.
 - **Advanced.** "Show class names (advanced)", remembered per browser, adds:
   - a raw **Classes** field, written without the `vt:` prefix
   - **Edit HTML** for a piece or a whole locked section. The server reads the HTML back through the importer's sanitiser (`src/server/builder/html-pieces.ts`, rate-limited, 50 KB, at most 1,500 elements). Builder blocks inside show as `<!--block:…-->` markers and are put back where the markers are.

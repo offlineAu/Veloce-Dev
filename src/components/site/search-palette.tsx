@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -18,42 +19,64 @@ const ORDER: SearchGroup[] = ["Jump to", "Services", "Capabilities", "Contact"];
 
 export function SearchPalette({ entries, className, variant = "compact", keyboardShortcut = true }: { entries: SearchEntry[]; className?: string; variant?: "compact" | "bar"; keyboardShortcut?: boolean }) {
   const [open, setOpen] = React.useState(false);
+  const router = useRouter();
+  const pending = React.useRef<SearchEntry | null>(null);
+  const opener = React.useRef<HTMLElement | null>(null);
+  const changeOpen = React.useCallback((next: boolean) => {
+    if (next) opener.current = document.activeElement as HTMLElement | null;
+    setOpen(next);
+  }, []);
 
   React.useEffect(() => {
     if (!keyboardShortcut) return;
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        setOpen((v) => !v);
+        changeOpen(!open);
       }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [keyboardShortcut]);
+  }, [keyboardShortcut, open, changeOpen]);
 
   const run = (entry: SearchEntry) => {
+    pending.current = entry;
     setOpen(false);
-    // Wait for the dialog to unmount so focus and scroll lock are released first.
-    window.setTimeout(() => {
+  };
+
+  const afterClose = (event: Event) => {
+    event.preventDefault();
+    const entry = pending.current;
+    pending.current = null;
+    if (!entry) {
+      opener.current?.focus({ preventScroll: true });
+      return;
+    }
+    // Radix has released its focus scope. Run after scroll-lock cleanup too.
+    requestAnimationFrame(() => {
       if (entry.kind === "cta") {
-        // The FAB action stays mounted even when collapsed, so search can open the form.
         document.querySelector<HTMLElement>("[data-primary-cta]")?.click();
       } else if (entry.kind === "mail" && entry.href) {
         window.location.href = entry.href;
       } else if (entry.href?.startsWith("#")) {
-        document.getElementById(entry.href.slice(1))?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth" });
-        history.replaceState(null, "", entry.href);
+        const target = document.getElementById(entry.href.slice(1));
+        if (!target) return;
+        const href = `${location.pathname}${location.search}${entry.href}`;
+        if (location.hash !== entry.href) router.push(href);
+        else target.scrollIntoView({ behavior: prefersReducedMotion() ? "instant" : "smooth" });
+      } else if (entry.href?.startsWith("/")) {
+        router.push(entry.href);
       } else if (entry.href) {
         window.location.assign(entry.href);
       }
-    }, 50);
+    });
   };
 
   return (
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => changeOpen(true)}
         aria-haspopup="dialog"
         aria-keyshortcuts={keyboardShortcut ? "Control+k Meta+k" : undefined}
         aria-label={variant === "bar" ? "Search this site" : "Search"}
@@ -70,8 +93,8 @@ export function SearchPalette({ entries, className, variant = "compact", keyboar
         </kbd>
       </button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent showCloseButton={false} className="top-[22%] translate-y-0 gap-0 overflow-hidden rounded-2xl border border-line p-0 sm:max-w-xl">
+      <Dialog open={open} onOpenChange={changeOpen}>
+        <DialogContent onCloseAutoFocus={afterClose} showCloseButton={false} className="top-[22%] translate-y-0 gap-0 overflow-hidden rounded-2xl border border-line p-0 sm:max-w-xl">
           <DialogTitle className="sr-only">Search this site</DialogTitle>
           <DialogDescription className="sr-only">Type to filter sections, services and capabilities, then press Enter to go there.</DialogDescription>
           <Command className="rounded-none bg-transparent">

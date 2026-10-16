@@ -1,6 +1,8 @@
 /* eslint-disable @next/next/no-img-element -- visitor images are arbitrary external URLs */
 import type { ComponentConfig } from "@puckeditor/core";
+import { isMediaSrc } from "@/lib/builder/media";
 import { linkField, linkProps } from "../links";
+import { imageField } from "../media-tools";
 import { alignClass, alignOptions, cardRadius, headingFont, kitFor, siteButton, withLook, type Align, type Look } from "./shared";
 
 const headingSize = { xl: "text-5xl md:text-6xl", l: "text-4xl md:text-5xl", m: "text-3xl", s: "text-xl" } as const;
@@ -46,7 +48,7 @@ export type ImageProps = { src: string; alt: string; ratio: "auto" | "16/9" | "4
 export const Image: ComponentConfig<ImageProps> = withLook({
   label: "Image",
   fields: {
-    src: { type: "text", label: "Image URL", placeholder: "https://…" },
+    src: imageField("Image"),
     alt: { type: "text", label: "Description (for screen readers)" },
     ratio: { type: "select", label: "Shape", options: [{ label: "Original", value: "auto" }, { label: "Wide 16:9", value: "16/9" }, { label: "Classic 4:3", value: "4/3" }, { label: "Square", value: "1/1" }] },
     rounded: { type: "radio", label: "Rounded corners", options: [{ label: "Yes", value: true }, { label: "No", value: false }] },
@@ -55,7 +57,7 @@ export const Image: ComponentConfig<ImageProps> = withLook({
   render: ({ src, alt, ratio, rounded, look, puck }) => {
     const k = kitFor(puck, look);
     const style = k?.image ? `w-full ${k.image}` : `w-full object-cover ${rounded ? cardRadius : ""}`;
-    return /^https?:\/\//i.test(src) || src.startsWith("/build/t/") || src.startsWith("/builder-templates/") ? (
+    return /^https?:\/\//i.test(src) || src.startsWith("/build/t/") || src.startsWith("/builder-templates/") || isMediaSrc(src) ? (
       <img src={src} alt={alt} loading="lazy" className={style} style={ratio === "auto" ? undefined : { aspectRatio: ratio }} />
     ) : (
       <div

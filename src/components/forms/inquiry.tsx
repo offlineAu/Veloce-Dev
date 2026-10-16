@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/analytics/client";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { Dialog, useOpenerFocus } from "@/components/ui/dialog";
@@ -56,7 +57,7 @@ export function InquiryProvider({ children, companyName, contactEmail, refToken,
     const id = window.setTimeout(() => void loadDialog(), 4000);
     return () => window.clearTimeout(id);
   }, []);
-  const ctx = useMemo<Ctx>(() => ({ open: (i = "CONVERSATION", svc) => { remember(); setIntent(i); setService(svc); setWanted(true); setOpen(true); } }), [remember]);
+  const ctx = useMemo<Ctx>(() => ({ open: (i = "CONVERSATION", svc) => { track("cta_clicked", { placement: i === "CONSULTATION" ? "consultation" : "inquiry", service: svc?.slug }); remember(); setIntent(i); setService(svc); setWanted(true); setOpen(true); } }), [remember]);
   return (
     <InquiryCtx.Provider value={ctx}>
       {children}

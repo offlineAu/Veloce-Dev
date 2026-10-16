@@ -6,6 +6,8 @@ Next.js (App Router) · React 19 · TypeScript (strict) · Tailwind CSS 4 · Rad
 
 Docs: [`docs/SOURCE_AUDIT.md`](docs/SOURCE_AUDIT.md) · [`docs/FEATURE_MAPPING.md`](docs/FEATURE_MAPPING.md) · [`docs/TECHNICAL_DECISIONS.md`](docs/TECHNICAL_DECISIONS.md) · [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) · [`docs/RELEASE_READINESS.md`](docs/RELEASE_READINESS.md)
 
+Analytics: [setup, dashboards, consent and erasure](docs/ANALYTICS.md). Collection is disabled by default.
+
 ## Local development (no Docker)
 
 ```bash

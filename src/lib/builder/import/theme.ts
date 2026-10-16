@@ -23,7 +23,7 @@ export interface DesignTokens {
   breakpoints: Record<string, string>;
 }
 
-const empty = (): DesignTokens => ({ colors: {}, spacing: {}, radius: {}, fontFamily: {}, fontSize: {}, shadow: {}, tracking: {}, leading: {}, breakpoints: {} });
+export const emptyTokens = (): DesignTokens => ({ colors: {}, spacing: {}, radius: {}, fontFamily: {}, fontSize: {}, shadow: {}, tracking: {}, leading: {}, breakpoints: {} });
 
 const isDict = (v: unknown): v is Dict => !!v && typeof v === "object" && !Array.isArray(v);
 const str = (v: unknown) => (typeof v === "string" || typeof v === "number" ? String(v) : undefined);
@@ -81,7 +81,7 @@ export function readTailwindConfig(script: string | undefined, report: Report): 
 }
 
 export function tokensFromConfig(config: Dict | null, report: Report): DesignTokens {
-  const t = empty();
+  const t = emptyTokens();
   if (!config) return t;
   const theme = isDict(config.theme) ? config.theme : {};
   const ext = isDict(theme.extend) ? theme.extend : {};
@@ -116,7 +116,7 @@ export function tokensFromConfig(config: Dict | null, report: Report): DesignTok
 
 /** DESIGN.md frontmatter (Stitch's design-system export): colors, typography, rounded, spacing. */
 export function tokensFromDesignMd(md: string | undefined, report: Report): { tokens: DesignTokens; notes?: string } {
-  const t = empty();
+  const t = emptyTokens();
   if (!md) return { tokens: t };
   const m = md.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
   if (!m) return { tokens: t, notes: md.trim() || undefined };
@@ -145,7 +145,7 @@ export function tokensFromDesignMd(md: string | undefined, report: Report): { to
 
 /** Later sources win, per token. */
 export function mergeTokens(...all: DesignTokens[]): DesignTokens {
-  const out = empty();
+  const out = emptyTokens();
   for (const t of all) for (const k of Object.keys(out) as (keyof DesignTokens)[]) Object.assign(out[k], t[k]);
   return out;
 }
@@ -238,7 +238,7 @@ export function builderTheme(t: DesignTokens, dark: boolean, report: Report, hin
     muted: pick("muted", ["on-surface-variant"]),
     line: pick("line", ["outline-variant", "outline"]),
   };
-  const heading = firstMatch(t.fontFamily, /^(display|headline|heading|h1|title)/i);
+  const heading = firstMatch(t.fontFamily, /^(display|headline|heading|head$|h1|title)/i);
   const body = firstMatch(t.fontFamily, /^body|^sans|^text/i);
   const label = firstMatch(t.fontSize, /^label/i);
   const accent = roles.accent.value;

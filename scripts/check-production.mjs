@@ -18,6 +18,7 @@ try {
   if (site.protocol !== 'https:' || local(site.hostname) || site.pathname !== '/' || site.search || site.hash || site.username || site.password) fail('NEXT_PUBLIC_SITE_URL must be the public HTTPS origin.');
 } catch { fail('NEXT_PUBLIC_SITE_URL is missing or invalid.'); }
 if (!e.HASH_SECRET || e.HASH_SECRET.length < 32 || e.HASH_SECRET === 'change-me') fail('HASH_SECRET needs at least 32 characters; preserve the existing production secret.');
+if (!e.PRIVACY_CRON_SECRET || e.PRIVACY_CRON_SECRET.length < 32) fail('PRIVACY_CRON_SECRET requires at least 32 characters; activate and monitor the daily privacy cleanup schedule.');
 if (e.CAL_LOCAL_MODE === 'true') fail('CAL_LOCAL_MODE must be false in production.');
 if (e.BOOKING_ENABLED !== 'true') fail('BOOKING_ENABLED must be true for the appointment release.');
 try {

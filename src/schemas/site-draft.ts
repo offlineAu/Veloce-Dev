@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { BLOCK_TYPES, mapBlocks, type BlockItem } from "@/lib/builder/blocks";
-import { sanitizeHtmlOnServer } from "@/server/builder/sanitize-html";
-import { MAX_PAGES, PATH_RE, migrateDoc, type SiteDoc } from "@/lib/builder/site-doc";
+import { sanitizeHtmlOnServer, sanitizeRichText } from "@/server/builder/sanitize-html";
+import { MAX_PAGES, PATH_RE, migrateDoc, type SiteDoc, type SitePage } from "@/lib/builder/site-doc";
 import { checkDesignSections } from "@/server/builder/design-validation";
 
 const KNOWN = new Set<string>(BLOCK_TYPES);
@@ -59,16 +59,30 @@ async function checkSite(doc: SiteDoc): Promise<string | null> {
     });
     if (unknown) return `Unknown block "${String(unknown).slice(0, 40)}".`;
   }
-  return checkDesignSections(doc);
+  // Components keep a copy of their main block: checked like a page of their own.
+  const componentBlocks = Object.values(doc.components ?? {}).map((c) => c.block);
+  let unknown: string | null = null;
+  mapBlocks(componentBlocks, (b) => {
+    if (!KNOWN.has(b.type)) unknown ??= b.type;
+    return b;
+  });
+  if (unknown) return `Unknown block "${String(unknown).slice(0, 40)}".`;
+  const components: SitePage = { id: "components", path: "/components", title: "Components", data: { root: {}, content: componentBlocks } };
+  return checkDesignSections(componentBlocks.length ? { ...doc, pages: [...doc.pages, components] } : doc);
 }
 
 const sanitizeBlocks = (items: BlockItem[]) =>
   mapBlocks(items, (b) =>
-    b.type === "CustomHtml" && typeof b.props.html === "string" ? { ...b, props: { ...b.props, html: sanitizeHtmlOnServer(b.props.html) } } : b,
+    b.type === "CustomHtml" && typeof b.props.html === "string"
+      ? { ...b, props: { ...b.props, html: sanitizeHtmlOnServer(b.props.html) } }
+      : b.type === "DRich" && typeof b.props.html === "string"
+        ? { ...b, props: { ...b.props, html: sanitizeRichText(b.props.html) } }
+        : b,
   );
 
 function sanitizeSite(doc: SiteDoc): SiteDoc {
-  return { ...doc, pages: doc.pages.map((p) => ({ ...p, data: { ...p.data, content: sanitizeBlocks(p.data.content) } })) };
+  const components = doc.components && Object.fromEntries(Object.entries(doc.components).map(([id, c]) => [id, { ...c, block: sanitizeBlocks([c.block])[0]! }]));
+  return { ...doc, components, pages: doc.pages.map((p) => ({ ...p, data: { ...p.data, content: sanitizeBlocks(p.data.content) } })) };
 }
 
 export type SiteDraftInput = z.input<typeof siteDraftSchema>;

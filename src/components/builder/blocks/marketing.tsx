@@ -1,6 +1,8 @@
 /* eslint-disable @next/next/no-img-element -- visitor images are arbitrary external URLs */
 import type { ComponentConfig, PuckContext } from "@puckeditor/core";
+import { isMediaSrc } from "@/lib/builder/media";
 import { linkField, linkProps } from "../links";
+import { imageField } from "../media-tools";
 import { alignClass, alignOptions, cardRadius, kitFor, looks, toneClass, toneOptions, withLook, type Align, type Look, type Tone } from "./shared";
 
 type Looks = ReturnType<typeof looks>;
@@ -36,7 +38,7 @@ export const Hero: ComponentConfig<HeroProps> = withLook({
     primaryHref: linkField("Main button link"),
     secondaryLabel: { type: "text", label: "Second button (optional)" },
     secondaryHref: linkField("Second button link"),
-    image: { type: "text", label: "Image URL (optional)" },
+    image: imageField("Image (optional)"),
     layout: { type: "radio", label: "Layout", options: [{ label: "Split", value: "split" }, { label: "Centred", value: "centered" }] },
     tone: { type: "select", label: "Background", options: [...toneOptions] },
   },
@@ -55,7 +57,7 @@ export const Hero: ComponentConfig<HeroProps> = withLook({
   render: ({ eyebrow, title, subtitle, primaryLabel, primaryHref, secondaryLabel, secondaryHref, image, layout, tone, look, puck }) => {
     const centred = layout === "centered";
     const l = looks(kitFor(puck, look), tone);
-    const media = /^(https?:\/\/|\/build\/t\/|\/builder-templates\/)/i.test(image) ? (
+    const media = /^(https?:\/\/|\/build\/t\/|\/builder-templates\/)/i.test(image) || isMediaSrc(image) ? (
       <img src={image} alt="" className={`aspect-[4/3] ${l.image}`} />
     ) : (
       <div aria-hidden className={`aspect-[4/3] w-full bg-(--site-accent) opacity-20 ${cardRadius}`} />

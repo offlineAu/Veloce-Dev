@@ -12,7 +12,8 @@ import type { AttrValue, ElementNode, TreeNode } from "./template-package";
 export const KEEP_MARKER = /^block:([\w-]{1,120})$/;
 export const KEEP_TYPE = "__keep";
 
-const PIECES = new Set<string>(ELEMENT_TYPES);
+// Rich text stays whole in the HTML (a block marker): its words are edited on the canvas.
+const PIECES = new Set<string>(ELEMENT_TYPES.filter((t) => t !== "DRich"));
 const VOID = new Set(["img", "input", "br", "hr", "source", "wbr", "col"]);
 const HTML_NAMES: Record<string, string> = {
   className: "class", htmlFor: "for", colSpan: "colspan", rowSpan: "rowspan", maxLength: "maxlength", dateTime: "datetime", tabIndex: "tabindex",

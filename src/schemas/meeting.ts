@@ -1,3 +1,5 @@
+import { analyticsContextSchema } from "@/lib/analytics/shared";
+import { privacyReceiptFields } from "./privacy";
 import { z } from 'zod';
 import { emailField, guardFields, optionalText, refToken, text } from './common';
 
@@ -6,6 +8,7 @@ const attribution = {
   utmSource: optionalText(100), utmMedium: optionalText(100), utmCampaign: optionalText(100),
 };
 export const meetingSessionSchema = z.object({
+  ...privacyReceiptFields, analytics: analyticsContextSchema,
   ...attribution,
   entryPoint: z.enum(['workbench', 'contact']),
   context: optionalText(1000, true),
@@ -23,4 +26,4 @@ export const meetingRequestClientSchema = z.object({
   privacyConsent: z.literal(true, { error: 'Please agree to the privacy notice.' }),
   contactFax: z.string().max(200).optional(),
 });
-export const meetingRequestSchema = meetingRequestClientSchema.extend({ ...guardFields, ...attribution });
+export const meetingRequestSchema = meetingRequestClientSchema.extend({ ...guardFields, ...attribution, ...privacyReceiptFields, analytics: analyticsContextSchema });

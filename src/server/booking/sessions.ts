@@ -1,3 +1,5 @@
+import { conversion, submissionTracking } from "@/server/analytics/capture";
+import { CONSENT_PURPOSES } from "@/lib/legal";
 import 'server-only';
 import { randomBytes, createHash } from 'node:crypto';
 import { db } from '@/server/db';
@@ -17,13 +19,17 @@ export async function startMeetingSession(raw: unknown, clientKey: string): Prom
   const reference = randomBytes(32).toString('hex');
   const accessToken = randomBytes(32).toString('hex');
   const campaign = await findCampaign(input.refToken);
-  await db.bookingSession.create({ data: {
+  const tracking = await submissionTracking(input.analytics);
+  const saved = await db.bookingSession.create({ data: {
+    analyticsVisitorId: tracking?.visitorId, analyticsLinkedAt: tracking?.linkedAt, analyticsContext: tracking?.context,
     referenceHash: tokenHash(reference), accessHash: tokenHash(accessToken),
     companyId: await ensureCompanyId(), eventTypeId: c.eventTypeId, hostId: c.hostId,
     entryPoint: input.entryPoint, campaignId: campaign?.id, context: input.context,
     utmSource: input.utmSource, utmMedium: input.utmMedium, utmCampaign: input.utmCampaign,
+    privacyNoticeVersion: input.privacyNoticeVersion, consentPurpose: CONSENT_PURPOSES.booking,
     consentAt: new Date(), expiresAt: new Date(Date.now() + 24 * 3600_000),
   } });
+  conversion({ event: "booking_started", key: saved.id, visitorId: tracking?.visitorId, linkedAt: tracking?.linkedAt, context: tracking?.context, campaignId: campaign?.id, form: "booking" });
   const config: Record<string, string> = { 'metadata[veloceSession]': reference, layout: 'month_view' };
   if (input.context) config.notes = input.context;
   const url = new URL(c.url);

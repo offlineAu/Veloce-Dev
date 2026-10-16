@@ -141,6 +141,11 @@ model ReferralCampaign {
 }
 
 model Lead {
+  analyticsBookingConfirmedAt DateTime?
+  @@index([analyticsVisitorId])
+  analyticsVisitorId String?
+  analyticsLinkedAt DateTime?
+  analyticsVisitor AnalyticsVisitor? @relation(fields: [analyticsVisitorId], references: [id], onDelete: SetNull)
   id                 String       @id @default(cuid())
   companyId          String
   name               String
@@ -158,6 +163,11 @@ model Lead {
   referralCampaignId String?
   idempotencyKey     String       @unique
   consentAt          DateTime
+  privacyNoticeVersion String?
+  consentPurpose       String?
+  /// Set by the owner's close workflow, not by background updates.
+  closedAt             DateTime?
+  retentionHold        Boolean @default(false)
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
 
@@ -171,6 +181,8 @@ model Lead {
   @@index([status, createdAt])
   @@index([referralCampaignId])
   @@index([email])
+  @@index([status, closedAt])
+
 }
 
 /// A page the visitor designed in the /build editor and sent with their inquiry.
@@ -199,6 +211,10 @@ model LeadAttribution {
 }
 
 model ReferralIntroduction {
+  @@index([analyticsVisitorId])
+  analyticsVisitorId String?
+  analyticsLinkedAt DateTime?
+  analyticsVisitor AnalyticsVisitor? @relation(fields: [analyticsVisitorId], references: [id], onDelete: SetNull)
   id                String             @id @default(cuid())
   campaignId        String?
   referrerName      String
@@ -209,6 +225,11 @@ model ReferralIntroduction {
   projectInterest   ProjectInterest
   message           String?
   referrerConsentAt DateTime
+  privacyNoticeVersion String?
+  consentPurpose       String?
+  /// Set by the owner's close workflow, not by background updates.
+  closedAt             DateTime?
+  retentionHold        Boolean @default(false)
   status            IntroductionStatus @default(RECEIVED)
   idempotencyKey    String             @unique
   createdAt         DateTime           @default(now())
@@ -218,6 +239,8 @@ model ReferralIntroduction {
 
   @@index([campaignId])
   @@index([status, createdAt])
+  @@index([status, closedAt])
+
 }
 
 model NotificationLog {
@@ -251,6 +274,11 @@ model RateLimit {
 }
 
 model BookingSession {
+  analyticsContext Json?
+  @@index([analyticsVisitorId])
+  analyticsVisitorId String?
+  analyticsLinkedAt DateTime?
+  analyticsVisitor AnalyticsVisitor? @relation(fields: [analyticsVisitorId], references: [id], onDelete: SetNull)
   id            String        @id @default(cuid())
   referenceHash String        @unique
   accessHash    String
@@ -264,11 +292,14 @@ model BookingSession {
   utmMedium     String?
   utmCampaign   String?
   consentAt     DateTime
+  privacyNoticeVersion String?
+  consentPurpose       String?
   expiresAt     DateTime
   createdAt     DateTime      @default(now())
   appointments  Appointment[]
 
   @@index([createdAt])
+
 }
 
 model Appointment {
@@ -379,4 +410,21 @@ model BuilderCssCache {
   key       String   @id
   css       String
   createdAt DateTime @default(now())
+}
+
+/// Consent identity is per browser, never inferred from an email or IP.
+model AnalyticsVisitor {
+  id String @id @default(uuid())
+  reference String @unique @default(uuid())
+  consentAt DateTime @default(now())
+  noticeVersion String
+  expiresAt DateTime
+  revokedAt DateTime?
+  identifiedAt DateTime?
+  deletionRequestedAt DateTime?
+  deletionConfirmedAt DateTime?
+  leads Lead[]
+  introductions ReferralIntroduction[]
+  bookingSessions BookingSession[]
+  @@index([expiresAt])
 }

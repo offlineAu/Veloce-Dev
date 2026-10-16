@@ -4,11 +4,12 @@
  * the locked DesignSection renders, with the visitor's current values filled in. Shared by the editor and the server
  * validator: no React.
  */
+import { BEHAVIOUR_ATTR } from "./behaviours";
 import { bgImage } from "./bg-image";
 import type { BlockItem } from "./blocks";
 import type { AttrValue, ElementNode, TemplateSection, TreeNode } from "./template-package";
 
-export const ELEMENT_TYPES = ["Box", "DText", "DImage", "DLink", "DIcon", "DField", "DRaw"] as const;
+export const ELEMENT_TYPES = ["Box", "DText", "DImage", "DLink", "DIcon", "DField", "DRaw", "DRich"] as const;
 export type ElementType = (typeof ELEMENT_TYPES)[number];
 
 /** A run of text inside a DText: plain, or wrapped in one inline element (span, strong, em, br…). */
@@ -29,8 +30,10 @@ export const BOX_TAGS = new Set([
   "h1", "h2", "h3", "h4", "h5", "h6",
 ]);
 export const FIELD_TAGS = new Set(["input", "select", "textarea"]);
-/** Attributes a piece keeps (besides its classes and style). */
-export const PIECE_ATTRS = /^(id|role|title|lang|dir|open|aria-[a-z-]+|target|rel|loading|width|height|type|name|placeholder|value|checked|disabled|required|min|max|step|rows|maxLength|htmlFor|colSpan|rowSpan|scope|dateTime)$/;
+/** Attributes a piece keeps (besides its classes and style), including its interactions (lib/builder/behaviours.ts). */
+export const PIECE_ATTRS = new RegExp(
+  `^(id|role|title|lang|dir|open|hidden|aria-[a-z-]+|target|rel|loading|width|height|type|name|placeholder|value|checked|disabled|required|min|max|step|rows|maxLength|htmlFor|colSpan|rowSpan|scope|dateTime)$|${BEHAVIOUR_ATTR.source}`,
+);
 
 const ICON_CLASS = /(^|\s)vt-material-(symbols|icons)/;
 
@@ -58,7 +61,10 @@ function isTextLike(n: ElementNode): boolean {
   if (!TEXT_TAGS.has(n.t) || ICON_CLASS.test(cls(n))) return false;
   const kids = n.c ?? [];
   if (!kids.length) return false;
-  return kids.every((c) => typeof c === "string" || "f" in (c as object) || (isEl(c) && INLINE_TAGS.has(c.t) && !c.b && !ICON_CLASS.test(cls(c)) && (c.c ?? []).every((g) => typeof g === "string" || "f" in (g as object))));
+  // A run keeps only its tag, class and text: an inline part with more (a bar's inline width, an id, a title) is a
+  // piece of its own, so the design keeps it.
+  const plainRun = (c: ElementNode) => Object.keys(c.a ?? {}).every((k) => k === "className");
+  return kids.every((c) => typeof c === "string" || "f" in (c as object) || (isEl(c) && INLINE_TAGS.has(c.t) && !c.b && plainRun(c) && !ICON_CLASS.test(cls(c)) && (c.c ?? []).every((g) => typeof g === "string" || "f" in (g as object))));
 }
 
 function runsOf(n: ElementNode, values: Values): TextRun[] {
@@ -130,7 +136,10 @@ export function toPiece(node: TreeNode, values: Values, items: Record<string, Va
     return [{ type: "DText", props: { id: newId("DText"), tag: node.t, className, text: plain ? runs[0]!.text : "", runs: plain ? [] : runs, attrs, style } }];
   }
   if (BOX_TAGS.has(node.t)) {
-    return [{ type: "Box", props: { id: newId("Box"), tag: node.t, className, ...(node.b?.bg ? { bg: bound("bg") } : {}), attrs, style, items: children() } }];
+    const items = children();
+    // An empty layer positioned over or behind the content (a glow, a gradient overlay) is decoration.
+    const decor = !items.length && /(^|\s)vt:(absolute|fixed)(\s|$)/.test(className);
+    return [{ type: "Box", props: { id: newId("Box"), tag: node.t, className, ...(node.b?.bg ? { bg: bound("bg") } : {}), ...(decor ? { decor: true } : {}), attrs, style, items } }];
   }
   // Anything else (SVG drawings, video…) stays as it is, but can still be moved and deleted.
   return [{ type: "DRaw", props: { id: newId("DRaw"), tree: fill(node, values, items) } }];

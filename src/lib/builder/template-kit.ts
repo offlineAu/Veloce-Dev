@@ -118,9 +118,26 @@ export function deriveKit(pkg: Pick<TemplatePackage, "pages">): DesignKit {
 /** How Tailwind escapes a class in a selector (same as the importer's check). */
 const escapeClass = (c: string) => c.replace(/[^a-zA-Z0-9_-]/g, (ch) => `\\${ch}`);
 
+/** Headings and body text take the colour of where they're placed, not of the section they were found in. */
+const INHERIT_COLOUR = new Set<keyof DesignKit>(["h1", "h2", "h3", "text"]);
+
+/** Whether a class only sets the text colour (its rule in the template's stylesheet has nothing but `color`). */
+function colourOnly(token: string, css: string): boolean {
+  // The class's own rule, alone or in a group of selectors (".a,.b{…}").
+  const name = `.${escapeClass(token)}`;
+  let at = css.indexOf(name);
+  while (at >= 0 && !/[,{]/.test(css[at + name.length] ?? "")) at = css.indexOf(name, at + name.length);
+  if (at < 0) return false;
+  const open = css.indexOf("{", at);
+  const body = css.slice(open + 1, css.indexOf("}", open));
+  return /^\s*color\s*:[^;]*;?\s*$/.test(body);
+}
+
 /**
  * The kit of a loaded template, worked out once per package. With the template's stylesheet, class names it never
- * defines (script hooks such as "next-step-trigger") are left out.
+ * defines (script hooks such as "next-step-trigger") are left out, and headings and body text lose their text colour:
+ * a headline taken from a dark hero is white, and on a light section it would vanish. They keep the design's font,
+ * size, weight and spacing, and inherit the colour of the section they're placed in.
  */
 const cache = new WeakMap<object, DesignKit>();
 export function kitOf(pkg: TemplatePackage | undefined, css?: string): DesignKit | undefined {
@@ -129,8 +146,9 @@ export function kitOf(pkg: TemplatePackage | undefined, css?: string): DesignKit
   if (!k) {
     k = deriveKit(pkg);
     if (css) {
-      const known = (c: string | undefined) => c?.split(/\s+/).filter((t) => css.includes(`.${escapeClass(t)}`)).join(" ") || undefined;
-      k = Object.fromEntries(Object.entries(k).map(([r, c]) => [r, known(c)])) as DesignKit;
+      const known = (role: keyof DesignKit, c: string | undefined) =>
+        c?.split(/\s+/).filter((t) => css.includes(`.${escapeClass(t)}`) && !(INHERIT_COLOUR.has(role) && colourOnly(t, css))).join(" ") || undefined;
+      k = Object.fromEntries(Object.entries(k).map(([r, c]) => [r, known(r as keyof DesignKit, c)])) as DesignKit;
     }
     cache.set(pkg, k);
   }

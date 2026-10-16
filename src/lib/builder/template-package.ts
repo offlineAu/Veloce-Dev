@@ -56,7 +56,12 @@ export interface RepeaterDef {
 
 export interface TemplateSection {
   id: string;
+  /** The section's name as shown (section-labels.ts cleanLabel). */
   label: string;
+  /** The label as the design's export had it ("HERO", "SERVICES (bento)"), which older sites stored as layer names. */
+  rawLabel?: string;
+  /** What it is (navigation, hero, pricing…), for grouping in the Blocks panel. */
+  kind?: import("./section-labels").SectionKind;
   tree: ElementNode;
   fields: FieldDef[];
   defaults: Record<string, string>;
@@ -83,6 +88,8 @@ export interface TemplatePackage {
   pages: TemplatePage[];
   /** Design guidance from the source (DESIGN.md prose), shown to the team during review. */
   notes?: string;
+  /** Styled by its own stylesheet (not Tailwind): its headings follow that stylesheet, not the builder's heading font. */
+  handWritten?: boolean;
   importedAt: string;
 }
 

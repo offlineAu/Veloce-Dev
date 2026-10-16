@@ -1,3 +1,4 @@
+import { PRIVACY_NOTICE_VERSION, CONSENT_PURPOSES } from "@/lib/legal";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { Client } from "pg";
 
@@ -26,7 +27,7 @@ d("services against a real database", () => {
 
   const base = () => ({
     name: "Test Person", email: `t${Math.random().toString(36).slice(2)}@example.com`, projectType: "NEW_PROJECT",
-    projectGoals: "A site", privacyConsent: true, idempotencyKey: crypto.randomUUID(), startedAt: Date.now() - 5000,
+    projectGoals: "A site", privacyNoticeVersion: PRIVACY_NOTICE_VERSION, privacyConsent: true, idempotencyKey: crypto.randomUUID(), startedAt: Date.now() - 5000,
   });
 
   beforeAll(async () => {
@@ -69,7 +70,7 @@ d("services against a real database", () => {
     const input = base();
     expect(await lead.submitInquiry(input, ctx)).toEqual({ ok: true });
     const row = await db.lead.findUniqueOrThrow({ where: { idempotencyKey: input.idempotencyKey }, include: { attribution: true } });
-    expect(row).toMatchObject({ status: "NEW", source: "DIRECT", referralCampaignId: null });
+    expect(row).toMatchObject({ status: "NEW", source: "DIRECT", referralCampaignId: null, privacyNoticeVersion: PRIVACY_NOTICE_VERSION, consentPurpose: CONSENT_PURPOSES.inquiry });
     expect(row.attribution).not.toBeNull();
     const recipients = sent.map((s) => s.to);
     expect(recipients).toHaveLength(2);
@@ -84,6 +85,7 @@ d("services against a real database", () => {
     const input = { ...base(), siteDraft };
     expect(await lead.submitInquiry(input, ctx)).toEqual({ ok: true });
     const row = await db.lead.findUniqueOrThrow({ where: { idempotencyKey: input.idempotencyKey }, include: { siteDraft: true } });
+    expect(row).toMatchObject({ privacyNoticeVersion: PRIVACY_NOTICE_VERSION, consentPurpose: CONSENT_PURPOSES.design });
     expect(row.siteDraft).toMatchObject({ templateId: "business" });
     expect(row.siteDraft!.token).toMatch(/^[A-Za-z0-9_-]{22}$/);
     expect(JSON.stringify(row.siteDraft!.data)).not.toMatch(/onclick|script/);
@@ -209,7 +211,7 @@ d("services against a real database", () => {
     const intro1 = () => ({
       referrerName: "Rita", referrerEmail: `r${Math.random().toString(36).slice(2)}@example.com`,
       referredName: "Bo", referredEmail: `b${Math.random().toString(36).slice(2)}@example.com`,
-      projectInterest: "REDESIGN", referrerConsent: true, refToken: TOKEN,
+      projectInterest: "REDESIGN", privacyNoticeVersion: PRIVACY_NOTICE_VERSION, referrerConsent: true, refToken: TOKEN,
       idempotencyKey: crypto.randomUUID(), startedAt: Date.now() - 5000,
     });
 

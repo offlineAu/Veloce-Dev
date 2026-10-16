@@ -1,15 +1,19 @@
 "use client";
 
+import { bakeHtml } from "./bake";
+import { TemplateList } from "./template-list";
 import { useCallback, useEffect, useState, useTransition, type FormEvent } from "react";
-import { ArrowDown, ArrowUp, ExternalLink, Lock, Trash2, Upload, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ExternalLink, FileCode2, FolderOpen, LayoutTemplate, LoaderCircle, Lock, ShieldCheck, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, ModalContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { contrast, type ThemeTokens } from "@/lib/builder/theme";
 import { cn } from "@/lib/utils";
+import { FileDropZone, fileSize } from "./file-drop-zone";
+import styles from "./dev-upload.module.css";
+import { TemplateImages } from "./template-html-editor";
 import {
-  deleteDraftAction, devStatusAction, listDevTemplatesAction, lockAction, publishVersionAction, unlockAction, unpublishVersionAction,
-  type DevTemplateRow,
+  devStatusAction, lockAction, unlockAction,
 } from "@/server/actions/dev-templates";
 
 /*
@@ -34,7 +38,7 @@ export default function DevPanel({ onClose }: { onClose: () => void }) {
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <ModalContent title="Developer: templates" description="Upload HTML designs as builder templates. Uploads start as drafts that only developers can see." className="max-w-[820px]">
+      <ModalContent title={<span className={styles.dialogTitle}><span><LayoutTemplate size={22} strokeWidth={1.5} aria-hidden="true" /></span>Developer: templates</span>} description="Bring a design into the builder. Upload it as a private draft, review it, then publish when it’s ready." className="max-w-[880px]">
         {!status ? (
           <p role="status" className="text-muted">Checking access…</p>
         ) : !status.enabled ? (
@@ -44,9 +48,9 @@ export default function DevPanel({ onClose }: { onClose: () => void }) {
         ) : !status.name ? (
           <UnlockForm onUnlocked={refresh} />
         ) : (
-          <div className="flex flex-col gap-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div role="tablist" aria-label="Developer tools" className="flex gap-1 rounded-full bg-ink/5 p-1">
+          <div className={styles.panel}>
+            <div className={styles.toolbar}>
+              <div role="tablist" aria-label="Developer tools" className={styles.tabs}>
                 {(["upload", "templates"] as const).map((t) => (
                   <button
                     key={t}
@@ -54,16 +58,16 @@ export default function DevPanel({ onClose }: { onClose: () => void }) {
                     type="button"
                     aria-selected={tab === t}
                     onClick={() => setTab(t)}
-                    className={cn("min-h-9 rounded-full px-4 text-sm font-semibold", tab === t ? "bg-bg shadow-sm" : "text-muted")}
+                    className={cn(styles.tab, tab === t && styles.activeTab)}
                   >
-                    {t === "upload" ? "Upload" : "Templates"}
+                    {t === "upload" ? <Upload size={15} aria-hidden="true" /> : <FolderOpen size={15} aria-hidden="true" />}{t === "upload" ? "Upload" : "Templates"}
                   </button>
                 ))}
               </div>
-              <span className="flex items-center gap-2 text-sm text-muted">
-                Signed in as <strong className="text-ink">{status.name}</strong>
+              <span className={styles.session}><span className={styles.sessionDot} aria-hidden="true" />
+                Signed in as <strong>{status.name}</strong>
                 <Button variant="ghost" size="sm" onClick={() => lockAction().then(refresh)}>
-                  <Lock aria-hidden /> Lock
+                  <Lock size={14} aria-hidden /> Lock
                 </Button>
               </span>
             </div>
@@ -117,7 +121,9 @@ const slugOf = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replac
 
 function UploadForm({ onSessionEnded }: { onSessionEnded: () => void }) {
   const [files, setFiles] = useState<{ html: File; screen?: File }[]>([]);
+  const [images, setImages] = useState<File[]>([]);
   const [name, setName] = useState("");
+  const [designMd, setDesignMd] = useState<File>();
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -140,14 +146,17 @@ function UploadForm({ onSessionEnded }: { onSessionEnded: () => void }) {
     body.set("slug", slug || slugOf(name));
     body.set("websiteType", String(f.get("websiteType")));
     body.set("description", String(f.get("description") ?? ""));
-    const design = f.get("designMd");
-    if (design instanceof File && design.size) body.set("designMd", design);
+    for (const image of images) body.append("assets", image, image.webkitRelativePath || image.name);
+    if (designMd?.size) body.set("designMd", designMd);
+    setBusy(true);
+    setError(null);
+    // Each page runs once here, sandboxed, so what its script builds (product cards, lists) is uploaded too (bake.ts).
     for (const p of files) {
       body.append("files", p.html);
       body.append("screens", p.screen ?? new Blob([]), p.screen?.name ?? "none");
+      const rendered = await bakeHtml(await p.html.text());
+      body.append("rendered", rendered ? new File([rendered], p.html.name, { type: "text/html" }) : new Blob([]), rendered ? p.html.name : "none");
     }
-    setBusy(true);
-    setError(null);
     try {
       const res = await fetch("/api/dev/templates", { method: "POST", body });
       const json = (await res.json().catch(() => ({ ok: false, error: "The server didn't answer properly." }))) as ({ ok: true } & UploadResult) | { ok: false; error: string };
@@ -161,72 +170,86 @@ function UploadForm({ onSessionEnded }: { onSessionEnded: () => void }) {
     }
   };
 
-  if (result) return <UploadDone result={result} onAnother={() => { setResult(null); setFiles([]); setName(""); setSlug(""); setSlugTouched(false); }} />;
+  if (result) return <UploadDone result={result} onAnother={() => { setResult(null); setFiles([]); setImages([]); setDesignMd(undefined); setName(""); setSlug(""); setSlugTouched(false); }} />;
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4" aria-busy={busy}>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className={labelCls}>
-          Template name
-          <input required maxLength={60} value={name} onChange={(e) => { setName(e.target.value); if (!slugTouched) setSlug(slugOf(e.target.value)); }} className={input} placeholder="Tattoo studio" />
-        </label>
-        <label className={labelCls}>
-          Slug (stays the same across versions)
-          <input required pattern="[a-z0-9]+(-[a-z0-9]+)*" maxLength={40} value={slug} onChange={(e) => { setSlugTouched(true); setSlug(e.target.value); }} className={input} />
-        </label>
-        <label className={labelCls}>
-          Website type
-          <select name="websiteType" defaultValue="BUSINESS" className={input}>
-            {TYPES.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
-          </select>
-        </label>
-        <label className={labelCls}>
-          DESIGN.md (optional)
-          <input name="designMd" type="file" accept=".md,text/markdown" className="text-sm font-normal" />
-        </label>
-      </div>
-      <label className={labelCls}>
-        Description shown in the picker (optional)
-        <input name="description" maxLength={300} className={input} />
-      </label>
+    <form onSubmit={submit} className={styles.uploadForm} aria-busy={busy}>
+      <fieldset disabled={busy} className={styles.details}>
+        <legend className={styles.sectionLabel}><span>01</span>Template details</legend>
+        <div className={styles.fields}>
+          <label className={styles.field}>
+            Template name
+            <input required maxLength={60} value={name} onChange={(e) => { setName(e.target.value); if (!slugTouched) setSlug(slugOf(e.target.value)); }} className={input} placeholder="e.g. Tattoo studio" />
+          </label>
+          <label className={styles.field}>
+            Slug <span className={styles.optional}>Stable across versions</span>
+            <input required pattern="[a-z0-9]+(-[a-z0-9]+)*" maxLength={40} value={slug} onChange={(e) => { setSlugTouched(true); setSlug(e.target.value); }} className={cn(input, styles.slug)} placeholder="tattoo-studio" />
+          </label>
+          <label className={styles.field}>
+            Website type
+            <select name="websiteType" defaultValue="BUSINESS" className={input}>
+              {TYPES.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
+            </select>
+          </label>
+          <label className={styles.field}>
+            Picker description <span className={styles.optional}>Optional</span>
+            <input name="description" maxLength={300} className={input} placeholder="A short description of the design" />
+          </label>
+        </div>
+      </fieldset>
 
-      <fieldset className="flex flex-col gap-2">
-        <legend className="mb-1 text-sm font-semibold">Pages (HTML files; the first is the home page)</legend>
-        <input
-          type="file"
-          accept=".html,.htm,text/html"
-          multiple
-          aria-label="Add HTML pages"
-          onChange={(e) => {
-            const added = [...(e.target.files ?? [])].map((html) => ({ html }));
-            setFiles((list) => [...list, ...added].slice(0, 12));
-            e.target.value = "";
-          }}
-          className="text-sm"
-        />
+      <fieldset className={styles.uploadSection} disabled={busy}>
+        <legend className={styles.sectionLabel}><span>02</span>Design files<span className={styles.fileCount}>{files.length} / 12 pages</span></legend>
+        <div className={styles.uploadGrid}>
+          <div>
+            <p className={styles.uploadLabel}>HTML pages<span>Required</span></p>
+            <FileDropZone label="Add HTML pages" kind="html" accept=".html,.htm,text/html" multiple files={files.map(page => page.html)} disabled={busy} maxSize={1_000_000}
+              title={files.length ? "Add more HTML pages" : "Drop your HTML pages here"} hint=".html or .htm · Up to 12 pages · 1 MB each" buttonText="Choose HTML files"
+              onFiles={added => {
+                if (files.length + added.length > 12) { setError("Up to 12 pages per template. Remove a page before adding more."); return; }
+                setFiles(list => [...list, ...added.map(html => ({ html }))]); setError(null);
+              }} />
+          </div>
+          <div>
+            <p className={styles.uploadLabel}>DESIGN.md<span>Optional</span></p>
+            <FileDropZone label="DESIGN.md (optional)" kind="markdown" accept=".md,text/markdown" files={designMd ? [designMd] : []} disabled={busy} maxSize={200_000}
+              title="Add your design notes" hint="Markdown notes to guide the import · 200 KB max" buttonText="Choose Markdown" onFiles={added => setDesignMd(added[0])} onRemove={() => setDesignMd(undefined)} />
+          </div>
+        </div>
+        <TemplateImages files={images} onChange={setImages} disabled={busy} />
+        <p className={styles.orderHint}>The first page becomes the home page. Reorder pages below and add an optional screenshot for each.</p>
+        <p role="status" className="sr-only">{files.length ? `${files.length} HTML ${files.length === 1 ? "page" : "pages"} selected.` : ""}</p>
         {files.length ? (
-          <ol className="flex flex-col divide-y divide-line rounded-md border border-line">
-            {files.map((p, i) => (
-              <li key={`${p.html.name}-${i}`} className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
-                <span className="min-w-0 flex-1 truncate font-semibold">{i === 0 ? "Home: " : ""}{p.html.name}</span>
-                <label className="text-xs text-muted">
-                  Screenshot{" "}
-                  <input type="file" accept="image/png,image/jpeg" aria-label={`Screenshot for ${p.html.name}`} className="w-40 text-xs"
-                    onChange={(e) => { const screen = e.target.files?.[0]; setFiles((list) => list.map((x, k) => (k === i ? { ...x, screen } : x))); }} />
-                </label>
-                <Button type="button" size="icon" variant="ghost" aria-label={`Move ${p.html.name} up`} disabled={i === 0} onClick={() => move(i, -1)}><ArrowUp aria-hidden /></Button>
-                <Button type="button" size="icon" variant="ghost" aria-label={`Move ${p.html.name} down`} disabled={i === files.length - 1} onClick={() => move(i, 1)}><ArrowDown aria-hidden /></Button>
-                <Button type="button" size="icon" variant="ghost" aria-label={`Remove ${p.html.name}`} onClick={() => setFiles((list) => list.filter((_, k) => k !== i))}><X aria-hidden /></Button>
+          <ol className={styles.pageList}>
+            {files.map((page, index) => (
+              <li key={`${page.html.name}-${index}`} className={styles.pageItem}>
+                <div className={styles.pageHeader}>
+                  <span className={styles.pageFileIcon}><FileCode2 size={21} strokeWidth={1.5} aria-hidden="true" /></span>
+                  <div className={styles.pageName}><strong title={page.html.name}>{page.html.name}</strong><span>{fileSize(page.html.size)}{index === 0 ? <span className={styles.homeBadge}>Home page</span> : `Page ${index + 1}`}</span></div>
+                  <div className={styles.pageActions}>
+                    <Button type="button" size="icon" variant="ghost" aria-label={`Move ${page.html.name} up`} disabled={busy || index === 0} onClick={() => move(index, -1)}><ArrowUp size={15} aria-hidden /></Button>
+                    <Button type="button" size="icon" variant="ghost" aria-label={`Move ${page.html.name} down`} disabled={busy || index === files.length - 1} onClick={() => move(index, 1)}><ArrowDown size={15} aria-hidden /></Button>
+                    <Button type="button" size="icon" variant="ghost" aria-label={`Remove ${page.html.name}`} disabled={busy} onClick={() => setFiles(list => list.filter((_, k) => k !== index))}><X size={15} aria-hidden /></Button>
+                  </div>
+                </div>
+                <FileDropZone label={`Screenshot for ${page.html.name}`} kind="image" accept=".png,.jpg,.jpeg,image/png,image/jpeg" compact files={page.screen ? [page.screen] : []} disabled={busy}
+                  title="Attach a screenshot" hint="PNG or JPG · Optional visual reference" buttonText="Choose image"
+                  onFiles={added => setFiles(list => list.map((item, k) => k === index ? { ...item, screen: added[0] } : item))}
+                  onRemove={() => setFiles(list => list.map((item, k) => k === index ? { ...item, screen: undefined } : item))} />
               </li>
             ))}
           </ol>
         ) : null}
       </fieldset>
 
-      {error ? <p role="alert" className="rounded-md bg-danger/10 px-4 py-3 text-sm font-medium text-danger">{error}</p> : null}
-      <Button type="submit" className="self-start" disabled={busy}>
-        <Upload aria-hidden /> {busy ? "Importing… (fonts and images are downloaded, this can take a minute)" : "Upload as draft"}
-      </Button>
+      {error ? <p role="alert" className="whitespace-pre-wrap break-words rounded-md bg-danger/10 px-4 py-3 text-sm font-medium text-danger">{error}</p> : null}
+      <div className={styles.uploadFooter}>
+        <p><ShieldCheck size={17} strokeWidth={1.5} aria-hidden="true" /><span><strong>Private until you publish.</strong><br />Review the draft in the builder first.</span></p>
+        <Button type="submit" disabled={busy || !files.length}>
+          {busy ? <LoaderCircle aria-hidden className="size-4 animate-spin motion-reduce:animate-none" /> : <Upload size={17} aria-hidden />} {busy ? "Importing design…" : "Upload as draft"}
+        </Button>
+      </div>
+      {busy ? <p role="status" className={styles.busyNote}>Importing pages and downloading their fonts and images. This can take a minute.</p> : null}
     </form>
   );
 }
@@ -295,62 +318,5 @@ function UploadDone({ result, onAnother }: { result: UploadResult; onAnother: ()
         <Button variant="ghost" onClick={onAnother}>Upload another</Button>
       </div>
     </div>
-  );
-}
-
-function TemplateList({ onSessionEnded }: { onSessionEnded: () => void }) {
-  const [rows, setRows] = useState<DevTemplateRow[] | null>(null);
-  const [pending, start] = useTransition();
-  const load = useCallback(
-    () =>
-      listDevTemplatesAction().then((r) => {
-        if (r.ok) setRows(r.templates);
-        else {
-          toast.error(r.error);
-          onSessionEnded();
-        }
-      }),
-    [onSessionEnded],
-  );
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const run = (fn: () => Promise<{ ok: boolean; error?: string }>, done: string) =>
-    start(async () => {
-      const r = await fn();
-      if (r.ok) toast.success(done);
-      else toast.error(r.error ?? "That didn't work.");
-      await load();
-    });
-
-  if (!rows) return <p role="status" className="text-muted">Loading templates…</p>;
-  if (!rows.length) return <p className="text-muted">No templates yet.</p>;
-  return (
-    <table className="w-full text-left text-sm" aria-busy={pending}>
-      <thead className="text-xs uppercase tracking-[0.08em] text-muted">
-        <tr><th className="py-2">Template</th><th>Version</th><th>Status</th><th>By</th><th><span className="sr-only">Actions</span></th></tr>
-      </thead>
-      <tbody className="divide-y divide-line">
-        {rows.flatMap((t) =>
-          t.versions.map((v, i) => (
-            <tr key={`${t.slug}-${v.version}`}>
-              <td className="py-2 pr-2">{i === 0 ? <><strong>{t.name}</strong><br /><span className="text-muted">{t.slug}{t.source === "repo" ? " · in the code (use the CLI)" : ""}</span></> : null}</td>
-              <td>v{v.version}</td>
-              <td>{v.status === "PUBLISHED" ? "Published" : v.status === "DRAFT" ? "Draft" : "Unpublished"}</td>
-              <td className="text-muted">{v.uploadedBy}</td>
-              <td className="flex flex-wrap justify-end gap-1 py-2">
-                <Button asChild size="sm" variant="ghost"><a href={`/build?template=${t.slug}&review=1`}>Review</a></Button>
-                {t.source === "upload" && v.status !== "PUBLISHED" ? <Button size="sm" onClick={() => run(() => publishVersionAction(t.slug, v.version), `${t.slug} v${v.version} published`)}>Publish</Button> : null}
-                {t.source === "upload" && v.status === "PUBLISHED" ? <Button size="sm" variant="outline" onClick={() => run(() => unpublishVersionAction(t.slug, v.version), `${t.slug} v${v.version} unpublished`)}>Unpublish</Button> : null}
-                {t.source === "upload" && v.status === "DRAFT" ? (
-                  <Button size="icon" variant="ghost" aria-label={`Delete draft ${t.slug} v${v.version}`} onClick={() => run(() => deleteDraftAction(t.slug, v.version), "Draft deleted")}><Trash2 aria-hidden /></Button>
-                ) : null}
-              </td>
-            </tr>
-          )),
-        )}
-      </tbody>
-    </table>
   );
 }

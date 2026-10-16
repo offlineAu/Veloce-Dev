@@ -1,9 +1,11 @@
 /*
  * Step 4: a page's body → the classes around it (its "frame") and its sections. Wrappers with a single child (and
  * <main>) are opened up; each landmark or top-level block inside becomes one section that visitors can move,
- * duplicate or delete. Labels come from the design's own HTML comments ("<!-- Immersive Editorial Hero -->"),
+ * duplicate or delete. A block the design lays out as a grid of cards (a dashboard's card grid) is kept whole, since
+ * its cards only line up inside it. Labels come from the design's own HTML comments ("<!-- Immersive Editorial Hero -->"),
  * then headings, then the landmark.
  */
+import postcss from "postcss";
 import { classList, textOf, type IREl, type IRNode } from "./ir";
 import type { Report } from "./report";
 
@@ -50,9 +52,56 @@ export function tidyComment(c: string): string {
 /** Closing markers ("END: MainHeader") label nothing. */
 const isEndMarker = (c: string) => /^[\s=*#-]*(end|\/)\b/i.test(c);
 
+const SECTION_TAGS = ["section", "header", "footer", "article", "aside"];
+const plainBlock = (el: IREl) => !hasOwnText(el) && !["header", "footer", "nav", "section", "article", "aside", "form"].includes(el.tag);
+
+/**
+ * Whether a plain block is the page's wrapper: it holds sections, or wraps (through single-child wrappers) something
+ * that does. A bar with one row inside (a top bar, a banner) is a section of its own, not the page around everything.
+ */
+function wrapsPage(el: IREl): boolean {
+  const kids = elements(el);
+  if (kids.filter((k) => SECTION_TAGS.includes(k.tag)).length >= 2) return true;
+  if (kids.length !== 1) return false;
+  const only = kids[0]!;
+  return only.tag === "main" || (plainBlock(only) && wrapsPage(only));
+}
+
+/** A readable name from the element's first class ("topbar" → "Topbar", "mobile-call" → "Mobile call"). */
+function classLabel(el: IREl): string | undefined {
+  const c = classList(el).find((x) => /^[a-z][a-z-]{2,30}$/i.test(x) && !x.includes(":"));
+  return c ? (c.charAt(0).toUpperCase() + c.slice(1)).replace(/-/g, " ") : undefined;
+}
+
 const isHidden = (el: IREl) => "hidden" in el.attrs || classList(el).some((c) => c === "hidden" || c === "invisible");
 
-export function splitSections(body: IREl, report: Report): { frame: string[]; sections: RawSection[] } {
+/**
+ * The `.class` and `#id` selectors a hand-written stylesheet lays out as a grid of columns
+ * (`display: grid` with `grid-template-columns`).
+ */
+export function gridSelectors(css: string): Set<string> {
+  const out = new Set<string>();
+  let root: postcss.Root;
+  try {
+    root = postcss.parse(css);
+  } catch {
+    return out;
+  }
+  root.walkRules((rule) => {
+    let grid = false;
+    let columns = false;
+    rule.walkDecls((d) => {
+      if (d.prop === "display" && /^(inline-)?grid$/.test(d.value.trim())) grid = true;
+      if (d.prop === "grid-template-columns" || (d.prop === "grid-template" && d.value.includes("/"))) columns = true;
+    });
+    if (!grid || !columns) return;
+    for (const sel of rule.selectors) if (/^[.#][\w-]+$/.test(sel.trim())) out.add(sel.trim());
+  });
+  return out;
+}
+
+export function splitSections(body: IREl, report: Report, grids: Set<string> = new Set()): { frame: string[]; sections: RawSection[] } {
+  const isGrid = (el: IREl) => (el.attrs.id !== undefined && grids.has(`#${el.attrs.id}`)) || classList(el).some((c) => grids.has(`.${c}`));
   const frame = [...classList(body)];
   const sections: RawSection[] = [];
 
@@ -76,16 +125,16 @@ export function splitSections(body: IREl, report: Report): { frame: string[]; se
       }
       // Open up page wrappers: <main>, an element that only wraps one other element, or a plain block whose children
       // are themselves sections.
-      const plain = !hasOwnText(child) && !["header", "footer", "nav", "section", "article", "aside", "form"].includes(child.tag);
-      const holdsSections = kids.filter((k) => ["section", "header", "footer", "article", "aside"].includes(k.tag)).length >= 2;
-      const wrapper = child.tag === "main" || (plain && (kids.length === 1 || holdsSections));
+      const wrapper = (child.tag === "main" || (plainBlock(child) && wrapsPage(child))) && !isGrid(child);
       if (wrapper && kids.length > 0) {
         frame.push(...classList(child));
         visit(child);
         comment = undefined;
         continue;
       }
-      const label = comment ?? LANDMARK_LABEL[child.tag] ?? headingLabel(child) ?? `Section ${sections.length + 1}`;
+      // An SVG sprite (symbols the page's icons use) shows nothing itself, but the icons need it.
+      const sprite = child.tag === "svg" && kids.some((k) => k.tag === "symbol") ? "Icons (used by the page)" : undefined;
+      const label = comment ?? sprite ?? LANDMARK_LABEL[child.tag] ?? headingLabel(child) ?? classLabel(child) ?? `Section ${sections.length + 1}`;
       sections.push({ label, el: child, hidden: false });
       comment = undefined;
     }

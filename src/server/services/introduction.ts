@@ -1,3 +1,5 @@
+import { conversion, submissionTracking } from "@/server/analytics/capture";
+import { CONSENT_PURPOSES } from "@/lib/legal";
 import "server-only";
 import { z } from "zod";
 import { env } from "@/config/env";
@@ -37,11 +39,14 @@ export async function submitIntroduction(raw: unknown, ctx: { clientKey: string 
 
     const campaign = await findCampaign(input.refToken);
 
+    const tracking = await submissionTracking(input.analytics);
     let introductionId: string;
     try {
       const row = await db.referralIntroduction.create({
         data: {
           campaignId: campaign?.id,
+          analyticsVisitorId: tracking?.visitorId,
+          analyticsLinkedAt: tracking?.linkedAt,
           referrerName: input.referrerName,
           referrerEmail: input.referrerEmail,
           referredName: input.referredName,
@@ -50,6 +55,8 @@ export async function submitIntroduction(raw: unknown, ctx: { clientKey: string 
           projectInterest: input.projectInterest,
           message: input.message,
           referrerConsentAt: new Date(),
+          privacyNoticeVersion: input.privacyNoticeVersion,
+          consentPurpose: CONSENT_PURPOSES.introduction,
           idempotencyKey: input.idempotencyKey,
         },
         select: { id: true },
@@ -60,6 +67,7 @@ export async function submitIntroduction(raw: unknown, ctx: { clientKey: string 
       throw err;
     }
 
+    conversion({ event: "introduction_submitted", key: introductionId, visitorId: tracking?.visitorId, linkedAt: tracking?.linkedAt, context: tracking?.context, campaignId: campaign?.id, form: "introduction" });
     const company = await getCompanyProfile();
     const e = env();
     const team = dispatch({

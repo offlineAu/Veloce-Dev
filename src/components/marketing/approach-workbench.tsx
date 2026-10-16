@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
-import { AnimatePresence, m } from "framer-motion";
+import { m } from "framer-motion";
 import { ArrowRight, Check, CheckCheck, ChevronRight, Hammer, Map, RefreshCw } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { CardRibbons } from "@/components/brand/card-ribbons";
@@ -44,7 +44,7 @@ export function ApproachWorkbench() {
 
   function goToStage(next: string) {
     setStage(next);
-    stageButtons.current[next]?.focus();
+    stageButtons.current[next]?.focus({ preventScroll: true });
   }
 
   function chooseExample(index: number) {
@@ -67,7 +67,7 @@ export function ApproachWorkbench() {
         <div className={styles.delivery}>
           <CardRibbons activeStage={activeStage.id} />
           {deliveryStages.map((s, i) => (
-            <TabsContent key={s.id} value={s.id} className={styles.deliveryContent}>
+            <TabsContent key={s.id} value={s.id} forceMount inert={stage !== s.id} aria-hidden={stage !== s.id} className={styles.deliveryContent}>
               <p className={styles.eyebrow}>Working together / 0{i + 1}</p>
               <h3 className={styles.flipHeading}><m.span key={s.id} initial={reduce ? false : { rotateX: -70, y: 12, opacity: 0 }} animate={{ rotateX: 0, y: 0, opacity: 1 }} transition={{ duration: reduce ? 0 : 0.5 }}>{s.headline}</m.span></h3>
               <p className={styles.stageSummary}>{s.summary}</p>
@@ -79,9 +79,9 @@ export function ApproachWorkbench() {
                 <div><dt>What you receive</dt><dd>{s.youReceive}</dd></div>
               </dl>
               <p className={styles.principle}><CheckCheck aria-hidden />{s.principle}</p>
-              {meetingInvitation}
             </TabsContent>
           ))}
+          {meetingInvitation}
         </div>
         <aside className={`${styles.example} ${meeting.open ? styles.meetingMode : ""}`} aria-labelledby={meeting.open ? "veloce-meeting-title" : `${id}-example-title`}>
           <div className={styles.examplePreview} hidden={meeting.open} inert={meeting.open}>
@@ -93,32 +93,34 @@ export function ApproachWorkbench() {
           </div>
           <div className={styles.prototype}>
             <div className={styles.prototypeBar}><span className={styles.prototypeDots} aria-hidden><i /><i /><i /></span><span>{example.label}</span><span className={styles.prototypeStage}>{activeStage.label}</span></div>
-            <AnimatePresence initial={false} mode="wait">
-              <m.div key={`${stage}-${example.id}`} className={styles.prototypeBody}
-                initial={reduce ? false : { opacity: 0, y: 14, rotateX: -5 }} animate={{ opacity: 1, y: 0, rotateX: 0 }} exit={{ opacity: 0, y: reduce ? 0 : -12 }} transition={{ duration: reduce ? 0 : 0.22 }}>
-                {stage === "think" ? <>
-                  <p className={styles.eyebrow}>The problem</p><p className={styles.problem}>{example.problem}</p>
-                  <p className={styles.eyebrow}>What should come first?</p>
-                  <div className={styles.priorityOptions} role="group" aria-label="First version priority">
-                    {[{ value: "first", label: example.first }, { value: "later", label: example.later }].map((option) => <button type="button" key={option.value} aria-pressed={priority === option.value} onClick={() => { setPriority(option.value); setSelection(null); setFeedback(null); }}><span className={styles.choiceDot} aria-hidden>{priority === option.value ? <Check /> : null}</span>{option.label}</button>)}
-                  </div>
-                  <div className={styles.scopeResult} role="status"><p><strong>First version</strong>{firstFeature}</p><p><strong>Later</strong>{laterFeature}</p></div>
-                  <button type="button" className={styles.demoNext} onClick={() => goToStage("build")}>See a working example <ArrowRight aria-hidden /></button>
-                </> : stage === "build" ? <>
-                  <p className={styles.eyebrow}>A small, usable interaction</p><h4>{demo.title}</h4>
-                  <div className={styles.demoOptions} role="group" aria-label={demo.selectionLabel}>{demo.options.map((option) => <button type="button" key={option} aria-pressed={selection === option} onClick={() => setSelection(option)}>{option}</button>)}</div>
-                  <div className={styles.demoResult} role="status"><CheckCheck aria-hidden /><p>{selection ? <><strong>{demo.selectionResult}: {selection}</strong><span>The example now reflects your choice.</span></> : <><strong>Ready for your input</strong><span>Choose an option above to try the interaction.</span></>}</p></div>
-                  <p className={styles.demoNote}>A working version makes the flow easier to review.</p>
-                  <button type="button" className={styles.demoNext} onClick={() => goToStage("improve")}>Choose an improvement <ArrowRight aria-hidden /></button>
-                </> : <>
-                  <p className={styles.eyebrow}>Learn from the working version</p><h4>{example.feedbackLabel}</h4>
-                  <div className={styles.priorityOptions} role="group" aria-label="Next improvement">{improvements.map((option) => <button type="button" key={option} aria-pressed={feedback === option} onClick={() => setFeedback(option)}><span className={styles.choiceDot} aria-hidden>{feedback === option ? <Check /> : null}</span>{option}</button>)}</div>
-                  <div className={styles.demoResult} role="status"><RefreshCw aria-hidden /><p><strong>{feedback ? "Next improvement to discuss" : "Your feedback guides the next step"}</strong><span>{feedback ?? "Select a change that would make this workflow more useful."}</span></p></div>
-                  <p className={styles.demoNote}>In a real project, we review feedback, agree the change, and test the improvement.</p>
-                  <button type="button" className={styles.demoNext} onClick={() => goToStage("think")}>Revisit the scope <ArrowRight aria-hidden /></button>
-                </>}
-              </m.div>
-            </AnimatePresence>
+            <div className={styles.prototypePanels}>
+              {deliveryStages.map(panel => (
+                <m.div key={`${panel.id}-${example.id}`} className={styles.prototypeBody} data-active={stage === panel.id} inert={stage !== panel.id} aria-hidden={stage !== panel.id}
+                  initial={false} animate={{ opacity: stage === panel.id ? 1 : 0, y: reduce || stage === panel.id ? 0 : 14 }} transition={{ duration: reduce ? 0 : 0.22 }}>
+                  {panel.id === "think" ? <>
+                    <p className={styles.eyebrow}>The problem</p><p className={styles.problem}>{example.problem}</p>
+                    <p className={styles.eyebrow}>What should come first?</p>
+                    <div className={styles.priorityOptions} role="group" aria-label="First version priority">
+                      {[{ value: "first", label: example.first }, { value: "later", label: example.later }].map((option) => <button type="button" key={option.value} aria-pressed={priority === option.value} onClick={() => { setPriority(option.value); setSelection(null); setFeedback(null); }}><span className={styles.choiceDot} aria-hidden>{priority === option.value ? <Check /> : null}</span>{option.label}</button>)}
+                    </div>
+                    <div className={styles.scopeResult} role="status"><p><strong>First version</strong>{firstFeature}</p><p><strong>Later</strong>{laterFeature}</p></div>
+                    <button type="button" className={styles.demoNext} onClick={() => goToStage("build")}>See a working example <ArrowRight aria-hidden /></button>
+                  </> : panel.id === "build" ? <>
+                    <p className={styles.eyebrow}>A small, usable interaction</p><h4>{demo.title}</h4>
+                    <div className={styles.demoOptions} role="group" aria-label={demo.selectionLabel}>{demo.options.map((option) => <button type="button" key={option} aria-pressed={selection === option} onClick={() => setSelection(option)}>{option}</button>)}</div>
+                    <div className={styles.demoResult} role="status"><CheckCheck aria-hidden /><p>{selection ? <><strong>{demo.selectionResult}: {selection}</strong><span>The example now reflects your choice.</span></> : <><strong>Ready for your input</strong><span>Choose an option above to try the interaction.</span></>}</p></div>
+                    <p className={styles.demoNote}>A working version makes the flow easier to review.</p>
+                    <button type="button" className={styles.demoNext} onClick={() => goToStage("improve")}>Choose an improvement <ArrowRight aria-hidden /></button>
+                  </> : <>
+                    <p className={styles.eyebrow}>Learn from the working version</p><h4>{example.feedbackLabel}</h4>
+                    <div className={styles.priorityOptions} role="group" aria-label="Next improvement">{improvements.map((option) => <button type="button" key={option} aria-pressed={feedback === option} onClick={() => setFeedback(option)}><span className={styles.choiceDot} aria-hidden>{feedback === option ? <Check /> : null}</span>{option}</button>)}</div>
+                    <div className={styles.demoResult} role="status"><RefreshCw aria-hidden /><p><strong>{feedback ? "Next improvement to discuss" : "Your feedback guides the next step"}</strong><span>{feedback ?? "Select a change that would make this workflow more useful."}</span></p></div>
+                    <p className={styles.demoNote}>In a real project, we review feedback, agree the change, and test the improvement.</p>
+                    <button type="button" className={styles.demoNext} onClick={() => goToStage("think")}>Revisit the scope <ArrowRight aria-hidden /></button>
+                  </>}
+                </m.div>
+              ))}
+            </div>
           </div>
           <p className={styles.exampleDisclaimer}>These example choices do not create a booking.</p>
           </div>

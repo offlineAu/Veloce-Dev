@@ -1,3 +1,5 @@
+import { conversion, submissionTracking } from "@/server/analytics/capture";
+import { CONSENT_PURPOSES } from "@/lib/legal";
 import "server-only";
 import { z } from "zod";
 import { env } from "@/config/env";
@@ -7,6 +9,7 @@ import { leadAckEmail, leadTeamEmail } from "@/server/notifications/templates";
 import { hmac, newPublicToken } from "@/server/security/hash";
 import { allow } from "@/server/security/rate-limit";
 import { looksLikeBot } from "@/server/security/request";
+import { keepMedia } from "@/server/builder/media";
 import { CONSULTATION_TOPICS, PROJECT_TYPES, WEBSITE_TYPES, inquirySchema } from "@/schemas/inquiry";
 import type { SiteDraftData } from "@/schemas/site-draft";
 import type { Prisma } from "@/generated/prisma/client";
@@ -52,12 +55,15 @@ export async function submitInquiry(raw: unknown, ctx: { clientKey: string }): P
     const source = campaign ? "REFERRAL_VERIFIED" : input.referralClaimed ? "REFERRAL_UNVERIFIED" : "DIRECT";
     const companyId = await ensureCompanyId();
 
+    const tracking = await submissionTracking(input.analytics);
     let leadId: string;
     const draftToken = draft?.success ? newPublicToken() : undefined;
     try {
       const lead = await db.lead.create({
         data: {
           companyId,
+          analyticsVisitorId: tracking?.visitorId,
+          analyticsLinkedAt: tracking?.linkedAt,
           name: input.name,
           email: input.email,
           companyName: input.companyName,
@@ -72,6 +78,8 @@ export async function submitInquiry(raw: unknown, ctx: { clientKey: string }): P
           referralCampaignId: campaign?.id,
           idempotencyKey: input.idempotencyKey,
           consentAt: new Date(),
+          privacyNoticeVersion: input.privacyNoticeVersion,
+          consentPurpose: draft?.success ? CONSENT_PURPOSES.design : input.intent === "MEETING" ? CONSENT_PURPOSES.meetingRequest : CONSENT_PURPOSES.inquiry,
           attribution: {
             create: {
               landingPath: input.landingPath,
@@ -91,6 +99,9 @@ export async function submitInquiry(raw: unknown, ctx: { clientKey: string }): P
       if ((err as { code?: string }).code === "P2002") return { ok: true }; // concurrent duplicate
       throw err;
     }
+    conversion({ event: "inquiry_submitted", key: leadId, visitorId: tracking?.visitorId, linkedAt: tracking?.linkedAt, context: tracking?.context, campaignId: campaign?.id, form: input.intent === "MEETING" ? "meeting_request" : "inquiry", service: input.serviceSlug });
+    // Images the visitor uploaded for the design stay as long as the design does (not just the builder's 30 days).
+    if (draft?.success) await keepMedia(JSON.stringify(draft.data.data)).catch((e) => console.error("[builder-media] keep", e));
 
     const company = await getCompanyProfile();
     const e = env();

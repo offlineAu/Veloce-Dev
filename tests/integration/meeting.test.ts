@@ -1,3 +1,4 @@
+import { PRIVACY_NOTICE_VERSION, CONSENT_PURPOSES } from "@/lib/legal";
 import { beforeEach, afterAll, describe, expect, it, vi } from 'vitest';
 import { Client } from 'pg';
 vi.mock('@/server/booking/config', () => ({ bookingSettings: () => ({ enabled: true, configured: true, eventTypeId: 42, hostId: 7, url: new URL('https://cal.com/veloce/intro'), apiKey: 'fake' }) }));
@@ -27,7 +28,7 @@ suite('meeting lifecycle on PostgreSQL', () => {
     ({ db } = await import('@/server/db'));
     sync = await import('@/server/booking/appointments'); sessions = await import('@/server/booking/sessions'); events = await import('@/server/booking/events');
     await db.rateLimit.deleteMany();
-    const session = await sessions.startMeetingSession({ entryPoint: 'workbench', privacyConsent: true }, 'meeting-tests');
+    const session = await sessions.startMeetingSession({ entryPoint: 'workbench', privacyNoticeVersion: PRIVACY_NOTICE_VERSION, privacyConsent: true }, 'meeting-tests');
     reference = session.reference; accessToken = session.accessToken;
     sessionId = (await db.bookingSession.findUniqueOrThrow({ where: { referenceHash: sessions.tokenHash(reference) } })).id;
     sessionIds.push(sessionId);
@@ -45,6 +46,7 @@ suite('meeting lifecycle on PostgreSQL', () => {
   });
   it('opening scheduling stores no lead, and hashes separate public/private tokens', async () => {
     const session = await db.bookingSession.findUniqueOrThrow({ where: { id: sessionId } });
+    expect(session).toMatchObject({ privacyNoticeVersion: PRIVACY_NOTICE_VERSION, consentPurpose: CONSENT_PURPOSES.booking });
     expect(session.referenceHash).not.toBe(reference);
     expect(session.accessHash).not.toBe(accessToken);
     expect(session.referenceHash).not.toBe(session.accessHash);
@@ -55,6 +57,7 @@ suite('meeting lifecycle on PostgreSQL', () => {
     await Promise.all([sync.syncAppointment(booking), sync.syncAppointment(booking)]);
     expect(await db.appointment.count({ where: { sessionId } })).toBe(1);
     const row = await db.appointment.findFirstOrThrow({ where: { sessionId }, include: { lead: true } });
+    expect(row.lead).toMatchObject({ privacyNoticeVersion: PRIVACY_NOTICE_VERSION, consentPurpose: CONSENT_PURPOSES.booking });
     expect(row.lead.intent).toBe('MEETING'); expect(row.status).toBe('CONFIRMED');
     expect(await sync.verifiedMeeting(reference, 'c'.repeat(64))).toBeNull();
     expect(await sync.verifiedMeeting(reference, accessToken)).toMatchObject({ status: 'CONFIRMED', timezone: 'Asia/Manila' });
@@ -117,7 +120,7 @@ suite('meeting lifecycle on PostgreSQL', () => {
     const { retryMeetingNotifications } = await import('@/server/notifications/retry');
     const key = crypto.randomUUID(); requestKeys.push(key);
     provider.setProviderForTests({ delivers: true, send: async () => { throw new Error('Temporary failure'); } });
-    expect(await submitInquiry({ name: 'Retry Fixture', email: 'retry-fixture@example.com', intent: 'MEETING', projectType: 'OTHER', projectGoals: 'Introductory meeting with Veloce', privacyConsent: true, idempotencyKey: key, startedAt: Date.now() - 5000 }, { clientKey: 'meeting-retry-test' })).toEqual({ ok: true });
+    expect(await submitInquiry({ name: 'Retry Fixture', email: 'retry-fixture@example.com', intent: 'MEETING', projectType: 'OTHER', projectGoals: 'Introductory meeting with Veloce', privacyNoticeVersion: PRIVACY_NOTICE_VERSION, privacyConsent: true, idempotencyKey: key, startedAt: Date.now() - 5000 }, { clientKey: 'meeting-retry-test' })).toEqual({ ok: true });
     const lead = await db.lead.findUniqueOrThrow({ where: { idempotencyKey: key } });
     await db.notificationLog.updateMany({ where: { leadId: lead.id }, data: { updatedAt: new Date(Date.now() - 180_000) } });
     let sent = 0;

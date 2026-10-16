@@ -5,7 +5,7 @@ import { Fragment, createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import sharp from "sharp";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import type { FetchLike } from "@/lib/builder/import/assets";
+import { fullSizeUrl, type FetchLike } from "@/lib/builder/import/assets";
 import { rewriteClass } from "@/lib/builder/import/classes";
 import { importTemplate, type ImportResult } from "@/lib/builder/import";
 import { readTailwindConfig, tokensFromConfig } from "@/lib/builder/import/theme";
@@ -50,7 +50,7 @@ const fetcher: FetchLike = async (url) => {
     return ok(`/* cyrillic */\n@font-face { font-family: 'Outfit'; src: url(https://fonts.gstatic.com/outfit-cyr.woff2) format('woff2'); }\n/* latin */\n@font-face { font-family: 'Outfit'; src: url(https://fonts.gstatic.com/outfit-latin.woff2) format('woff2'); }`);
   }
   if (url.startsWith("https://fonts.gstatic.com/")) return ok(Buffer.from("woff2"));
-  if (url.endsWith("missing.jpg")) return { ok: false, status: 404, text: async () => "", arrayBuffer: async () => new ArrayBuffer(0) };
+  if (url.includes("missing.jpg")) return { ok: false, status: 404, text: async () => "", arrayBuffer: async () => new ArrayBuffer(0) };
   return ok(png);
 };
 
@@ -101,7 +101,9 @@ describe("importer: sections and fields", () => {
   const home = () => result.pkg.pages[0]!;
 
   it("splits pages into labelled sections and leaves out script-only (hidden) ones", () => {
-    expect(home().sections.map((s) => s.label)).toEqual(["Header", "Editorial Hero", "Portfolio Grid", "Footer"]);
+    // Shown names are cleaned (section-labels.ts); the export's own labels are kept alongside.
+    expect(home().sections.map((s) => s.label)).toEqual(["Header", "Editorial hero", "Portfolio grid", "Footer"]);
+    expect(home().sections.map((s) => s.rawLabel)).toEqual(["Header", "Editorial Hero", "Portfolio Grid", "Footer"]);
     expect(result.report).toContain("Skipped");
   });
 
@@ -139,6 +141,12 @@ describe("importer: assets and stylesheet", () => {
     expect(files).toContain("img/placeholder.webp");
     expect(result.report).toMatch(/couldn't be downloaded/);
     expect(JSON.stringify(result.pkg)).not.toContain("lh3.googleusercontent.com");
+  });
+
+  it("asks Google's image host for the full-size image, not its 512px default", () => {
+    expect(fetched).toContain("https://lh3.googleusercontent.com/hero.jpg=s0");
+    expect(fullSizeUrl("https://lh3.googleusercontent.com/aida-public/AB6=w800")).toBe("https://lh3.googleusercontent.com/aida-public/AB6=w800");
+    expect(fullSizeUrl("https://images.example.com/a.jpg")).toBe("https://images.example.com/a.jpg");
   });
 
   it("compiles prefixed utilities scoped to the template, with no global variables", () => {
@@ -197,6 +205,16 @@ describe("validating submitted designs that use an imported template", () => {
     expect(await check(doc)).toBeNull();
     const values = firstSection(doc).props.values as Record<string, string>;
     expect(Object.values(values)).toContain(`page:${doc.pages[1]!.id}`);
+  });
+
+  it("opened in the editor, every section arrives as draggable pieces, with page links resolved and nothing rejected", async () => {
+    const doc = docFromTemplate(result.pkg, "pieces");
+    const json = JSON.stringify(doc.pages.map((p) => p.data.content));
+    expect(json).not.toContain('"DesignSection"');
+    expect(doc.pages[0]!.data.content.length).toBe(result.pkg.pages[0]!.sections.length);
+    expect(json).toContain(`page:${doc.pages[1]!.id}`);
+    expect(json).not.toContain('"tpl:');
+    expect(await check(doc)).toBeNull();
   });
 
   it("rejects unknown sections, unknown fields, unsafe links and foreign images", async () => {

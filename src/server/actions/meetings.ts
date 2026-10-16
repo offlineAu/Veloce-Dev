@@ -4,13 +4,15 @@ import { clientKey } from '@/server/security/request';
 import { allow } from '@/server/security/rate-limit';
 import { startMeetingSession } from '@/server/booking/sessions';
 import { verifiedMeeting } from '@/server/booking/appointments';
-import { meetingRequestSchema, meetingVerificationSchema } from '@/schemas/meeting';
+import { meetingRequestSchema, meetingSessionSchema, meetingVerificationSchema } from '@/schemas/meeting';
 import { submitInquiry } from '@/server/services/lead';
 import type { ActionResult } from '@/server/services/result';
 import type { MeetingResult, MeetingSession } from '@/lib/meeting';
 
 export async function startMeetingAction(input: unknown): Promise<ActionResult<{ session: MeetingSession }>> {
-  try { return { ok: true, session: await startMeetingSession(input, await clientKey()) }; } catch { return { ok: false, code: 'UNAVAILABLE' }; }
+  const parsed = meetingSessionSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, code: 'VALIDATION', fieldErrors: z.flattenError(parsed.error).fieldErrors };
+  try { return { ok: true, session: await startMeetingSession(parsed.data, await clientKey()) }; } catch { return { ok: false, code: 'UNAVAILABLE' }; }
 }
 export async function verifyMeetingAction(input: unknown): Promise<ActionResult<{ meeting: MeetingResult | null }>> {
   const parsed = meetingVerificationSchema.safeParse(input);

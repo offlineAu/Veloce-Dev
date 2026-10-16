@@ -1,6 +1,7 @@
 import "server-only";
 import { mapBlocks } from "@/lib/builder/blocks";
-import { PAGE_LINK, type SiteDoc } from "@/lib/builder/site-doc";
+import { isMediaSrc } from "@/lib/builder/media";
+import { PAGE_LINK, pageLinkTarget, type SiteDoc } from "@/lib/builder/site-doc";
 import { CLASS_PREFIX, findSection, type FieldDef, type TemplatePackage } from "@/lib/builder/template-package";
 import { readDevSession } from "@/server/security/dev-session";
 import { checkPieces } from "./piece-validation";
@@ -17,11 +18,11 @@ function checkValue(field: FieldDef, value: unknown, pkg: TemplatePackage, pageI
   if (typeof value !== "string") return "bad value";
   if (value.length > MAX_TEXT) return "text too long";
   if (field.kind === "image") {
-    const ok = value === "" || isOwnAsset(pkg, value) || (/^https:\/\//i.test(value) && !value.includes(".."));
+    const ok = value === "" || isOwnAsset(pkg, value) || isMediaSrc(value) || (/^https:\/\//i.test(value) && !value.includes(".."));
     return ok ? null : "image address not allowed";
   }
   if (field.kind === "link") {
-    if (value.startsWith(PAGE_LINK)) return pageIds.has(value.slice(PAGE_LINK.length)) ? null : "link to a missing page";
+    if (value.startsWith(PAGE_LINK)) return pageIds.has(pageLinkTarget(value)?.pageId ?? "") ? null : "link to a missing page";
     return value === "" || SAFE_URL.test(value) ? null : "link address not allowed";
   }
   return null;

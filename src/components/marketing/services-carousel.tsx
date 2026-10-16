@@ -90,7 +90,7 @@ export function ServicesCarousel({ services, photo, closingPhoto, refToken }: { 
               <span className="mb-6 rounded border border-line bg-neutral-100 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-muted">
                 {categoryOf(s.slug)}
               </span>
-              <h3 className="mb-5 text-lg font-bold leading-snug tracking-tight text-ink">{servicePageHref(s.slug, refToken) ? <Link href={servicePageHref(s.slug, refToken)!} className="hover:underline">{s.title}</Link> : s.title}</h3>
+              <h3 className="mb-5 text-lg font-bold leading-snug tracking-tight text-ink">{servicePageHref(s.slug, refToken) ? <Link data-analytics-placement="service" href={servicePageHref(s.slug, refToken)!} className="hover:underline">{s.title}</Link> : s.title}</h3>
               <div aria-hidden className="flex h-28 w-16 flex-col items-center justify-between rounded-xl border-2 border-line bg-neutral-100 p-2 shadow-inner transition-colors group-hover:border-ink/30">
                 <span className="h-1.5 w-6 rounded-full bg-ink/15" />
                 <span className="grid size-9 place-items-center rounded-lg bg-inverse text-accent">

@@ -7,8 +7,8 @@ export const brand = {
   tagline: "Build fast. Build what works.",
   short: "Veloce builds fast, practical, and reliable digital systems for businesses that need to turn ideas into working solutions.",
   about: [
-    "Veloce is a software development company focused on building practical digital systems quickly and effectively. We help businesses turn ideas, processes, and problems into working websites, web applications, and custom business systems.",
-    "Our approach is simple: understand what needs to be solved, build what matters, and get a working system into your hands as quickly as possible. We focus on useful functionality, clear user experiences, and solutions that can grow with the business, without unnecessary complexity.",
+    "We are a software development team based in the Philippines. We build websites, web applications, and custom business systems that help businesses serve customers and manage everyday work.",
+    "Our purpose is to turn ideas and difficult workflows into useful software. We bring clear priorities, visible progress, and a practical approach to building systems that can grow with your business.",
   ],
   value: "Your idea shouldn't stay an idea.",
   valueFlow: ["Idea", "Build", "Working System"],
@@ -18,6 +18,12 @@ export const brand = {
   promiseFocus: ["Speed", "Functionality", "Simplicity", "Practicality", "Reliability", "Continuous improvement"],
   message: "Think it. Build it. Make it work.",
 } as const;
+
+export const aboutGoals = [
+  { title: "Solve a real problem.", body: "We start with the work you need to improve and agree what success should look like. That might mean making bookings easier, reducing manual steps, or helping people find the information they need." },
+  { title: "Deliver a useful first version.", body: "We focus on the essential functionality first, so you can review and test something tangible. A clear scope helps everyone understand what comes first, what can wait, and why." },
+  { title: "Improve through real use.", body: "We use feedback from the people using the system to guide the next changes. Further development and support are agreed around what your business needs." },
+] as const;
 
 /**
  * Headline numbers. Deliberately 0 until the owner decides what is true and worth showing

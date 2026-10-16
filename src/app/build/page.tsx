@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { readFileSync } from "node:fs";
-import path from "node:path";
+import { notFound } from "next/navigation";
 import { BuilderLoader } from "@/components/builder/builder-loader";
-import type { ReviewInfo } from "@/components/builder/review-banner";
-import { currentVersion, findImported, showDrafts } from "@/content/builder-templates";
+import { templateReview } from "@/server/builder/template-review";
 import { listTemplates } from "@/server/builder/template-registry";
-import { db } from "@/server/db";
+import { mediaEnabled } from "@/server/builder/media";
 import { readDevSession } from "@/server/security/dev-session";
 import { PageLoading } from "@/components/site/page-loading";
 import { findCampaign } from "@/server/services/campaign";
@@ -18,7 +16,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-type BuildPageProps = { searchParams: Promise<{ template?: string | string[]; ref?: string | string[]; review?: string | string[] }> };
+type BuildPageProps = { searchParams: Promise<{ template?: string | string[]; ref?: string | string[]; review?: string | string[]; version?: string | string[] }> };
 
 const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
@@ -31,37 +29,13 @@ export default function BuildPage(props: BuildPageProps) {
   );
 }
 
-/**
- * The template being reviewed: an uploaded one (developer session) with its report from the database, or a repo
- * one while developing locally (reports live outside public/).
- */
-async function reviewInfo(slug: string | undefined, isDeveloper: boolean): Promise<ReviewInfo | undefined> {
-  if (!slug) return undefined;
-  if (isDeveloper && !findImported(slug)) {
-    const v = await db.builderTemplateVersion.findFirst({
-      where: { template: { slug } },
-      orderBy: { version: "desc" },
-      select: { version: true, status: true, report: true },
-    });
-    if (v) return { slug, version: v.version, published: v.status === "PUBLISHED", report: v.report, canPublish: true };
-  }
-  const t = findImported(slug);
-  const version = t ? currentVersion(t, true) : undefined;
-  if (!showDrafts() || !t || version === undefined) return undefined;
-  let report = "";
-  try {
-    // Development only (see showDrafts above), so the production bundle doesn't need to include the reports.
-    report = readFileSync(path.join(/*turbopackIgnore: true*/ process.cwd(), "src/content/builder-templates/reports", `${t.slug}-v${version}.md`), "utf8");
-  } catch {
-    /* imported without a report */
-  }
-  return { slug: t.slug, version, published: t.published.includes(version), report, canPublish: false };
-}
-
 async function BuildContent({ searchParams }: BuildPageProps) {
   const sp = await searchParams;
   const ref = first(sp.ref);
   const developer = await readDevSession();
+  const version = first(sp.version);
+  const review = first(sp.review) === "1" ? await templateReview(first(sp.template), !!developer, version) : undefined;
+  if (first(sp.review) === "1" && version !== undefined && !review) notFound();
   const [company, campaign, templates] = await Promise.all([
     getCompanyProfile(),
     ref ? findCampaign(ref) : Promise.resolve(null),
@@ -71,12 +45,14 @@ async function BuildContent({ searchParams }: BuildPageProps) {
     <main id="main" className="h-dvh">
       <h1 className="sr-only">Design your website</h1>
       <BuilderLoader
+        key={review ? `${review.slug}@${review.version}` : "builder"}
         companyName={company.name}
         contactEmail={company.contactEmail}
         refToken={campaign ? ref : undefined}
         requestedTemplate={first(sp.template)}
         templates={templates}
-        review={first(sp.review) === "1" ? await reviewInfo(first(sp.template), !!developer) : undefined}
+        uploads={mediaEnabled()}
+        review={review}
       />
     </main>
   );

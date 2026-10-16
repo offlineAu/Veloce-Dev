@@ -8,13 +8,16 @@ import { PACKAGE_FORMAT, packageBase, type TemplatePackage, type TemplatePage, t
 import { collectFonts, collectImages, thumbnail, type FetchLike } from "./assets";
 import { rewriteClassList, type ClassContext } from "./classes";
 import { compileTemplateCss } from "./css";
+import { normalizePackage } from "../section-labels";
+import { mapBehaviours, type BehaviourHint } from "./behaviours";
+import { cssClasses, cssImageUrls, scopePageCss, scriptClasses, tokensFromPageCss } from "./page-css";
 import { ASSET, convertSection, type FieldEnv } from "./fields";
 import { classList, parsePage, textOf, walk, type IREl, type IRNode, type ParsedPage } from "./ir";
 import { validatePackage } from "./package-schema";
 import { Report } from "./report";
-import { splitSections } from "./sections";
+import { gridSelectors, splitSections } from "./sections";
 import {
-  builderTheme, extractPalette, mergeTokens, readTailwindConfig, themeCss, tokensFromConfig, tokensFromDesignMd,
+  builderTheme, emptyTokens, extractPalette, mergeTokens, readTailwindConfig, themeCss, tokensFromConfig, tokensFromDesignMd,
   type ColorHints, type ThemeOverrides,
 } from "./theme";
 
@@ -36,8 +39,13 @@ export interface ImportOptions {
   keepOrder?: boolean;
   /** Where the package's files will be served from (defaults to the repo location, public/builder-templates). */
   assetBase?: string;
+  /** Uploads fail visibly when a photo cannot be imported. */
+  strictImages?: boolean;
+  storedImageFiles?: ReadonlyMap<string, Buffer>;
   /** The developer's choice of design colour for each theme role (from the upload screen). */
   themeOverrides?: ThemeOverrides;
+  /** Interactions to set up that the importer can't recognise on its own (import/behaviours.ts). */
+  hints?: BehaviourHint[];
 }
 
 export interface ImportResult {
@@ -137,11 +145,22 @@ export async function importTemplate(src: ImportSource, opts: ImportOptions): Pr
   // 1. Parse every page.
   const pages: PageInfo[] = src.pages.map((p) => ({ dir: p.dir, parsed: parsePage(p.html, report), screen: p.screen }));
 
-  // 2. Design tokens: each page's Tailwind config, then DESIGN.md on top.
+  // Hand-written pages (no Tailwind) are styled by their own stylesheet, which comes along (page-css.ts).
+  const handWritten = pages.filter((p) => !p.parsed.usesTailwind);
+  const pageCss = [...new Set(handWritten.flatMap((p) => p.parsed.styles))].join("\n");
+
+  // 2. Design tokens: each page's Tailwind config (or a hand-written page's :root colours and fonts), then DESIGN.md.
   const design = tokensFromDesignMd(src.designMd, report);
-  const tokens = mergeTokens(...pages.map((p) => tokensFromConfig(readTailwindConfig(p.parsed.tailwindConfig, report), report)), design.tokens);
+  const { usage, ...cssTokens } = tokensFromPageCss(pageCss);
+  const tokens = mergeTokens(
+    { ...emptyTokens(), ...cssTokens },
+    ...pages.map((p) => tokensFromConfig(readTailwindConfig(p.parsed.tailwindConfig, report), report)),
+    design.tokens,
+  );
   const dark = pages.some((p) => p.parsed.htmlClass.split(/\s+/).includes("dark"));
-  const theme = builderTheme(tokens, dark, report, colorHints(pages[0]!.parsed.body), opts.themeOverrides);
+  // What a hand-written page paints its body with comes before guesses from token names; the developer's choices still win.
+  const pageRoles = { ...(usage.bodyBg ? { bg: usage.bodyBg } : {}), ...(usage.bodyText ? { fg: usage.bodyText } : {}) };
+  const theme = builderTheme(tokens, dark, report, colorHints(pages[0]!.parsed.body), { ...pageRoles, ...opts.themeOverrides });
 
   // 3. Which page is which, and their order (the navigation's order, home first).
   const prefix = commonPrefix(pages.map((p) => p.dir));
@@ -157,11 +176,21 @@ export async function importTemplate(src: ImportSource, opts: ImportOptions): Pr
   const rank = (p: PageInfo) => (navOrder.includes(p.path!) ? navOrder.indexOf(p.path!) : navOrder.length + pages.indexOf(p));
   if (!opts.keepOrder) pages.sort((a, b) => rank(a) - rank(b));
   const keyOf = new Map(pages.map((p, i) => [p.path!, i === 0 ? "" : slugify(p.path!)]));
-  const navText = new Map(navLinks(pages[0]!.parsed.body).map((l) => [l.attrs["data-path"]!, labelOf(l)]));
+  // A count badge on a link ("Approvals 3") isn't part of the page's name.
+  const navText = new Map(navLinks(pages[0]!.parsed.body).map((l) => [l.attrs["data-path"]!, labelOf(l).replace(/\s+\d{1,3}$/, "")]));
   const missing = new Set<string>();
+
+  // The pages' interactions, recreated by the builder (their scripts never come along).
+  const scriptStates = scriptClasses(handWritten.flatMap((p) => p.parsed.scripts));
+  const behaviours = handWritten.length
+    ? mapBehaviours(handWritten.map((p) => p.parsed.body), { scripts: handWritten.flatMap((p) => p.parsed.scripts), css: pageCss, scriptStates, hints: opts.hints, report })
+    : undefined;
 
   const classes: ClassContext = { custom: new Set(), radiusDefault: "DEFAULT" in tokens.radius };
   for (const p of pages) for (const el of walk(p.parsed.body)) classList(el).filter((c) => ICON_CLASS.test(c)).forEach((c) => classes.custom.add(c));
+  // On hand-written pages every class is the design's own (its stylesheet, or a hook for its script).
+  for (const p of handWritten) for (const el of walk(p.parsed.body)) classList(el).forEach((c) => classes.custom.add(c));
+  for (const c of cssClasses(pageCss)) classes.custom.add(c);
 
   const env: FieldEnv = {
     classes,
@@ -178,8 +207,9 @@ export async function importTemplate(src: ImportSource, opts: ImportOptions): Pr
   };
 
   // 4. Sections and their editable content.
+  const grids = gridSelectors(pageCss);
   const outPages: TemplatePage[] = pages.map((p) => {
-    const { frame, sections } = splitSections(p.parsed.body, report);
+    const { frame, sections } = splitSections(p.parsed.body, report, p.parsed.usesTailwind ? undefined : grids);
     const key = keyOf.get(p.path!)!;
     const used = new Set<string>();
     const frameClasses = rewriteClassList(frame.join(" "), classes);
@@ -193,6 +223,7 @@ export async function importTemplate(src: ImportSource, opts: ImportOptions): Pr
         let id = `${key || "home"}-${slugify(s.label)}`.slice(0, 70);
         for (let n = 2; used.has(id); n++) id = `${key || "home"}-${slugify(s.label)}-${n}`.slice(0, 80);
         used.add(id);
+        // The id follows the export's own label (stable across re-imports); the name shown is cleaned below.
         return { id, label: s.label.slice(0, 60), ...convertSection(s.el, env) };
       }),
     };
@@ -202,7 +233,7 @@ export async function importTemplate(src: ImportSource, opts: ImportOptions): Pr
 
   // 5. Fonts and images into the package.
   const fonts = await collectFonts({ links: [...new Set(pages.flatMap((p) => p.parsed.fontLinks))], icons: env.icons, base, scope, fetcher: opts.fetcher, report });
-  const images = await collectImages({ urls: env.images, base, fetcher: opts.fetcher, report, placeholderColor: theme.surface });
+  const images = await collectImages({ urls: [...env.images, ...cssImageUrls(pageCss)], base, fetcher: opts.fetcher, report, placeholderColor: theme.surface, strict: opts.strictImages, storedImageFiles: opts.storedImageFiles });
   const asset = (v: string) => (v.startsWith(ASSET) ? (images.map.get(v.slice(ASSET.length)) ?? "") : v);
   for (const page of outPages) {
     for (const s of page.sections) {
@@ -212,7 +243,10 @@ export async function importTemplate(src: ImportSource, opts: ImportOptions): Pr
   }
 
   // 6. The stylesheet.
-  const css = await compileTemplateCss({ slug: opts.slug, candidates: env.candidates, theme: themeCss(tokens), extra: fonts.css, report });
+  const ownCss = pageCss
+    ? scopePageCss(pageCss, { slug: opts.slug, classes: classes.custom, scriptStates, asset: (u) => images.map.get(u), behaviours, report })
+    : "";
+  const css = await compileTemplateCss({ slug: opts.slug, candidates: env.candidates, theme: themeCss(tokens), extra: `${fonts.css}\n${ownCss}`, report });
 
   // 7. Thumbnails.
   const files = new Map([...fonts.files, ...images.files]);
@@ -224,7 +258,7 @@ export async function importTemplate(src: ImportSource, opts: ImportOptions): Pr
     thumbnails.push(file);
   }
 
-  const pkg: TemplatePackage = {
+  const pkg: TemplatePackage = normalizePackage({
     format: PACKAGE_FORMAT,
     slug: opts.slug,
     version: opts.version,
@@ -235,8 +269,10 @@ export async function importTemplate(src: ImportSource, opts: ImportOptions): Pr
     theme,
     pages: outPages,
     notes: design.notes,
+    ...(handWritten.length ? { handWritten: true } : {}),
     importedAt: new Date().toISOString(),
-  };
+  });
+
   const valid = validatePackage(pkg);
   if (!valid.success) throw new Error(`The imported package is invalid: ${valid.error.issues.slice(0, 3).map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`);
 
@@ -247,7 +283,9 @@ export async function importTemplate(src: ImportSource, opts: ImportOptions): Pr
   report.note(`${sectionCount} sections, ${fieldCount} editable fields, ${listCount} editable lists.`);
   report.note(`Theme: ${theme.scheme}, accent ${theme.accent}, headings ${theme.fontHeading}, body ${theme.fontBody}.`);
   report.note(`Stylesheet ${(css.length / 1024).toFixed(0)} KB, ${files.size} asset files.`);
-  if (pages.some((p) => p.parsed.styles.length)) report.count("page <style> blocks left out (page boilerplate)", pages.reduce((n, p) => n + p.parsed.styles.length, 0));
+  const boilerplate = pages.filter((p) => p.parsed.usesTailwind).reduce((n, p) => n + p.parsed.styles.length, 0);
+  if (boilerplate) report.count("page <style> blocks left out (page boilerplate)", boilerplate);
+  if (handWritten.some((p) => p.parsed.styles.length)) report.note("Hand-written stylesheet kept: scoped to the template and its class names prefixed (vt-…). Style panel changes still override it.");
   report.note("Interactive parts that relied on scripts (tabs, filters, sliders, multi-step forms, modals) show their first state. Rebuild the behaviour when building the real site.");
 
   return { pkg, css, files, thumbnails, report: report.toMarkdown(`${opts.name} v${opts.version}`), palette: extractPalette(tokens) };

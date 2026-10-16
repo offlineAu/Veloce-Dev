@@ -1,3 +1,4 @@
+import { analyticsConfig } from "@/server/analytics/config";
 import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
 import { env } from "@/config/env";
@@ -28,7 +29,7 @@ export function generateMetadata(): Metadata {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${heading.variable} ${body.variable} ${mono.variable}`}>
+    <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning className={`${heading.variable} ${body.variable} ${mono.variable}`}>
       <body>
         <a
           href="#main"
@@ -43,7 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <MarketingOnly>
           <ScrollProgress />
         </MarketingOnly>
-        <Providers>
+        <Providers analyticsEnabled={analyticsConfig().enabled}>
           {children}
           <DevShortcut />
         </Providers>
