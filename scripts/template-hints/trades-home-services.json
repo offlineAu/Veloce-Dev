@@ -1,0 +1,125 @@
+[
+  {
+    "selector": ".wall-col.up",
+    "set": {
+      "data-vt-marquee": "y up 24 pause"
+    }
+  },
+  {
+    "selector": ".wall-col.down",
+    "set": {
+      "data-vt-marquee": "y down 20 pause"
+    }
+  },
+  {
+    "selector": ".wall-col.slow",
+    "set": {
+      "data-vt-marquee": "y up 17 pause"
+    }
+  },
+  {
+    "selector": "#bento",
+    "set": {
+      "data-vt-reveal": "stagger:140 from:center"
+    }
+  },
+  {
+    "selector": ".roll-me",
+    "set": {
+      "data-vt-roll": ""
+    }
+  },
+  {
+    "selector": "#job-list",
+    "set": {
+      "data-vt-tabs": "job-stage hover"
+    }
+  },
+  {
+    "selector": "#job-list button",
+    "remove": [
+      "aria-current"
+    ]
+  },
+  {
+    "selector": "#stack",
+    "set": {
+      "data-vt-stack": "swipe status:rev-count"
+    }
+  },
+  {
+    "selector": "#stack > figure",
+    "remove": [
+      "style",
+      "aria-hidden"
+    ]
+  },
+  {
+    "selector": "#rev-next",
+    "set": {
+      "data-vt-step": "next",
+      "aria-controls": "stack"
+    }
+  },
+  {
+    "selector": "#rev-prev",
+    "set": {
+      "data-vt-step": "prev",
+      "aria-controls": "stack"
+    }
+  },
+  {
+    "selector": "#spot-nav",
+    "set": {
+      "data-vt-spotlight": ""
+    }
+  },
+  {
+    "selector": "#hgrid",
+    "set": {
+      "data-vt-pointer": ""
+    }
+  },
+  {
+    "selector": "#area-input",
+    "set": {
+      "data-vt-filter": "hgrid"
+    }
+  },
+  {
+    "selector": ".phone",
+    "set": {
+      "data-vt-seq": "400 900"
+    }
+  },
+  {
+    "selector": ".typing",
+    "set": {
+      "data-vt-transient": ""
+    }
+  },
+  {
+    "selector": "#flip",
+    "set": {
+      "data-vt-flip": ""
+    }
+  },
+  {
+    "selector": ".faq .pm",
+    "set": {
+      "data-vt-alt": "−"
+    }
+  },
+  {
+    "selector": "#b-name, #b-phone, #b-suburb, #b-service, #b-date",
+    "set": {
+      "required": true
+    }
+  },
+  {
+    "selector": "#b-window input",
+    "set": {
+      "required": true
+    }
+  }
+]

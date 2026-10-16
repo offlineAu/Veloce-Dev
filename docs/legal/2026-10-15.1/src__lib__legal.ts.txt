@@ -1,0 +1,10 @@
+/** Bump when the notice or consent purposes change; preserve the previous release as described in docs/LEGAL_REVIEW.md. */
+export const PRIVACY_NOTICE_VERSION = "2026-10-15.1";
+export const LEGAL_UPDATED_LABEL = "15 October 2026";
+export const CONSENT_PURPOSES = {
+  inquiry: "Respond to an inquiry and send a confirmation",
+  design: "Respond to an inquiry, store the submitted design and create a preview accessible to anyone with its link",
+  meetingRequest: "Respond to a meeting request and arrange a time by email",
+  booking: "Load Cal.com and share meeting details to arrange and manage a booking",
+  introduction: "Record an introduction and permission to contact the referred person",
+} as const;

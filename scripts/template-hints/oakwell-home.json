@@ -1,0 +1,59 @@
+{
+  "bake": {
+    "pages": [
+      {
+        "dir": "home",
+        "before": "const slides = FEATURED.map((f) => ({ ...f, p: P(f.id) })); const words = (t) => t.split(\" \").map((w, i) => \"<span class=\\\"w\\\"><span style=\\\"--i:\" + i + \"\\\">\" + w + \"</span></span>\").join(\" \"); const copy = document.createElement(\"div\"); copy.id = \"h-words\"; copy.className = \"h-panels\"; copy.innerHTML = slides.map((s) => \"<div class=\\\"h-panel\\\"><p class=\\\"h-title\\\">\" + words(s.title) + \"</p><p class=\\\"h-text\\\">\" + s.text + \"</p></div>\").join(\"\"); document.getElementById(\"h-title\").replaceWith(copy); document.getElementById(\"h-text\").remove(); const prices = document.createElement(\"span\"); prices.id = \"h-prices\"; prices.className = \"h-price h-panels\"; prices.innerHTML = slides.map((s) => \"<span class=\\\"h-panel\\\">\" + money(s.p.price) + (s.p.was ? \"<s>\" + money(s.p.was) + \"</s>\" : \"\") + \"</span>\").join(\"\"); document.getElementById(\"h-price\").replaceWith(prices); document.querySelectorAll(\"#h-stage > .h-card\").forEach((c) => { c.removeAttribute(\"style\"); c.removeAttribute(\"aria-hidden\"); c.classList.remove(\"front\", \"gone\"); c.classList.add(\"loaded\"); }); const seg = document.getElementById(\"h-seg\"); seg.classList.remove(\"paused\"); seg.querySelectorAll(\"button\").forEach((b) => { b.classList.remove(\"cur\", \"done\"); b.removeAttribute(\"aria-current\"); }); document.getElementById(\"h-count\").innerHTML = \"<b>01</b> / \" + String(slides.length).padStart(2, \"0\"); const css = document.createElement(\"style\"); css.textContent = [ \".h-panels{display:grid}\", \".h-panels>.h-panel{grid-area:1/1;opacity:0;visibility:hidden;transition:opacity .3s,visibility 0s .35s}\", \".h-panels>.h-panel[data-vt-state~=on]{opacity:1;visibility:visible;transition:opacity .35s .25s}\", \"#h-words .h-text{transition:transform .45s var(--ease);transform:translateY(8px)}\", \"#h-words .h-panel[data-vt-state~=on] .h-text{transform:none;transition-delay:.3s}\", \"#h-words .h-title .w>span{transform:translateY(-110%);transition:transform .35s var(--ease)}\", \"#h-words .h-panel[data-vt-state~=on] .h-title .w>span{transform:none;transition:transform .7s var(--ease);transition-delay:calc(.3s + var(--i) * 32ms)}\", \"#h-stage>.h-card{z-index:calc(20 - var(--vt-pos,0));opacity:clamp(0,calc(4 - var(--vt-pos,0)),1);transform:translateX(calc(var(--vt-pos,0) * (38 - 4 * var(--vt-pos,0)) * 1%)) translateZ(calc(var(--vt-pos,0) * -120px)) rotateY(calc(var(--vt-pos,0) * (var(--vt-pos,0) - 10) * 1deg)) scale(calc(1 - var(--vt-pos,0) * (.105 - .005 * var(--vt-pos,0))));filter:brightness(calc(1 - var(--vt-pos,0) * .07)) saturate(calc(1 - var(--vt-pos,0) * .12))}\", \"#h-stage>.h-card[data-vt-state~=dim]{z-index:30;opacity:0;transform:translateX(-16%) translateZ(40px) rotateY(10deg) scale(.96);filter:none;transition:transform .9s var(--ease),opacity .3s,filter .7s}\", \"#h-stage>.h-card[data-vt-state~=on] img{transform:scale(1.03)}\", \"#h-stage>.h-card[data-vt-state~=on] .h-room{opacity:1;transform:none}\", \"#h-seg button[data-vt-state~=hit] i{width:100%}\", \"#h-seg button[data-vt-state~=on] i{animation:h-fill var(--dur,6000ms) linear forwards}\", \"#h-seg[data-vt-state~=dim] button[data-vt-state~=on] i{animation-play-state:paused}\", \"@media (prefers-reduced-motion:reduce){#h-seg button[data-vt-state~=on] i{animation:none;width:100%}}\", ].join(\"\"); document.head.append(css);"
+      }
+    ]
+  },
+  "behaviours": [
+    {
+      "selector": "#h-stage",
+      "set": {
+        "data-vt-carousel": "linked:h-words,h-prices dots:h-seg status:h-count auto:6000 swipe"
+      }
+    },
+    {
+      "selector": "#h-next",
+      "set": {
+        "data-vt-step": "next",
+        "aria-controls": "h-stage"
+      }
+    },
+    {
+      "selector": "#h-prev",
+      "set": {
+        "data-vt-step": "prev",
+        "aria-controls": "h-stage"
+      }
+    },
+    {
+      "selector": "#stack",
+      "set": {
+        "data-vt-stack": "swipe status:rv-count"
+      }
+    },
+    {
+      "selector": "#stack > figure",
+      "remove": [
+        "style",
+        "aria-hidden"
+      ]
+    },
+    {
+      "selector": "#rv-next",
+      "set": {
+        "data-vt-step": "next",
+        "aria-controls": "stack"
+      }
+    },
+    {
+      "selector": "#rv-prev",
+      "set": {
+        "data-vt-step": "prev",
+        "aria-controls": "stack"
+      }
+    }
+  ]
+}

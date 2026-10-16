@@ -1,0 +1,31 @@
+{
+  "bake": {
+    "pages": [
+      {
+        "dir": "overview",
+        "before": "enterApp(); await wait(500); go(\"overview\"); await wait(1400); document.querySelectorAll(\"a[data-view]\").forEach((a) => a.setAttribute(\"data-path\", a.dataset.view)); document.querySelectorAll(\"[data-go]\").forEach((b) => b.setAttribute(\"data-path\", b.dataset.go)); document.querySelectorAll(\"section.view[hidden]\").forEach((s) => s.remove());"
+      },
+      {
+        "dir": "project",
+        "before": "enterApp(); await wait(500); go(\"project\"); await wait(1400); document.querySelectorAll(\"a[data-view]\").forEach((a) => a.setAttribute(\"data-path\", a.dataset.view)); document.querySelectorAll(\"[data-go]\").forEach((b) => b.setAttribute(\"data-path\", b.dataset.go)); document.querySelectorAll(\"section.view[hidden]\").forEach((s) => s.remove());"
+      },
+      {
+        "dir": "approvals",
+        "before": "enterApp(); await wait(500); go(\"approvals\"); await wait(1400); document.querySelectorAll(\"a[data-view]\").forEach((a) => a.setAttribute(\"data-path\", a.dataset.view)); document.querySelectorAll(\"[data-go]\").forEach((b) => b.setAttribute(\"data-path\", b.dataset.go)); document.querySelectorAll(\"section.view[hidden]\").forEach((s) => s.remove());"
+      },
+      {
+        "dir": "invoices",
+        "before": "enterApp(); await wait(500); go(\"invoices\"); await wait(1400); document.querySelectorAll(\"a[data-view]\").forEach((a) => a.setAttribute(\"data-path\", a.dataset.view)); document.querySelectorAll(\"[data-go]\").forEach((b) => b.setAttribute(\"data-path\", b.dataset.go)); document.querySelectorAll(\"section.view[hidden]\").forEach((s) => s.remove());"
+      },
+      {
+        "dir": "files",
+        "before": "enterApp(); await wait(500); go(\"files\"); await wait(1400); document.querySelectorAll(\"a[data-view]\").forEach((a) => a.setAttribute(\"data-path\", a.dataset.view)); document.querySelectorAll(\"[data-go]\").forEach((b) => b.setAttribute(\"data-path\", b.dataset.go)); document.querySelectorAll(\"section.view[hidden]\").forEach((s) => s.remove());"
+      },
+      {
+        "dir": "messages",
+        "before": "enterApp(); await wait(500); go(\"messages\"); await wait(1400); document.querySelectorAll(\"a[data-view]\").forEach((a) => a.setAttribute(\"data-path\", a.dataset.view)); document.querySelectorAll(\"[data-go]\").forEach((b) => b.setAttribute(\"data-path\", b.dataset.go)); document.querySelectorAll(\"section.view[hidden]\").forEach((s) => s.remove());"
+      }
+    ]
+  },
+  "behaviours": []
+}

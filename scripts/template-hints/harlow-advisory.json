@@ -1,0 +1,6 @@
+[
+  { "selector": "#stack", "set": { "data-vt-stack": "swipe status:st-count" } },
+  { "selector": "#stack > figure", "remove": ["style", "aria-hidden"] },
+  { "selector": "#st-next", "set": { "data-vt-step": "next", "aria-controls": "stack" } },
+  { "selector": "#st-prev", "set": { "data-vt-step": "prev", "aria-controls": "stack" } }
+]

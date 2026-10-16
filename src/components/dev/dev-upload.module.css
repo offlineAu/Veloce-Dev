@@ -1,0 +1,144 @@
+.dialogTitle { display: flex; align-items: center; gap: 13px; font-size: clamp(22px, 3vw, 29px); letter-spacing: -.04em; }
+.dialogTitle > span { display: grid; place-items: center; width: 42px; height: 42px; flex-shrink: 0; border: 1px solid var(--color-line); border-radius: 12px; color: var(--color-sage-700); }
+.panel { display: flex; flex-direction: column; gap: 25px; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 13px; padding-bottom: 20px; border-bottom: 1px solid var(--color-line); }
+.tabs { display: inline-flex; gap: 4px; border: 1px solid var(--color-line); border-radius: 11px; padding: 4px; background: var(--color-neutral-200); }
+.tab { display: inline-flex; gap: 8px; align-items: center; justify-content: center; min-height: 40px; padding: 8px 15px; border-radius: 7px; font-size: 12px; font-weight: 600; color: var(--color-muted); }
+.activeTab { background: var(--color-bg); color: var(--color-ink); box-shadow: 0 1px 3px color-mix(in srgb, var(--color-ink) 10%, transparent); }
+.session { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; color: var(--color-muted); font-size: 11px; }
+.session strong { color: var(--color-ink); max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
+.session button { font-size: 11px; padding-inline: 11px; gap: 6px; }
+.sessionDot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-accent-700); }
+.uploadForm { display: flex; flex-direction: column; gap: 25px; }
+.details, .uploadSection { min-width: 0; }
+.sectionLabel { display: flex; align-items: center; gap: 10px; width: 100%; margin-bottom: 17px; font-size: 12px; font-weight: 600; }
+.sectionLabel > span:first-child { display: grid; place-items: center; width: 22px; height: 22px; font-family: var(--font-mono); font-size: 9px; font-weight: 400; border: 1px solid var(--color-line); border-radius: 6px; color: var(--color-muted); }
+.sectionLabel .fileCount { margin-left: auto; font-family: var(--font-mono); font-size: 9px; font-weight: 400; color: var(--color-muted); }
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 17px 20px; }
+.field { display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 7px; row-gap: 8px; min-width: 0; font-size: 12px; font-weight: 600; }
+.optional { margin-left: auto; color: var(--color-muted); font-size: 9px; font-weight: 400; }
+.field input, .field select { display: block; min-height: 45px; min-width: 0; width: 100%; border-radius: 10px; background: var(--color-neutral-100); padding-inline: 13px; color: var(--color-ink); font-size: 13px; font-weight: 400; }
+.field input::placeholder { font-size: 12px; color: var(--color-neutral-700); }
+.field .slug { font-family: var(--font-mono); font-size: 11px; }
+.field input:focus-visible, .field select:focus-visible { outline: 2px solid var(--color-accent-700); outline-offset: 2px; }
+.uploadSection { padding-top: 5px; }
+.uploadGrid { display: grid; grid-template-columns: 1.12fr 1fr; gap: 18px; }
+.uploadGrid > div { min-width: 0; }
+.uploadLabel { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 9px; font-size: 12px; font-weight: 600; }
+.uploadLabel > span { font-size: 9px; font-weight: 400; color: var(--color-muted); }
+.dropField { min-width: 0; }
+.dropZone { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 13px; min-height: 187px; padding: 22px 14px; border: 1px dashed color-mix(in srgb, var(--color-muted) 55%, transparent); border-radius: 12px; background: var(--color-neutral-100); text-align: center; cursor: pointer; transition: background .15s ease, border-color .15s ease, box-shadow .15s ease; }
+.dropZone:hover { background: var(--color-accent-100); border-color: var(--color-accent-700); }
+.dropZone:focus-within { outline: 2px solid var(--color-accent-700); outline-offset: 3px; }
+.dropZone.hasFiles { border-color: var(--color-sage-700); background: color-mix(in srgb, var(--color-sage-100) 45%, var(--color-neutral-100)); }
+.dropZone.dragging { border-style: solid; border-color: var(--color-accent-700); background: var(--color-accent-100); box-shadow: inset 0 0 0 1px var(--color-accent-700); }
+.nativeInput { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.fileIcon { position: relative; display: grid; place-items: center; flex-shrink: 0; width: 45px; height: 45px; border: 1px solid var(--color-line); border-radius: 12px; background: var(--color-bg); color: var(--color-sage-700); }
+.check { position: absolute; right: -5px; bottom: -3px; display: grid; place-items: center; width: 16px; height: 16px; border: 2px solid var(--color-neutral-100); border-radius: 50%; color: var(--color-bg); background: var(--color-accent-700); }
+.dropCopy { display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 0; max-width: 100%; }
+.dropTitle { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 600; color: var(--color-ink); }
+.dropHint { font-size: 9px; line-height: 1.7; font-weight: 400; color: var(--color-muted); }
+.browse { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 34px; padding: 7px 12px; border: 1px solid var(--color-line); border-radius: 7px; color: var(--color-ink); background: var(--color-surface); font-size: 10px; font-weight: 600; }
+.removeFile { display: flex; align-items: center; justify-content: center; gap: 5px; min-height: 32px; margin: 5px auto 0; padding: 4px 8px; font-size: 10px; color: var(--color-muted); text-decoration: underline; text-underline-offset: 3px; }
+.fileError { margin-top: 9px; font-size: 11px; line-height: 1.7; color: var(--color-danger); }
+.orderHint { margin-top: 12px; color: var(--color-muted); font-size: 10px; line-height: 1.8; }
+.pageList { display: flex; flex-direction: column; gap: 12px; list-style: none; padding: 0; margin-top: 17px; }
+.pageItem { min-width: 0; padding: 14px; border: 1px solid var(--color-line); border-radius: 11px; background: var(--color-surface); }
+.pageHeader { display: flex; align-items: center; gap: 11px; margin-bottom: 12px; }
+.pageFileIcon { display: grid; place-items: center; width: 36px; height: 40px; flex-shrink: 0; color: var(--color-sage-700); background: var(--color-sage-100); border-radius: 8px; }
+.pageName { flex: 1; min-width: 0; }
+.pageName > strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 600; }
+.pageName > span { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 4px; color: var(--color-muted); font-size: 9px; }
+.homeBadge { padding: 2px 6px; border-radius: 4px; background: var(--color-accent-100); color: var(--color-accent-700); font-size: 8px; }
+.pageActions { display: flex; gap: 1px; }
+.pageActions button { width: 34px; height: 38px; }
+.pageActions button:disabled { opacity: .3; }
+.compact .dropZone { flex-direction: row; justify-content: flex-start; min-height: 65px; gap: 10px; padding: 10px 12px; border-radius: 8px; text-align: left; }
+.compact .fileIcon { width: 33px; height: 33px; border-radius: 8px; }
+.compact .dropCopy { flex: 1; align-items: flex-start; gap: 3px; }
+.compact .dropTitle { font-size: 11px; }
+.compact .dropHint { font-size: 9px; }
+.compact .browse { flex-shrink: 0; min-height: 32px; padding: 5px 10px; font-size: 9px; }
+.compact .removeFile { margin: 5px 0 0 auto; }
+.disabled { opacity: .6; cursor: not-allowed; }
+.uploadFooter { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: 16px; padding-top: 21px; border-top: 1px solid var(--color-line); }
+.uploadFooter > p { display: flex; align-items: center; gap: 9px; color: var(--color-muted); font-size: 9px; line-height: 1.8; }
+.uploadFooter > p > svg { flex-shrink: 0; color: var(--color-sage-700); }
+.uploadFooter strong { font-weight: 500; color: var(--color-ink); }
+.uploadFooter > button { font-size: 12px; min-height: 45px; }
+.busyNote { font-size: 11px; line-height: 1.8; color: var(--color-muted); }
+.panel button:focus-visible { outline: 2px solid var(--color-accent-700); outline-offset: 3px; }
+@media (max-width: 600px) {
+  .dialogTitle { font-size: 21px; gap: 9px; }
+  .dialogTitle > span { width: 34px; height: 34px; border-radius: 9px; }
+  .dialogTitle svg { width: 19px; }
+  .toolbar { align-items: flex-start; }
+  .session { width: 100%; font-size: 10px; }
+  .session button { margin-left: auto; }
+  .fields { grid-template-columns: 1fr; gap: 15px; }
+  .uploadGrid { grid-template-columns: 1fr; gap: 20px; }
+  .dropZone { min-height: 170px; }
+  .pageItem { padding: 11px; }
+  .pageHeader { flex-wrap: wrap; gap: 8px; }
+  .pageActions button { width: 32px; height: 38px; }
+  .pageFileIcon { width: 29px; }
+  .compact .dropZone { flex-wrap: wrap; padding: 12px; gap: 10px; }
+  .compact .dropCopy { flex-basis: calc(100% - 45px); }
+  .compact .browse { margin-left: 43px; }
+  .uploadFooter > button { width: 100%; }
+  .uploadFooter > p { font-size: 10px; }
+}
+@media (prefers-reduced-motion: reduce) { .dropZone { transition: none; } }
+
+.htmlEditor { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+.editorHeading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.editorEyebrow { margin-bottom: 8px; font-family: var(--font-mono); font-size: 9px; letter-spacing: .14em; color: var(--color-muted); }
+.editorHeading h2 { display: flex; align-items: center; gap: 10px; font-size: 25px; font-weight: 600; letter-spacing: -.04em; line-height: 1.2; }
+.editorHeading h2 > span { padding: 4px 7px; border: 1px solid var(--color-line); border-radius: 5px; font-family: var(--font-mono); font-size: 10px; font-weight: 400; letter-spacing: 0; color: var(--color-muted); }
+.editorSlug { margin-top: 7px; font-family: var(--font-mono); font-size: 11px; color: var(--color-muted); overflow-wrap: anywhere; }
+.draftBadge { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; margin-top: 3px; padding: 6px 9px; border-radius: 6px; background: var(--color-sage-100); color: var(--color-sage-700); font-size: 10px; font-weight: 500; }
+.editorIntro { margin-top: -8px; max-width: 65ch; color: var(--color-muted); font-size: 12px; line-height: 1.8; }
+.sourceNotice { display: flex; align-items: flex-start; gap: 11px; padding: 16px; border: 1px solid var(--color-line); border-radius: 11px; background: var(--color-neutral-100); }
+.sourceNotice > svg { flex-shrink: 0; margin-top: 2px; color: var(--color-sage-700); }
+.sourceNotice strong { display: block; font-size: 12px; font-weight: 600; }
+.sourceNotice p { margin-top: 5px; max-width: 65ch; color: var(--color-muted); font-size: 11px; line-height: 1.8; }
+.htmlSection, .imageSection { min-width: 0; }
+.imageSection { padding-top: 22px; border-top: 1px solid var(--color-line); }
+.editorSectionHeading { display: flex; align-items: flex-start; gap: 11px; margin-bottom: 14px; }
+.sectionIcon { display: grid; place-items: center; flex-shrink: 0; width: 34px; height: 34px; border: 1px solid var(--color-line); border-radius: 9px; color: var(--color-sage-700); }
+.editorSectionHeading > div { min-width: 0; flex: 1; }
+.editorSectionHeading h3 { display: flex; align-items: baseline; gap: 10px; font-size: 13px; font-weight: 600; line-height: 1.5; }
+.editorSectionHeading .optional { margin-left: 0; font-size: 10px; }
+.editorSectionHeading p { margin-top: 3px; color: var(--color-muted); font-size: 11px; line-height: 1.7; }
+.pageCount { flex-shrink: 0; margin-top: 3px; color: var(--color-muted); font-family: var(--font-mono); font-size: 10px; }
+.imageChoices { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.imageChoices .compact .dropZone { flex-wrap: wrap; gap: 10px; padding: 14px; }
+.imageChoices .compact .dropCopy { flex-basis: calc(100% - 43px); }
+.imageChoices .compact .browse { margin-left: 43px; }
+.imageSelection { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; font-size: 11px; color: var(--color-sage-700); }
+.imageSelection button { font-size: 11px; }
+.sourcePages { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.sourcePage { min-width: 0; border: 1px solid var(--color-line); border-radius: 10px; overflow: hidden; }
+.sourcePage summary { display: flex; align-items: center; gap: 9px; min-height: 46px; padding: 11px 14px; cursor: pointer; background: var(--color-neutral-100); color: var(--color-sage-700); }
+.sourcePage summary > span:first-of-type { min-width: 0; overflow-wrap: anywhere; font-family: var(--font-mono); font-size: 11px; color: var(--color-ink); }
+.sourceLanguage { margin-left: auto; color: var(--color-muted); font-family: var(--font-mono); font-size: 9px; }
+.sourcePage textarea { display: block; width: 100%; min-height: 300px; padding: 17px; border-top: 1px solid var(--color-line); resize: vertical; background: var(--color-bg); color: var(--color-ink); font-family: var(--font-mono); font-size: 11px; line-height: 1.8; tab-size: 2; outline-offset: -3px; }
+.sourcePage summary:focus-visible, .sourcePage textarea:focus-visible { outline: 2px solid var(--color-accent-700); }
+.reuseNote { margin-top: -10px; color: var(--color-muted); font-size: 10px; line-height: 1.8; }
+.editorFooter { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 20px; border-top: 1px solid var(--color-line); }
+.editorFooter button { min-height: 44px; padding-inline: 17px; font-size: 12px; }
+.editorLoading { display: flex; align-items: center; gap: 9px; padding-block: 24px; color: var(--color-muted); font-size: 12px; }
+.editorError { padding: 12px 15px; border: 1px solid color-mix(in srgb,var(--color-danger) 25%,transparent); border-radius: 9px; background: color-mix(in srgb,var(--color-danger) 5%,transparent); color: var(--color-danger); font-size: 12px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .editorHeading h2 { font-size: 23px; }
+  .draftBadge { font-size: 9px; padding: 6px; }
+  .imageChoices { grid-template-columns: 1fr; }
+  .editorFooter { flex-wrap: wrap; }
+  .editorFooter button { width: 100%; }
+  .editorFooter button:first-child { order: 1; }
+  .pageCount { font-size: 9px; }
+}
+.htmlSection > .dropField > .dropZone { min-height: 155px; }
+.htmlSection > .compact > .dropZone { min-height: 65px; }
+.sourceChevron { flex-shrink: 0; transition: transform .15s ease; }
+.sourcePage[open] .sourceChevron { transform: rotate(180deg); }

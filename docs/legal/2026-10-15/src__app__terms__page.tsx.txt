@@ -1,0 +1,45 @@
+import Link from "next/link";
+import { pageMetadata } from "@/lib/seo";
+import { LEGAL_UPDATED_LABEL } from "@/lib/legal";
+import { LegalPage } from "@/components/site/legal-page";
+import { getCompanyProfile } from "@/server/services/company";
+import { env } from "@/config/env";
+
+export const revalidate = 300;
+export const metadata = pageMetadata("Terms of use", "Terms for using Veloce’s website, builder, inquiries and meeting scheduling.", "/terms");
+
+export default async function TermsPage() {
+  const c = await getCompanyProfile();
+  const e = env();
+  return (
+    <LegalPage title="Terms of use">
+      <p className="text-sm">Last updated: {LEGAL_UPDATED_LABEL}.</p>
+      <p className="rounded-xl border border-line bg-surface p-4"><strong>Draft for review.</strong> Business identity, governing law and the legal provisions below require review before public launch.</p>
+      <h2>About this website</h2>
+      <p>This website is operated by {e.LEGAL_ENTITY_NAME ?? "[Legal business name to be confirmed]"}, trading as {c.name}. Business address: {e.LEGAL_BUSINESS_ADDRESS ?? "[Business address to be confirmed]"}.</p>
+      <p>The site describes our services and lets you explore designs, send inquiries, make introductions and arrange meetings. Website descriptions, sample designs and informal estimates are general information. Sending a request does not create a development contract or commit either party to a project.</p>
+      <h2>Project agreements and offers</h2>
+      <p>Any paid engagement requires a separate written agreement covering scope, price, payment, delivery, revisions, support and ownership. Review and accept that agreement before work starts. We confirm any consultation charge before you commit.</p>
+      <p>Special offers apply only while active and are subject to their displayed eligibility, conditions and expiry. A referral or inquiry does not guarantee eligibility or acceptance.</p>
+      <h2>Acceptable use</h2>
+      <p>Use the website lawfully. Do not attempt unauthorized access, interfere with availability, bypass security, send spam, impersonate others, or submit unlawful or infringing content. Only share another person&apos;s details when you have permission to do so.</p>
+      <h2>Website materials and your submissions</h2>
+      <p>Website branding, text, code and design materials belong to us or their respective owners and licensors. Viewing or trying a template does not transfer ownership or grant rights beyond the applicable licence. Third-party materials remain subject to their own terms.</p>
+      <p>You retain your rights in content you submit. By sending an inquiry or design, you permit us to store, display and review that content as needed to handle your request and discuss a proposed project. This does not grant permission to use your content in public marketing. You are responsible for having the rights and permissions needed for your submissions.</p>
+      <h2>Builder drafts and previews</h2>
+      <p>The builder is a planning tool. Sample content, forms and links may be placeholders, and a preview is not a finished or deployed production website. Drafts saved in your browser can be lost if site data is cleared or unavailable; keep your own copies of important work.</p>
+      <p>Sending a design stores a snapshot and creates a preview accessible to anyone who has its link without signing in. Do not submit passwords, confidential information or personal details you do not have permission to share. See the <Link href="/privacy" className="underline">privacy notice</Link> for handling and deletion requests.</p>
+      <h2>Meetings and third-party services</h2>
+      <p>Cal.com provides the scheduler when enabled. A request sent by email does not reserve a meeting time. Check the provider confirmation for booking status, joining instructions and any cancellation or rescheduling options. Any charges or special booking conditions will be shown before commitment.</p>
+      <p>External websites and services have their own terms and privacy practices. We do not control their availability or content.</p>
+      <h2>Availability and responsibility</h2>
+      <p>We aim to keep information accurate and the website available, but information may change and access may be interrupted. To the extent permitted by applicable law, the website and planning tools are provided without a promise of uninterrupted operation or suitability for a particular project. Any warranties and responsibilities for paid work belong in the separate project agreement.</p>
+      <p>Nothing in these terms excludes liability, remedies or consumer rights that cannot lawfully be excluded. Any additional limitation of liability requires review under the law applicable to the business before publication.</p>
+      <h2>Privacy</h2>
+      <p>Our <Link href="/privacy" className="underline">privacy notice</Link> explains how requests, referrals, bookings, designs and browser storage are handled. Consent choices are presented with the relevant action.</p>
+      <h2>Governing law and questions</h2>
+      <p>{e.LEGAL_GOVERNING_LAW ?? "[Governing law and any dispute arrangements must be confirmed before public launch.]"} Any mandatory rights under applicable law continue to apply.</p>
+      <p>For questions, email <a href={`mailto:${c.contactEmail}`} className="underline">{c.contactEmail}</a>. Updates will be published here with a revised date. A separate signed project agreement is changed only according to its own terms.</p>
+    </LegalPage>
+  );
+}
