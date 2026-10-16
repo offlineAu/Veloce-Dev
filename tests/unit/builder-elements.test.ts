@@ -11,20 +11,26 @@ import { sectionDefaults, type TemplatePackage } from "@/lib/builder/template-pa
 
 vi.mock("@/content/builder-templates", () => ({ isKnownVersion: () => true, findImported: () => ({ versions: [1], published: [1] }), showDrafts: () => true }));
 
-const noir = JSON.parse(readFileSync("public/builder-templates/noir-needle/v1/template.json", "utf8")) as TemplatePackage;
+const pkgOf = (slug: string) => JSON.parse(readFileSync(`public/builder-templates/${slug}/v1/template.json`, "utf8")) as TemplatePackage;
+const noir = pkgOf("noir-needle");
+/** Every template in the repo: what the editor shows (pieces) must look like the sample (locked sections). */
+const REPO = (JSON.parse(readFileSync("src/content/builder-templates/manifest.json", "utf8")) as { slug: string }[]).map((t) => t.slug);
 
 /**
- * Markup reduced to what decides the layout and what people read: tags, classes and text. (Attributes such as id
- * and aria-* are applied after mount on pieces, and the editor adds data attributes, so they're left out.)
+ * Markup reduced to what decides the layout and what people read: tags, classes, inline styles and text. (Attributes
+ * such as id and aria-* are applied after mount on pieces, and the editor adds data attributes, so they're left out.)
  */
 function shape(html: string): string {
   return html
     .replace(/<(\w+)((?:\s+[\w:-]+(?:="[^"]*")?)*)\s*(\/?)>/g, (_m, tag: string, attrs: string, self: string) => {
       const cls = attrs.match(/\sclass="([^"]*)"/)?.[1]?.split(/\s+/).filter(Boolean).sort().join(" ");
-      return `<${tag}${cls ? ` class="${cls}"` : ""}${self ? "/" : ""}>`;
+      const style = attrs.match(/\sstyle="([^"]*)"/)?.[1]?.split(";").map((d) => d.replace(/\s+/g, "")).filter(Boolean).sort().join(";");
+      return `<${tag}${cls ? ` class="${cls}"` : ""}${style ? ` style="${style}"` : ""}${self ? "/" : ""}>`;
     })
+    .replace(/^(?:<link\/>)+/, "")
     .replace(/\s+/g, " ")
     .replace(/> </g, "><")
+    .replace(/ </g, "<")
     .trim();
 }
 
@@ -38,8 +44,8 @@ const bareConfig = { ...builderConfig, root: undefined };
 const pieces = (block: BlockItem) =>
   renderToStaticMarkup(createElement(Render, { config: bareConfig, data: { root: { props: {} }, content: [block] }, metadata: {} } as never));
 
-describe("Edit layout: a section taken apart looks the same", () => {
-  for (const page of noir.pages) {
+describe.each(REPO)("Edit layout: a section of %s taken apart looks the same", (slug) => {
+  for (const page of pkgOf(slug).pages) {
     for (const section of page.sections) {
       it(`${page.title} · ${section.label}`, () => {
         // Render wraps the page in its root drop zone (<div>); the section itself is inside.

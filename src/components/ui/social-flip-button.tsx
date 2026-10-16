@@ -46,7 +46,8 @@ export default function SocialFlipButton({ items, word = "VELOCE", className }: 
 
   return (
     <div
-      className={cn("relative grid w-fit max-w-full grid-cols-3 items-center gap-2 rounded-2xl border border-line bg-neutral-100 p-3 shadow-sm sm:inline-flex sm:flex-wrap", className)}
+      className={cn("@container relative grid w-[20.75rem] max-w-full items-center gap-2 rounded-2xl border border-line bg-neutral-100 p-3 shadow-sm", className)}
+      style={{ gridTemplateColumns: `repeat(${Math.max(items.length, 1)}, minmax(0, 1fr))` }}
       onMouseEnter={() => setFlipped(true)}
       onMouseLeave={() => {
         setFlipped(false);
@@ -86,7 +87,7 @@ export default function SocialFlipButton({ items, word = "VELOCE", className }: 
             key={item.kind}
             {...(live ? { href: item.href, "aria-label": item.label } : { role: "img", "aria-label": `${item.label} (not set up yet)` })}
             {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-            className="relative block size-11 shrink-0 rounded-lg [perspective:1000px]"
+            className="relative block aspect-square w-full min-w-0 rounded-lg [perspective:1000px]"
             onMouseEnter={() => setTip(i)}
             onMouseLeave={() => setTip(null)}
             onFocus={() => setTip(i)}
@@ -117,13 +118,13 @@ export default function SocialFlipButton({ items, word = "VELOCE", className }: 
               style={{ transformStyle: "preserve-3d" }}
             >
               <span
-                className="absolute inset-0 flex items-center justify-center rounded-lg bg-neutral-200 font-heading text-xl text-ink shadow-sm"
+                className="absolute inset-0 flex items-center justify-center rounded-lg bg-neutral-200 font-heading text-[clamp(0.625rem,7cqw,1.25rem)] text-ink shadow-sm"
                 style={{ backfaceVisibility: "hidden", ...(reduce && show ? { visibility: "hidden" } : {}) }}
               >
                 {letters[i % letters.length]}
               </span>
               <span
-                className={cn("absolute inset-0 flex items-center justify-center rounded-lg bg-accent-600 text-lg text-on-accent", !live && "opacity-50")}
+                className={cn("absolute inset-0 flex items-center justify-center rounded-lg bg-accent-600 text-[clamp(0.625rem,6cqw,1.125rem)] text-on-accent", !live && "opacity-50")}
                 style={reduce ? { visibility: show ? "visible" : "hidden" } : { backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
               >
                 <Glyph />

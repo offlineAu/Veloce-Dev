@@ -1,0 +1,36 @@
+{
+  "bake": {
+    "pages": [
+      {
+        "dir": "home",
+        "before": "for (const vt of [...document.querySelectorAll(\".vt[data-for]\")]) { const id = vt.dataset.for; const chart = document.getElementById(id), table = document.getElementById(id + \"-table\"); if (!chart || !table) continue; vt.querySelector(\"[data-m=table]\").click(); await wait(250); vt.querySelector(\"[data-m=chart]\").click(); await wait(250); const panels = document.createElement(\"div\"); panels.id = id + \"-panels\"; panels.className = \"vt-panels\"; chart.before(panels); panels.append(chart, table); table.removeAttribute(\"hidden\"); vt.id = id + \"-tabs\"; vt.querySelectorAll(\"button\").forEach((b) => b.removeAttribute(\"aria-pressed\")); } const css = document.createElement(\"style\"); css.textContent = \".vt-panels > * + *{display:none}.vt-panels > [data-vt-state~=on]{display:block}.vt-panels:has(> * + [data-vt-state~=on]) > :first-child{display:none}.vt button[aria-current=true]{background:var(--hover);color:var(--ink)}\"; document.head.append(css);"
+      }
+    ]
+  },
+  "behaviours": [
+    {
+      "selector": "#trend-tabs",
+      "set": {
+        "data-vt-tabs": "trend-panels"
+      }
+    },
+    {
+      "selector": "#mix-tabs",
+      "set": {
+        "data-vt-tabs": "mix-panels"
+      }
+    },
+    {
+      "selector": "#reg-tabs",
+      "set": {
+        "data-vt-tabs": "reg-panels"
+      }
+    },
+    {
+      "selector": "#cash-tabs",
+      "set": {
+        "data-vt-tabs": "cash-panels"
+      }
+    }
+  ]
+}

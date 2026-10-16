@@ -9,8 +9,8 @@ import { useTemplate } from "./template-registry";
 
 /** Width the miniature is laid out at before scaling, so it shows the desktop design. */
 const DESIGN_WIDTH = 1280;
-/** Only the top of the home page is visible in a card. */
-const SECTIONS = 3;
+/** Only the top of the home page is visible in a card: its first sections, up to and including the hero. */
+const SECTIONS = 4;
 
 /**
  * A live miniature of a template's home page, for templates uploaded without a screenshot. It renders the real
@@ -33,8 +33,14 @@ export function TemplatePreview({ slug, version }: { slug: string; version: numb
     if (!template) return null;
     const doc = docFromTemplate(template.pkg);
     const home = doc.pages[0]!;
-    const data = { ...home.data, content: home.data.content.slice(0, SECTIONS) } as Partial<BuilderData>;
-    return { data, metadata: { template, pages: pageRefs(doc) } };
+    // Parts that draw nothing (an icon sprite) don't count; the top of the page is shown through its hero.
+    const kinds = new Map(template.pkg.pages[0]!.sections.map((s) => [s.id, s.kind]));
+    const kindOf = (b: (typeof home.data.content)[number]) => kinds.get(String(b.props.sectionId));
+    const visible = home.data.content.filter((b) => kindOf(b) !== "utility");
+    const hero = visible.findIndex((b) => kindOf(b) === "hero");
+    const data = { ...home.data, content: visible.slice(0, hero >= 0 ? Math.max(hero + 1, Math.min(SECTIONS, visible.length)) : SECTIONS) } as Partial<BuilderData>;
+    // A still picture: no interactions running in the picker.
+    return { data, metadata: { template, pages: pageRefs(doc), static: true } };
   }, [template]);
 
   return (

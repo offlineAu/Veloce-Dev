@@ -1,3 +1,5 @@
+import { analyticsContextSchema } from "@/lib/analytics/shared";
+import { privacyReceiptFields } from "./privacy";
 import { z } from "zod";
 import { emailField, guardFields, optionalText, refToken, text } from "./common";
 
@@ -32,7 +34,7 @@ const differentPeople = (v: { referrerEmail: string; referredEmail: string }) =>
 const sameEmail = { path: ["referredEmail"], message: "Use the other person's email, not your own." };
 
 /** Full server-side schema. */
-export const introductionSchema = z.object({ ...introductionShape, ...guardFields }).refine(differentPeople, sameEmail);
+export const introductionSchema = z.object({ ...introductionShape, ...guardFields, ...privacyReceiptFields, analytics: analyticsContextSchema }).refine(differentPeople, sameEmail);
 /** Browser-side schema without the hidden guard fields. */
 export const introductionClientSchema = z.object(introductionShape).refine(differentPeople, sameEmail);
 export type IntroductionFormValues = z.input<typeof introductionClientSchema>;

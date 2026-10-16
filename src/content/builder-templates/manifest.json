@@ -126,5 +126,170 @@
       "thumb-home.webp"
     ],
     "importedAt": "2026-10-14T14:50:36.157Z"
+  },
+  {
+    "slug": "trades-home-services",
+    "name": "Trades & home services",
+    "description": "Bold one-page site for a plumber, electrician or other trade: instant estimate, recent jobs, service areas, reviews and booking.",
+    "websiteType": "BUSINESS",
+    "scheme": "light",
+    "versions": [
+      1
+    ],
+    "published": [
+      1
+    ],
+    "pages": [
+      {
+        "key": "",
+        "title": "Home"
+      }
+    ],
+    "thumbnails": [
+      "thumb-home.webp"
+    ],
+    "importedAt": "2026-10-16T12:11:14.888Z"
+  },
+  {
+    "slug": "harlow-advisory",
+    "name": "Accountants & advisers",
+    "description": "Warm one-page site for an accounting and advisory practice: services, a cash runway tool, client stories, the team and fixed fees.",
+    "websiteType": "BUSINESS",
+    "scheme": "light",
+    "versions": [
+      1
+    ],
+    "published": [
+      1
+    ],
+    "pages": [
+      {
+        "key": "",
+        "title": "Home"
+      }
+    ],
+    "thumbnails": [
+      "thumb-home.webp"
+    ],
+    "importedAt": "2026-10-16T12:11:41.873Z"
+  },
+  {
+    "slug": "oakwell-home",
+    "name": "Homeware boutique",
+    "description": "An online store for small-batch homeware: shop by room, a product grid with colour swatches, a shoppable set, makers and reviews.",
+    "websiteType": "ECOMMERCE_STORE",
+    "scheme": "light",
+    "versions": [
+      1,
+      2
+    ],
+    "published": [
+      1,
+      2
+    ],
+    "pages": [
+      {
+        "key": "",
+        "title": "Home"
+      }
+    ],
+    "thumbnails": [
+      "thumb-home.webp"
+    ],
+    "importedAt": "2026-10-16T13:06:46.818Z"
+  },
+  {
+    "slug": "bellbird-portal",
+    "name": "Construction client portal",
+    "description": "A six-page client portal for a builder: project progress, build stages and photos, approvals, invoices, files and messages.",
+    "websiteType": "WEB_APP",
+    "scheme": "light",
+    "versions": [
+      1
+    ],
+    "published": [
+      1
+    ],
+    "pages": [
+      {
+        "key": "",
+        "title": "Overview"
+      },
+      {
+        "key": "project",
+        "title": "Project"
+      },
+      {
+        "key": "approvals",
+        "title": "Approvals"
+      },
+      {
+        "key": "invoices",
+        "title": "Invoices"
+      },
+      {
+        "key": "files",
+        "title": "Files"
+      },
+      {
+        "key": "messages",
+        "title": "Messages"
+      }
+    ],
+    "thumbnails": [
+      "thumb-home.webp",
+      "thumb-project.webp",
+      "thumb-approvals.webp",
+      "thumb-invoices.webp",
+      "thumb-files.webp",
+      "thumb-messages.webp"
+    ],
+    "importedAt": "2026-10-16T12:13:22.350Z"
+  },
+  {
+    "slug": "ridgeline-dashboard",
+    "name": "Operations dashboard",
+    "description": "An executive dashboard: revenue against budget, KPI tiles, sales mix, region and cash charts, goals and top customers.",
+    "websiteType": "WEB_APP",
+    "scheme": "light",
+    "versions": [
+      1
+    ],
+    "published": [
+      1
+    ],
+    "pages": [
+      {
+        "key": "",
+        "title": "Home"
+      }
+    ],
+    "thumbnails": [
+      "thumb-home.webp"
+    ],
+    "importedAt": "2026-10-16T12:13:49.759Z"
+  },
+  {
+    "slug": "wren-vale-property",
+    "name": "Real estate agency",
+    "description": "An editorial site for a property agency: homes for sale, a room-by-room walk-through, inspections, suburb guides, agents and appraisals.",
+    "websiteType": "BUSINESS",
+    "scheme": "light",
+    "versions": [
+      1
+    ],
+    "published": [
+      1
+    ],
+    "pages": [
+      {
+        "key": "",
+        "title": "Home"
+      }
+    ],
+    "thumbnails": [
+      "thumb-home.webp"
+    ],
+    "importedAt": "2026-10-16T12:14:34.689Z"
   }
 ]

@@ -5,7 +5,8 @@ import { AnimatePresence, m } from "framer-motion";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { Menu, Palette, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useActiveSection } from "./notch-header";
+import { NavigationLink } from "./navigation-link";
+import { useActiveNavigation } from "./notch-header";
 import { PaletteChoices, useThemeChoice } from "./theme-manager";
 
 /*
@@ -46,7 +47,7 @@ export function QuickDock({
   const toggle = React.useRef<HTMLButtonElement>(null);
   const menuId = React.useId();
   const palette = useThemeChoice();
-  const active = useActiveSection([...shortcuts, ...columns.flatMap((c) => c.links)]);
+  const active = useActiveNavigation([...shortcuts, ...columns.flatMap((c) => c.links)]);
 
   React.useEffect(() => {
     const on = () => setVisible(window.scrollY > 480);
@@ -107,18 +108,18 @@ export function QuickDock({
                     {col.title}
                   </p>
                   {col.links.map((l) => (
-                    <a
+                    <NavigationLink
                       key={l.label}
                       href={l.href}
                       onClick={() => setOpen(false)}
-                      aria-current={active === l.href ? "location" : undefined}
+                      aria-current={active === l.href ? (l.href.startsWith("#") ? "location" : "page") : undefined}
                       className={cn(
                         "block min-h-9 rounded-md py-1.5 text-[15px] leading-snug hover:text-accent-700",
-                        active === l.href ? "text-accent-700" : "text-ink",
+                        active === l.href ? "bg-inverse px-2.5 font-semibold text-on-inverse shadow-sm hover:text-on-inverse" : "text-ink",
                       )}
                     >
                       {l.label}
-                    </a>
+                    </NavigationLink>
                   ))}
                 </div>
               ))}
@@ -152,17 +153,17 @@ export function QuickDock({
         </button>
         <div className="hidden min-w-0 flex-1 gap-1.5 sm:flex">
           {shortcuts.map((s) => (
-            <a
+            <NavigationLink
               key={s.href}
               href={s.href}
-              aria-current={active === s.href ? "location" : undefined}
+              aria-current={active === s.href ? (s.href.startsWith("#") ? "location" : "page") : undefined}
               className={cn(
                 "hidden min-h-11 min-w-0 flex-1 items-center justify-center truncate rounded-full border px-2 text-sm transition-colors sm:flex",
-                active === s.href ? "border-accent-300 bg-accent-100 font-semibold text-ink" : "border-line text-muted hover:border-ink/40 hover:text-ink",
+                active === s.href ? "border-inverse bg-inverse font-semibold text-on-inverse shadow-sm" : "border-line text-muted hover:border-ink/40 hover:text-ink",
               )}
             >
               {s.label}
-            </a>
+            </NavigationLink>
           ))}
         </div>
       </div>

@@ -1,0 +1,36 @@
+{
+  "bake": {
+    "pages": [
+      {
+        "dir": "home",
+        "before": "document.querySelectorAll(\"img[data-src]\").forEach((im) => load(im)); await wait(2500); const thanks = async (formSel, bodySel, values, id) => { const form = document.querySelector(formSel), body = document.querySelector(bodySel); if (!form || !body) return; const saved = body.innerHTML; for (const [sel, v] of Object.entries(values)) { const el = document.querySelector(sel); if (el) el.value = v; } form.requestSubmit(); await wait(3000); const done = body.innerHTML; body.innerHTML = saved; if (done === saved) return; const now = document.querySelector(formSel); const box = document.createElement(\"div\"); box.id = id; box.className = now.className; box.hidden = true; box.innerHTML = done; now.after(box); }; await thanks(\"#book-form\", \"#book-body\", { \"#b-name\": \"Alex Smith\", \"#b-phone\": \"0412 345 678\" }, \"book-done\"); await thanks(\"#ap-form\", \"#ap-body\", { \"#a-addr\": \"14 Linden Street, Paddington\", \"#a-name\": \"Alex Smith\", \"#a-phone\": \"0412 345 678\" }, \"ap-done\"); const css = document.createElement(\"style\"); css.textContent = \"[data-vt-state~=invalid] .inp:invalid, [data-vt-state~=invalid] input:invalid { border-color:#b9473b }\"; document.head.append(css);"
+      }
+    ]
+  },
+  "behaviours": [
+    {
+      "selector": "#book-form",
+      "set": {
+        "data-vt-form": "book-done"
+      }
+    },
+    {
+      "selector": "#b-name, #b-phone",
+      "set": {
+        "required": true
+      }
+    },
+    {
+      "selector": "#ap-form",
+      "set": {
+        "data-vt-form": "ap-done"
+      }
+    },
+    {
+      "selector": "#a-addr, #a-name, #a-phone",
+      "set": {
+        "required": true
+      }
+    }
+  ]
+}

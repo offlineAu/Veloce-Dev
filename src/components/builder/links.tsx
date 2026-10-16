@@ -2,6 +2,7 @@
 
 import { createContext, useContext, type MouseEvent } from "react";
 import { FieldLabel } from "@puckeditor/core";
+import type { Collection, Menus } from "@/lib/builder/content";
 import { PAGE_LINK, type PageRef } from "@/lib/builder/site-doc";
 import { safeHref } from "./blocks/shared";
 
@@ -10,8 +11,12 @@ export interface BuilderMetadata {
   pages?: PageRef[];
   /** Editor preview mode: switch to another page instead of following the link. */
   navigate?: (pageId: string) => void;
-  /** Published preview: where another page of this design lives. */
-  pageHref?: (page: PageRef) => string;
+  /** Published preview: where another page of this design lives (and an item of the collection it shows). */
+  pageHref?: (page: PageRef, itemSlug?: string) => string;
+  /** The site's collections and menus (content.ts), and which page shows each collection's items. */
+  collections?: Collection[];
+  menus?: Menus;
+  itemPages?: Record<string, string>;
 }
 
 /**
@@ -22,9 +27,11 @@ export function linkProps(href: string | undefined, puck: { isEditing?: boolean;
   const meta = (puck.metadata ?? {}) as BuilderMetadata;
   const editing = !!puck.isEditing;
   if (href?.startsWith(PAGE_LINK)) {
-    const page = meta.pages?.find((p) => p.id === href.slice(PAGE_LINK.length));
+    // "page:<id>" or, for an item of a collection, "page:<id>/<item slug>".
+    const [pageId, itemSlug] = href.slice(PAGE_LINK.length).split("/");
+    const page = meta.pages?.find((p) => p.id === pageId);
     if (!page) return { href: "#", tabIndex: editing ? -1 : undefined };
-    if (meta.pageHref) return { href: meta.pageHref(page) };
+    if (meta.pageHref) return { href: meta.pageHref(page, itemSlug) };
     return {
       href: "#",
       "data-page-link": page.id,

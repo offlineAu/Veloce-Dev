@@ -3,6 +3,8 @@
  * (root + content). Shared by the editor, storage, the preview page and the server validator: no React.
  */
 import { withFreshIds, type BlockItem } from "./blocks";
+import { normalizeCollections, normalizeMenus, normalizeSeo, type Collection, type Menus } from "./content";
+import { normalizeStyles, type SiteStyles } from "./site-styles";
 import { DEFAULT_THEME, normalizeTheme, themeFromLegacy, type ThemeTokens } from "./theme";
 
 export interface PageData {
@@ -23,11 +25,48 @@ export interface TemplateRef {
   version: number;
 }
 
+/** A reusable component: its main block as last synced (instances are updated from changes to the main). */
+export interface ComponentDef {
+  name: string;
+  block: BlockItem;
+}
+
 export interface SiteDoc {
   version: 2;
   theme: ThemeTokens;
   templateRef?: TemplateRef;
+  /** Colour and text styles and token overrides (site-styles.ts). */
+  styles?: SiteStyles;
+  /** Reusable components by id (components.ts). */
+  components?: Record<string, ComponentDef>;
+  /** Collections (a blog, a team…) and the site's menus (content.ts). */
+  collections?: Collection[];
+  menus?: Menus;
   pages: SitePage[];
+}
+
+export const MAX_COMPONENTS = 50;
+
+/** A page's own settings on its root (SEO, the collection it shows one item of), made safe. */
+function withPageSettings(data: PageData): PageData {
+  const props = { ...(data.root?.props ?? {}) };
+  const seo = normalizeSeo(props.seo);
+  if (seo) props.seo = seo;
+  else delete props.seo;
+  if (typeof props.itemsOf !== "string" || !/^[a-z0-9][a-z0-9-]{0,39}$/.test(props.itemsOf)) delete props.itemsOf;
+  if (typeof props.previewItem !== "string" || !/^[a-z0-9][a-z0-9-]{0,39}$/.test(props.previewItem)) delete props.previewItem;
+  return { ...data, root: { ...data.root, props } };
+}
+
+/** Components as stored: well-formed entries only (their blocks are checked like the pages' on submit). */
+function normalizeComponents(raw: unknown): Record<string, ComponentDef> | undefined {
+  if (!isRecord(raw)) return undefined;
+  const out: Record<string, ComponentDef> = {};
+  for (const [id, c] of Object.entries(raw).slice(0, MAX_COMPONENTS)) {
+    if (!/^c-[a-z0-9]{4,16}$/.test(id) || !isRecord(c) || typeof c.name !== "string" || !isRecord(c.block) || typeof c.block.type !== "string" || !isRecord(c.block.props)) continue;
+    out[id] = { name: c.name.slice(0, 40) || "Component", block: c.block as unknown as BlockItem };
+  }
+  return Object.keys(out).length ? out : undefined;
 }
 
 /** A page as other parts of the site see it: enough to list it and link to it. */
@@ -37,6 +76,12 @@ export const MAX_PAGES = 12;
 export const PATH_RE = /^\/([a-z0-9]+(-[a-z0-9]+)*)?$/;
 /** Links to another page of the same site are stored by page id, so renaming a page never breaks them. */
 export const PAGE_LINK = "page:";
+
+/** The page a "page:<id>" link goes to (and the collection item, for "page:<id>/<item slug>"), if it's well formed. */
+export function pageLinkTarget(href: string): { pageId: string; itemSlug?: string } | null {
+  const m = href.slice(PAGE_LINK.length).match(/^([\w-]{1,40})(?:\/([a-z0-9]+(?:-[a-z0-9]+)*))?$/);
+  return href.startsWith(PAGE_LINK) && m ? { pageId: m[1]!, itemSlug: m[2] } : null;
+}
 
 const isRecord = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 const isPageData = (v: unknown): v is PageData => isRecord(v) && Array.isArray(v.content) && (v.root === undefined || isRecord(v.root));
@@ -77,18 +122,31 @@ export function migrateDoc(raw: unknown): SiteDoc | null {
     const templateRef = isRecord(raw.templateRef) && typeof raw.templateRef.slug === "string" && typeof raw.templateRef.version === "number"
       ? { slug: raw.templateRef.slug, version: raw.templateRef.version }
       : undefined;
-    return withTheme({ version: 2, theme: normalizeTheme(raw.theme), templateRef, pages: pages.map((p) => ({ ...p, title: typeof p.title === "string" ? p.title : "Page" })) });
+    return withTheme({
+      version: 2,
+      theme: normalizeTheme(raw.theme),
+      templateRef,
+      styles: normalizeStyles(raw.styles),
+      components: normalizeComponents(raw.components),
+      collections: normalizeCollections(raw.collections),
+      menus: normalizeMenus(raw.menus),
+      pages: pages.map((p) => ({ ...p, title: typeof p.title === "string" ? p.title : "Page", data: withPageSettings(p.data) })),
+    });
   }
   if (isPageData(raw)) return docFromPage({ root: raw.root ?? {}, content: raw.content });
   return null;
 }
 
-/** The theme belongs to the site; each page's root carries a copy because that is what the editor renders. */
-export function withTheme(doc: SiteDoc, theme: ThemeTokens = doc.theme): SiteDoc {
+/**
+ * The theme and styles belong to the site; each page's root carries a copy because that is what the editor and the
+ * preview render.
+ */
+export function withTheme(doc: SiteDoc, theme: ThemeTokens = doc.theme, styles: SiteStyles | undefined = doc.styles): SiteDoc {
   return {
     ...doc,
     theme,
-    pages: doc.pages.map((p) => ({ ...p, data: { ...p.data, root: { ...p.data.root, props: { ...p.data.root.props, theme } } } })),
+    styles,
+    pages: doc.pages.map((p) => ({ ...p, data: { ...p.data, root: { ...p.data.root, props: { ...p.data.root.props, theme, styles } } } })),
   };
 }
 

@@ -58,6 +58,7 @@ export function applyServerResult<T extends FieldValues>(
   if (result.ok) return null;
   if (result.code === "VALIDATION") {
     const errors: FieldErrors = result.fieldErrors;
+    if (errors.privacyNoticeVersion?.[0]) return errors.privacyNoticeVersion[0];
     let first = true;
     for (const [name, msgs] of Object.entries(errors)) {
       if (msgs?.[0]) setError(name as Path<T>, { message: msgs[0] }, { shouldFocus: first });

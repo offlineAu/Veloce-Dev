@@ -1,3 +1,4 @@
+import { AnalyticsPreferences } from "@/components/analytics/analytics-provider";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { LogoMark } from "@/components/brand/logo";
@@ -87,7 +88,7 @@ export function SiteFooter({
           <div className="flex flex-col gap-3 md:col-span-3 md:col-start-10">
             <p className="font-mono text-[11px] font-bold uppercase tracking-[0.12em] text-on-inverse/85">Questions?</p>
             <p>Have an idea, or need straightforward advice on what to build first?</p>
-            <a href={contactHref ?? `mailto:${email}`} className="inline-flex w-fit items-center gap-1.5 border-b border-accent pb-0.5 font-semibold text-accent transition-colors hover:border-on-inverse hover:text-on-inverse">
+            <a data-analytics-placement="footer" href={contactHref ?? `mailto:${email}`} className="inline-flex w-fit items-center gap-1.5 border-b border-accent pb-0.5 font-semibold text-accent transition-colors hover:border-on-inverse hover:text-on-inverse">
               Talk with us <span aria-hidden>→</span>
             </a>
             {showContacts ? <SocialFlipButton items={channels} /> : null}
@@ -100,6 +101,7 @@ export function SiteFooter({
             <a className={link} href={websiteUrl}>{host}</a>
             <Link className={link} href="/privacy">Privacy</Link>
             <Link className={link} href="/terms">Terms</Link>
+            <AnalyticsPreferences />
             {/* The header has a palette icon from lg up; this link covers phones and tablets, where the header goes logo-only once scrolled. */}
             <ThemeManager variant="text" className="hover:text-on-inverse lg:hidden" />
           </nav>

@@ -1,0 +1,3 @@
+export const CLOSED_RECORD_RETENTION_DAYS = 30;
+export const CLOSED_RECORD_RETENTION_MS = CLOSED_RECORD_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+export const CLOSED_RECORD_RETENTION_NOTICE = `Inquiries that do not become projects, and closed referrals, are scheduled for deletion from the website database ${CLOSED_RECORD_RETENTION_DAYS} days after the conversation is marked closed. Deleting an inquiry also removes its submitted design, shared preview, attribution and website notification records. Active discussions and project records are kept while needed for the work. Records needed for legal obligations or a specific legal claim are handled separately and reviewed for continued necessity.`;

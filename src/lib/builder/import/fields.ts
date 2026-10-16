@@ -6,10 +6,11 @@
  *   - runs of 3+ structurally identical siblings (cards, steps, nav links) become a list visitors can add to.
  * Icon ligatures (Material Symbols) and form option text stay as they are.
  */
+import { BEHAVIOUR_ATTR, parseBehaviour } from "../behaviours";
 import { backgroundUrl } from "../bg-image";
 import type { AttrValue, ElementNode, FieldDef, RepeaterDef, TreeNode } from "../template-package";
-import { rewriteClassList, type ClassContext } from "./classes";
-import { classList, textOf, type IREl, type IRNode } from "./ir";
+import { AS_BUTTON, rewriteClassList, type ClassContext } from "./classes";
+import { classList, textOf, walk, type IREl, type IRNode } from "./ir";
 import type { Report } from "./report";
 
 /** Image addresses are recorded as "asset:<original url>" and replaced by package paths once downloaded. */
@@ -78,7 +79,12 @@ function parseStyle(style: string): Record<string, string> {
 export function reactAttrs(el: IREl, env: FieldEnv, svg: boolean): Record<string, AttrValue> {
   const out: Record<string, AttrValue> = {};
   for (const [name, value] of Object.entries(el.attrs)) {
-    if (name.startsWith("data-") || name === "srcset" || name === "sizes") continue; // consumed here or not imported
+    // Interactions (import/behaviours.ts) are kept; other data-* were consumed here, or aren't imported.
+    if (BEHAVIOUR_ATTR.test(name) && parseBehaviour(name, value) !== null) {
+      out[name] = value;
+      continue;
+    }
+    if (name.startsWith("data-") || name === "srcset" || name === "sizes") continue;
     if (name === "class") {
       const cls = rewriteClassList(value, env.classes);
       cls.split(" ").forEach((c) => c && env.candidates.add(c));
@@ -199,7 +205,28 @@ function convertChildren(parent: IREl, scope: Scope, env: FieldEnv, svg: boolean
   return out;
 }
 
+/** Attributes that mark one item of a group as the chosen one (a segmented control's "Month", a checked radio). */
+const CHOSEN = ["aria-pressed", "aria-selected", "aria-current", "aria-checked", "checked", "selected"];
+/** Inline style without what may differ between items of one list: photos (fields) and stagger delays (`--d:80`). */
+const sharedStyle = (style = "") =>
+  style
+    .split(";")
+    .map((d) => d.trim())
+    .filter((d) => d && !/url\(/i.test(d) && !/^--(d|i|n|delay|index|vt-d|vt-i)\s*:/i.test(d))
+    .join(";");
+/**
+ * How an item looks apart from its editable text, photos and links: every element's classes, inline style, chosen
+ * state, input value and icon. A list repeats its first item's markup, so items that differ in these would all come
+ * out looking like the first (a red figure turned black, three sliders at one position, every card with one icon).
+ */
+const look = (el: IREl) =>
+  [...walk(el)]
+    .map((e) => [e.tag, classList(e).sort().join("."), sharedStyle(e.attrs.style), ...CHOSEN.map((a) => e.attrs[a] ?? ""), e.tag === "input" ? (e.attrs.value ?? "") : "", e.tag === "use" ? (e.attrs.href ?? e.attrs["xlink:href"] ?? "") : ""].join(","))
+    .join("|");
+
 function repeater(run: IREl[], scope: Scope, env: FieldEnv): TreeNode | null {
+  // Items that don't look alike (one pressed, one red, another icon) stay separate.
+  if (new Set(run.map(look)).size > 1) return null;
   const scopes = run.map(() => newScope(true));
   const items = run.map((el, k) => convertElement(el, scopes[k]!, env, false, undefined));
   const ids = scopes[0]!.fields.map((f) => f.id).join();
@@ -248,7 +275,11 @@ function convertElement(el: IREl, scope: Scope, env: FieldEnv, inSvg: boolean, i
     const text = wordsOf(el).replace(/\s+/g, " ").trim().slice(0, 30);
     b.href = addField(scope, "link", "l", text ? `“${text}” link` : "Link", href);
     delete a.href;
-    if (navButton) delete a.type;
+    if (navButton) {
+      delete a.type;
+      // Still styled as the design styles its buttons (page-css.ts matches `button` rules to it).
+      a.className = [typeof a.className === "string" ? a.className : "", AS_BUTTON].filter(Boolean).join(" ");
+    }
   }
 
   // Text areas show their text as a value; selected options become the select's value.

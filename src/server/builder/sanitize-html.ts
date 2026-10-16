@@ -30,3 +30,18 @@ export function sanitizeHtmlOnServer(html: string): string {
     disallowedTagsMode: "discard",
   });
 }
+
+/**
+ * Rich text pieces (blocks/elements.tsx DRich): exactly what their editor makes, nothing else. Links go to web,
+ * email and phone addresses only.
+ */
+export function sanitizeRichText(html: string): string {
+  return sanitize(html.slice(0, 20_000), {
+    allowedTags: ["p", "br", "h2", "h3", "h4", "strong", "b", "em", "i", "u", "s", "a", "ul", "ol", "li", "blockquote"],
+    allowedAttributes: { a: ["href", "target", "rel"] },
+    allowedSchemes: ["http", "https", "mailto", "tel"],
+    allowProtocolRelative: false,
+    disallowedTagsMode: "discard",
+    transformTags: { a: sanitize.simpleTransform("a", { rel: "noopener noreferrer" }) },
+  });
+}

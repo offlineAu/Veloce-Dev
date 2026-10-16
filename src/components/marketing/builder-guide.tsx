@@ -40,7 +40,7 @@ export function BuilderGuide({ refToken }: { refToken?: string }) {
         <h2 id="offer-title" className="text-[clamp(32px,3.8vw,50px)] leading-[1.05]">{boldTail(heading)}</h2>
         <p className="max-w-[46ch] text-[17px] leading-relaxed text-ink">{lead}</p>
         <div className="flex flex-wrap items-center gap-3">
-          <Link href={buildHref(refToken)} className={buttonVariants({ size: "lg" })}>
+          <Link data-analytics-placement="builder" href={buildHref(refToken)} className={buttonVariants({ size: "lg" })}>
             Open the builder <ArrowRight aria-hidden />
           </Link>
           <OpenInquiryButton variant="outline" size="lg">Rather just talk?</OpenInquiryButton>

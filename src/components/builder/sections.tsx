@@ -1,15 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { SectionThumb } from "./section-gallery";
+import { TemplateContext } from "./template-registry";
+import { useContext, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 import { Dialog, ModalContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import type { BlockItem } from "@/lib/builder/blocks";
-import { sectionBlock } from "@/lib/builder/template-doc";
+import { sectionPieces, templatePageIds } from "@/lib/builder/template-doc";
 import type { TemplatePackage } from "@/lib/builder/template-package";
 import { builderConfig } from "./config";
 import { SAVE_SECTION_EVENT, useAppendBlocks } from "./editor-hooks";
+import { PagesContext } from "./links";
 import { loadSections, saveSections, type SavedSection } from "./storage";
 
 const blockLabel = (type: string) => (builderConfig.components as Record<string, { label?: string }>)[type]?.label ?? type;
@@ -32,33 +35,49 @@ export function SectionsDialog({ open, onOpenChange, template }: { open: boolean
 
 function TemplateSections({ pkg, onDone }: { pkg: TemplatePackage; onDone: () => void }) {
   const append = useAppendBlocks();
+  const pages = useContext(PagesContext);
+  const loaded = useContext(TemplateContext);
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
   return (
     <>
-      <h3 className="mb-2 text-sm font-bold uppercase tracking-[0.08em] text-muted">{pkg.name} sections</h3>
-      {pkg.pages.map((page) => (
-        <section key={page.key} aria-label={page.title} className="mb-3">
-          <p className="text-sm font-semibold">{page.title}</p>
-          <ul className="flex flex-col divide-y divide-line">
-            {page.sections.map((s) => (
-              <li key={s.id} className="flex items-center justify-between gap-4 py-2">
-                <span className="text-[15px]">{s.label}</span>
+      {loaded ? <style>{loaded.css}</style> : null}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-sm font-bold uppercase tracking-[0.08em] text-muted">{pkg.name} sections</h3>
+        <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search sections" aria-label="Search sections" className="min-h-9 rounded-md border border-line px-2 text-sm" />
+      </div>
+      {pkg.pages.map((page) => {
+        const shown = page.sections.filter((s) => s.kind !== "utility" && (!q || s.label.toLowerCase().includes(q)));
+        if (!shown.length) return null;
+        return (
+        <section key={page.key} aria-label={page.title} className="mb-4">
+          <p className="mb-2 text-sm font-semibold">{page.title}</p>
+          <ul className="grid gap-3 sm:grid-cols-2">
+            {shown.map((s) => (
+              <li key={s.id} className="flex flex-col gap-2 rounded-lg border border-line p-2">
+                {loaded ? <SectionThumb pkg={loaded.pkg} section={s} height={140} /> : null}
+                <div className="flex items-center justify-between gap-3">
+                <span className="text-[15px] font-medium">{s.label}</span>
                 <Button
                   size="sm"
                   variant="outline"
                   aria-label={`Add ${s.label}`}
                   onClick={() => {
-                    append([sectionBlock(s)]);
+                    // As design pieces, like the rest of a template site, linking to the site's own pages.
+                    append([sectionPieces(s, templatePageIds(pkg, pages))]);
                     onDone();
                     toast.success(`Added “${s.label}” to the bottom of the page`);
                   }}
                 >
                   <Plus aria-hidden /> Add
                 </Button>
+                </div>
               </li>
             ))}
           </ul>
         </section>
-      ))}
+        );
+      })}
     </>
   );
 }

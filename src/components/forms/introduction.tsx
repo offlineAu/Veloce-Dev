@@ -1,5 +1,9 @@
 "use client";
 
+import { AnalyticsLinkChoice } from "@/components/analytics/link-choice";
+import { track, analyticsContext } from "@/lib/analytics/client";
+
+import { PRIVACY_NOTICE_VERSION } from "@/lib/legal";
 import { createContext, useContext, useMemo, useState, useTransition, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -50,6 +54,8 @@ export function OpenIntroductionButton({ onClick, ...props }: ButtonProps) {
       {...props}
       onClick={(e) => {
         onClick?.(e);
+        if (e.defaultPrevented) return;
+        track("cta_clicked", { placement: "inquiry" });
         ctx.open();
       }}
     />
@@ -66,6 +72,7 @@ function IntroductionForm({
 }: Omit<IntroductionProviderProps, "children"> & { onClose: () => void }) {
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   const [startedAt] = useState(() => Date.now());
+  const [analyticsLinked, setAnalyticsLinked] = useState(false);
   const [done, setDone] = useState<{ name: string; emailed: boolean } | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -81,7 +88,7 @@ function IntroductionForm({
     if (pending) return;
     setFormError(null);
     startTransition(async () => {
-      const result = await submitIntroductionAction({ ...data, refToken, idempotencyKey, startedAt }).catch(
+      const result = await submitIntroductionAction({ ...data, privacyNoticeVersion: PRIVACY_NOTICE_VERSION, analytics: analyticsContext(analyticsLinked), refToken, idempotencyKey, startedAt }).catch(
         () => ({ ok: false, code: "UNAVAILABLE" }) as const,
       );
       if (result.ok) {
@@ -106,7 +113,7 @@ function IntroductionForm({
   return (
     <>
       <span role="status" className="sr-only">{pending ? "Sending…" : ""}</span>
-      <form onSubmit={onSubmit} noValidate className="relative flex flex-col gap-5" aria-busy={pending}>
+      <form data-analytics-form="introduction" onSubmit={onSubmit} noValidate className="relative flex flex-col gap-5" aria-busy={pending}>
         <Honeypot {...register("contactFax")} />
         <fieldset className="flex flex-col gap-4">
           <legend className="mb-3 text-xs font-bold uppercase tracking-[0.08em] text-accent-700">About you</legend>
@@ -149,12 +156,14 @@ function IntroductionForm({
           <label className="flex items-start gap-3 text-[15px]">
             <input type="checkbox" {...register("referrerConsent")} aria-invalid={!!err("referrerConsent")} aria-describedby={err("referrerConsent") ? "in-consent-error" : undefined} className="mt-0.5 size-5 shrink-0 accent-accent-600" />
             <span>
-              I have this person&apos;s permission to share their name and email with {companyName}, who may contact them about this introduction.{" "}
+              I have this person&apos;s permission to share the details entered above with {companyName}, who may contact them about this introduction.{" "}
               <a href="/privacy" target="_blank" rel="noopener" className="font-semibold text-accent-700 underline underline-offset-2">Privacy notice</a>.
             </span>
           </label>
           {err("referrerConsent") ? <p id="in-consent-error" role="alert" className="mt-1.5 text-[13px] font-medium text-danger">{err("referrerConsent")}</p> : null}
         </div>
+
+        <AnalyticsLinkChoice form="introduction" checked={analyticsLinked} onChange={setAnalyticsLinked} />
 
         {formError ? <p role="alert" className="rounded-md bg-danger/10 px-4 py-3 text-sm font-medium text-danger">{formError}</p> : null}
 

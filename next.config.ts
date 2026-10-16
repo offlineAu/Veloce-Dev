@@ -66,6 +66,17 @@ const nextConfig: NextConfig = {
       },
       // Later entries win for the same key: only the builder gets the wider image and embed sources.
       { source: "/build/:path*", headers: [{ key: "Content-Security-Policy", value: buildCsp(true) }] },
+      // The developer panel's capture page (src/app/build/bake): an uploaded template runs there once, sandboxed, with
+      // its images, styles and fonts from anywhere, framed only by this site.
+      {
+        source: "/build/bake",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: "sandbox allow-scripts; default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https:; img-src https: data: blob:; font-src https: data:; media-src https:; connect-src https:; frame-ancestors 'self'",
+          },
+        ],
+      },
     ];
   },
 };

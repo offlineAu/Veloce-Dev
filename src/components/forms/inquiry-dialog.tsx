@@ -1,5 +1,9 @@
 "use client";
 
+import { AnalyticsLinkChoice } from "@/components/analytics/link-choice";
+import { analyticsContext, submissionAttribution } from "@/lib/analytics/client";
+
+import { PRIVACY_NOTICE_VERSION } from "@/lib/legal";
 import { useEffect, useState, useTransition } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -34,7 +38,7 @@ export default function InquiryDialog({ onCloseAutoFocus, ...props }: Omit<Inqui
       <ModalContent
         onCloseAutoFocus={onCloseAutoFocus}
         title="Send us your design"
-        description={`${props.companyName} will review your page and reply with questions, a proposed scope and an honest estimate. Nothing goes live until you agree.`}
+        description={`${props.companyName} will review your page and reply with questions, a proposed scope and an honest estimate. Submitting creates a shareable preview for review; it does not launch a finished website.`}
       >
         <InquiryForm key="draft" {...props} service={undefined} />
       </ModalContent>
@@ -69,6 +73,7 @@ export function InquiryForm({
   const [editTopic, setEditTopic] = useState(false);
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   const [startedAt] = useState(() => Date.now());
+  const [analyticsLinked, setAnalyticsLinked] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -111,19 +116,16 @@ export function InquiryForm({
     if (pending) return; // duplicate-submit guard
     setFormError(null);
     startTransition(async () => {
-      const params = new URLSearchParams(window.location.search);
       const draft = getSiteDraft?.();
       const result = await submitInquiryAction({
         ...data,
+        privacyNoticeVersion: PRIVACY_NOTICE_VERSION, analytics: analyticsContext(analyticsLinked),
         intent,
         serviceSlug: service?.slug,
         refToken,
         idempotencyKey,
         startedAt,
-        landingPath: window.location.pathname,
-        utmSource: params.get("utm_source") ?? undefined,
-        utmMedium: params.get("utm_medium") ?? undefined,
-        utmCampaign: params.get("utm_campaign") ?? undefined,
+        ...submissionAttribution(),
         siteDraft: draft ? { templateId: draft.templateId, data: draft.data } : undefined,
       }).catch(() => ({ ok: false, code: "UNAVAILABLE" }) as const);
       if (result.ok) {
@@ -150,7 +152,7 @@ export function InquiryForm({
   return (
     <>
       <span role="status" className="sr-only">{pending ? "Sending…" : ""}</span>
-      <form onSubmit={onSubmit} noValidate className="relative flex flex-col gap-5" aria-busy={pending}>
+      <form data-analytics-form="inquiry" onSubmit={onSubmit} noValidate className="relative flex flex-col gap-5" aria-busy={pending}>
         {consultation ? (
           <div className="rounded-xl bg-sage-100 p-4 text-sm text-sage-800">
             <p className="font-semibold">A clearer next step</p>
@@ -159,7 +161,7 @@ export function InquiryForm({
         ) : null}
         {draftAtOpen ? (
           <p className="rounded-md bg-accent-100 px-4 py-3 text-sm text-ink">
-            Your design ({draftPages} {draftPages === 1 ? "page" : "pages"}, {draftBlocks} {draftBlocks === 1 ? "section" : "sections"}) will be attached. You can keep editing it afterwards.
+            Your design ({draftPages} {draftPages === 1 ? "page" : "pages"}, {draftBlocks} {draftBlocks === 1 ? "section" : "sections"}) will be uploaded with your inquiry. Anyone with its preview link can view it without signing in. Do not include passwords, confidential information or personal details you do not have permission to share. You can keep editing your local copy afterwards.
           </p>
         ) : null}
         {introducedBy ? (
@@ -239,17 +241,19 @@ export function InquiryForm({
           <label className="flex items-start gap-3 text-[15px]">
             <input type="checkbox" {...register("privacyConsent")} aria-invalid={!!err("privacyConsent")} aria-describedby={err("privacyConsent") ? "iq-consent-error" : undefined} className="mt-0.5 size-5 shrink-0 accent-accent-600" />
             <span>
-              I agree that {companyName} may use these details to respond to my inquiry, as described in the{" "}
+              I agree that {companyName} may use these details to respond to my inquiry{draftAtOpen ? ", store my submitted design and create a preview accessible to anyone with its link" : ""}, as described in the{" "}
               <a href="/privacy" target="_blank" rel="noopener" className="font-semibold text-accent-700 underline underline-offset-2">privacy notice</a>.
             </span>
           </label>
           {err("privacyConsent") ? <p id="iq-consent-error" role="alert" className="mt-1.5 text-[13px] font-medium text-danger">{err("privacyConsent")}</p> : null}
         </div>
 
+        <AnalyticsLinkChoice form="inquiry" checked={analyticsLinked} onChange={setAnalyticsLinked} />
+
         {formError ? <p role="alert" className="rounded-md bg-danger/10 px-4 py-3 text-sm font-medium text-danger">{formError}</p> : null}
 
         <div className="sticky -bottom-6 -mx-6 -mb-6 flex flex-wrap items-center justify-between gap-4 border-t border-line bg-background px-6 pb-6 pt-4 sm:-bottom-10 sm:-mx-10 sm:-mb-10 sm:px-10 sm:pb-10">
-          <PrivacyNote>We only use these details to respond to your inquiry.</PrivacyNote>
+          <PrivacyNote>Used to handle your inquiry as explained above. No mailing-list signup.</PrivacyNote>
           <Button type="submit" size="lg" disabled={pending}>{pending ? <><PixelLogoLoader variant="compact" /> Sending…</> : consultation ? "Send consultation request" : "Send project inquiry"}</Button>
         </div>
       </form>

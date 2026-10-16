@@ -1,4 +1,7 @@
 'use client';
+import { AnalyticsLinkChoice } from "@/components/analytics/link-choice";
+import { analyticsContext, submissionAttribution } from "@/lib/analytics/client";
+import { PRIVACY_NOTICE_VERSION } from "@/lib/legal";
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useState, useTransition } from 'react';
 import { ArrowLeft, CalendarDays } from 'lucide-react';
@@ -15,6 +18,7 @@ export function MeetingPanel() {
   const meeting = useMeeting();
   const [context, setContext] = useState(() => suggestedDiscussion(meeting.context));
   const [consent, setConsent] = useState(false);
+  const [analyticsLinked, setAnalyticsLinked] = useState(false);
   const [session, setSession] = useState<MeetingSession>();
   const [result, setResult] = useState<Result>();
   const [uid, setUid] = useState<string>();
@@ -43,9 +47,9 @@ export function MeetingPanel() {
     if (!consent || pending) return;
     setError('');
     startTransition(async () => {
-      const p = new URLSearchParams(location.search);
-      const response = await startMeetingAction({ privacyConsent: true, context, entryPoint: meeting.entryPoint, refToken: meeting.refToken, utmSource: p.get('utm_source') ?? undefined, utmMedium: p.get('utm_medium') ?? undefined, utmCampaign: p.get('utm_campaign') ?? undefined }).catch(() => null);
+      const response = await startMeetingAction({ privacyConsent: true, privacyNoticeVersion: PRIVACY_NOTICE_VERSION, analytics: analyticsContext(analyticsLinked), context, entryPoint: meeting.entryPoint, refToken: meeting.refToken, ...submissionAttribution() }).catch(() => null);
       if (response?.ok) setSession(response.session);
+      else if (response && !response.ok && response.code === 'VALIDATION' && response.fieldErrors.privacyNoticeVersion?.[0]) setError(response.fieldErrors.privacyNoticeVersion[0]);
       else setError('Scheduling is unavailable right now. Please retry or request a meeting by email.');
     });
   }
@@ -57,8 +61,10 @@ export function MeetingPanel() {
     {result ? <><MeetingResult meeting={result} />{uid ? <Button variant="outline" className="mt-4" disabled={pending} onClick={() => complete(uid)}>Check latest meeting details</Button> : null}</> : <>
       {fallback ? <div className="mt-5"><MeetingRequestForm context={context} refToken={meeting.refToken} contactEmail={meeting.contactEmail} /></div> : <>
         {!session ? <div className="mt-5 flex flex-col gap-4">
-          <label className="flex flex-col gap-2 text-sm font-semibold">What would you like to discuss? <span className="font-normal text-muted">Optional. Suggested from your example choices; edit or remove it.</span><textarea value={context} onChange={e => setContext(e.target.value)} maxLength={1000} rows={3} className="rounded-xl border border-line bg-surface p-3 font-normal" /></label>
-          <label className="flex items-start gap-3 text-sm"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} className="mt-1 size-5 shrink-0 accent-accent-600" /><span>I agree that Veloce and its scheduling provider may use my details to arrange this meeting, as described in the <a href="/privacy" target="_blank" rel="noopener" className="underline">privacy notice</a>.</span></label>
+          <label data-analytics-booking-start className="flex flex-col gap-2 text-sm font-semibold">What would you like to discuss? <span className="font-normal text-muted">Optional. Suggested from your example choices; edit or remove it.</span><textarea value={context} onChange={e => setContext(e.target.value)} maxLength={1000} rows={3} className="rounded-xl border border-line bg-surface p-3 font-normal" /></label>
+          <label className="flex items-start gap-3 text-sm"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} className="mt-1 size-5 shrink-0 accent-accent-600" /><span>I agree that Veloce and Cal.com may use my details to arrange this meeting, as described in the <a href="/privacy" target="_blank" rel="noopener" className="underline">privacy notice</a>.</span></label>
+          <p className="text-sm text-muted">Continuing loads Cal.com, which receives connection information and the discussion context above. Booking details are shared with Veloce to manage your meeting. Read <a href="https://cal.com/privacy" target="_blank" rel="noopener noreferrer" className="underline">Cal.com&apos;s privacy notice</a>, or use the email request below.</p>
+          <AnalyticsLinkChoice form="booking" checked={analyticsLinked} onChange={setAnalyticsLinked} />
           <Button onClick={start} disabled={!consent || pending}>Choose a real meeting time</Button>
         </div> : <div hidden={!!uid} inert={!!uid}><SchedulerEmbed session={session} onComplete={complete} /></div>}
         {uid && session ? <div className="mt-4 flex flex-col gap-3"><a href={`https://cal.com/booking/${encodeURIComponent(uid)}`} target="_blank" rel="noopener noreferrer" className="text-sm underline">View the provider confirmation</a><Button variant="outline" onClick={() => complete(uid)} disabled={pending}>Check meeting status</Button></div> : null}

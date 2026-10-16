@@ -80,3 +80,6 @@ export const rewriteClassList = (value: string, ctx: ClassContext) =>
 
 /** How Tailwind escapes a class in a selector, to check that a class produced CSS. */
 export const escapeClass = (cls: string) => cls.replace(/[^a-zA-Z0-9_-]/g, (ch) => `\\${ch}`);
+
+/** The class of a button that became a link (it navigates to a page), so the design's `button` rules still apply. */
+export const AS_BUTTON = "vt-as-button";

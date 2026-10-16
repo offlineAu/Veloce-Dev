@@ -2,10 +2,14 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { m } from "framer-motion";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
+import { usePathname } from "next/navigation";
 import { ArrowUpRight, Menu, Palette, X } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { NavigationLink } from "./navigation-link";
 import { PaletteChoices, ThemeManager, useThemeChoice } from "./theme-manager";
 
 /*
@@ -27,23 +31,44 @@ const RULE = "text-ink";
 
 export function useActiveSection(links: NavLink[]) {
   const [active, setActive] = React.useState<string | null>(null);
+  // Header and dock can pass newly allocated arrays without restarting the observers.
+  const sectionKey = [...new Set(links.map(link => link.href).filter(href => href.startsWith("#")))].join(" ");
   React.useEffect(() => {
-    const ids = links.map((l) => l.href).filter((h) => h.startsWith("#")).map((h) => h.slice(1));
-    const els = ids.map((id) => document.getElementById(id)).filter((el): el is HTMLElement => !!el);
-    if (!els.length || typeof IntersectionObserver === "undefined") return;
-    const seen = new Map<string, number>();
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) seen.set(e.target.id, e.isIntersecting ? e.intersectionRatio : 0);
-        const best = [...seen.entries()].sort((a, b) => b[1] - a[1])[0];
-        setActive(best && best[1] > 0 ? `#${best[0]}` : null);
-      },
-      { rootMargin: "-30% 0px -55% 0px", threshold: [0, 0.1, 0.5, 1] },
-    );
-    els.forEach((el) => io.observe(el));
-    return () => io.disconnect();
-  }, [links]);
+    const els = sectionKey.split(" ").map(href => document.getElementById(href.slice(1)))
+      .filter((el): el is HTMLElement => !!el);
+    if (!els.length) return;
+    let frame = 0;
+    const measure = () => {
+      frame = 0;
+      const offset = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
+      const ordered = els.map(el => {
+        const bounds = el.getBoundingClientRect();
+        return { el, top: bounds.top, bottom: bounds.bottom };
+      }).sort((a, b) => a.top - b.top);
+      const current = ordered.filter(item => item.top <= offset + 2).at(-1);
+      setActive(current && current.bottom > offset + 2 ? `#${current.el.id}` : null);
+    };
+    const schedule = () => { if (!frame) frame = requestAnimationFrame(measure); };
+    measure();
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    const observer = new ResizeObserver(schedule);
+    els.forEach(el => observer.observe(el));
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+    };
+  }, [sectionKey]);
   return active;
+}
+
+export function useActiveNavigation(links: NavLink[]) {
+  const section = useActiveSection(links);
+  const pathname = usePathname();
+  const page = links.find(link => link.href.startsWith("/") && !link.href.includes("#") && link.href.split("?")[0] === pathname);
+  return section ?? page?.href ?? null;
 }
 
 function Rules({ y1, y2 }: { y1: number; y2: number }) {
@@ -77,19 +102,22 @@ function Corner({ side }: { side: "left" | "right" }) {
   );
 }
 
-function NavItem({ link, active, register }: { link: NavLink; active: boolean; register: (href: string, el: HTMLElement | null) => void }) {
+function NavItem({ link, active, selected, onSelect, register }: { link: NavLink; active: boolean; selected: boolean; onSelect: (href: string) => void; register: (href: string, el: HTMLElement | null) => void }) {
   return (
-    <a
+    <NavigationLink
       ref={(el) => register(link.href, el)}
       href={link.href}
-      aria-current={active ? "location" : undefined}
+      onClick={event => {
+        if (!event.defaultPrevented && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey && link.href.startsWith("#")) onSelect(link.href);
+      }}
+      aria-current={active ? (link.href.startsWith("#") ? "location" : "page") : undefined}
       className={cn(
-        "relative z-10 -mx-3 whitespace-nowrap rounded-full px-3 py-1.5 text-[15px] font-medium transition-colors duration-200 hover:text-ink",
-        active ? "text-ink" : "text-muted",
+        "relative z-10 -mx-3 whitespace-nowrap rounded-full px-3 py-1.5 text-[15px] font-medium transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent-700",
+        selected ? "text-on-inverse delay-100" : "text-muted hover:text-ink",
       )}
     >
       {link.label}
-    </a>
+    </NavigationLink>
   );
 }
 
@@ -107,7 +135,29 @@ export function NotchHeader({
   /** Labelled call to action shown at the bottom of the mobile menu. */
   menuCta?: React.ReactNode;
 }) {
-  const active = useActiveSection(links);
+  const active = useActiveNavigation(links);
+  const reduce = useReducedMotion();
+  const [destination, setDestination] = React.useState<string | null>(null);
+  const highlighted = destination ?? active;
+  // Keep a clicked destination highlighted while native smooth scrolling crosses other sections.
+  React.useEffect(() => {
+    if (!destination) return;
+    const finish = () => setDestination(null);
+    let quiet = window.setTimeout(finish, 250);
+    const onScroll = () => {
+      window.clearTimeout(quiet);
+      quiet = window.setTimeout(finish, 150);
+    };
+    const deadline = window.setTimeout(finish, 2000);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("scrollend", finish);
+    return () => {
+      window.clearTimeout(quiet);
+      window.clearTimeout(deadline);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("scrollend", finish);
+    };
+  }, [destination]);
   const palette = useThemeChoice();
   const [menu, setMenu] = React.useState(false);
   // Same threshold as the quick dock: once it is on screen, the header keeps only the logo and the conversation button.
@@ -125,16 +175,19 @@ export function NotchHeader({
     if (el) items.current.set(href, el);
     else items.current.delete(href);
   }, []);
-  const [pill, setPill] = React.useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const [pill, setPill] = React.useState<{ x: number; y: number; w: number; h: number; visible: boolean } | null>(null);
   const [pillReady, setPillReady] = React.useState(false);
   const measure = React.useCallback(() => {
     const bar = barRef.current;
-    const el = active ? items.current.get(active) : null;
-    if (!bar || !el || !el.offsetWidth) return setPill(null);
+    const el = highlighted ? items.current.get(highlighted) : null;
+    if (!bar || !el || !el.offsetWidth) {
+      setPill(previous => previous?.visible ? { ...previous, visible: false } : previous);
+      return;
+    }
     const b = bar.getBoundingClientRect();
     const r = el.getBoundingClientRect();
-    setPill({ x: r.left - b.left, y: r.top - b.top, w: r.width, h: r.height });
-  }, [active]);
+    setPill({ x: r.left - b.left, y: r.top - b.top, w: r.width, h: r.height, visible: true });
+  }, [highlighted]);
   React.useLayoutEffect(measure, [measure, compact]);
   React.useEffect(() => {
     const bar = barRef.current;
@@ -155,7 +208,7 @@ export function NotchHeader({
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-40 flex h-16 [filter:drop-shadow(0_6px_8px_rgba(42,39,51,0.07))]">
+      <header className="fixed inset-x-0 top-0 z-40 flex h-[var(--site-header-height)] [filter:drop-shadow(0_6px_8px_rgba(42,39,51,0.07))]">
         <div className="relative z-20 h-10 min-w-0 flex-1 bg-neutral-100">
           <Rules y1={39.5} y2={39.5} />
         </div>
@@ -166,100 +219,109 @@ export function NotchHeader({
             <div className="absolute inset-0 bg-neutral-100">
               <Rules y1={63.5} y2={63.5} />
             </div>
-            <div ref={barRef} className={cn("relative flex h-full items-center justify-between gap-3 px-2 pb-2 md:px-6", compact && "max-lg:justify-center")}>
-              <span
+            {/* Equal outer tracks keep the logo dead-centre whatever sits on either side. */}
+            <div ref={barRef} className="relative grid h-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-2 pb-2 md:px-6">
+              <m.span
                 aria-hidden
-                className={cn(
-                  "pointer-events-none absolute left-0 top-0 z-0 rounded-full bg-accent/10 shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--color-accent)_25%,transparent)] motion-reduce:transition-none",
-                  pillReady && "transition-[transform,width,height,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
-                )}
-                style={{
+                data-nav-highlight
+                initial={false}
+                className="pointer-events-none absolute left-0 top-0 z-0 rounded-full bg-inverse shadow-[inset_0_1px_0_#ffffff26,0_2px_5px_#201e1d24]"
+                animate={{
+                  x: pill?.x ?? 0,
+                  y: pill?.y ?? 0,
                   width: pill?.w ?? 0,
                   height: pill?.h ?? 0,
-                  transform: `translate(${pill?.x ?? 0}px, ${pill?.y ?? 0}px)`,
-                  opacity: pill ? 1 : 0,
+                  opacity: pill?.visible ? 1 : 0,
                 }}
-              />
-              <nav aria-label="Main" className={cn("hidden items-center gap-7", compact ? "lg:flex" : "md:flex")}>
-                {left.map((l) => (
-                  <NavItem key={l.href} link={l} active={active === l.href} register={register} />
-                ))}
-              </nav>
+                transition={reduce || !pillReady ? { duration: 0 } : {
+                  type: "spring", stiffness: 420, damping: 38, mass: 0.7,
+                  opacity: { duration: 0.16 },
+                }}
+              >
+                <span className="absolute inset-x-3 bottom-[3px] mx-auto h-0.5 w-4 rounded-full bg-accent-300" />
+              </m.span>
+              <div className="flex min-w-0 items-center justify-self-start">
+                <nav aria-label="Main" className={cn("hidden items-center gap-7", compact ? "lg:flex" : "md:flex")}>
+                  {left.map((l) => (
+                    <NavItem key={l.href} link={l} active={active === l.href} selected={highlighted === l.href} onSelect={setDestination} register={register} />
+                  ))}
+                </nav>
 
-              <Sheet open={menu} onOpenChange={setMenu}>
-                <SheetTrigger asChild>
-                  <button
-                    type="button"
-                    className={cn(
-                      "grid size-11 place-items-center rounded-full text-ink transition-colors hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
-                      "md:hidden",
-                      compact && "hidden",
-                    )}
-                  >
-                    <span className="sr-only">Open menu</span>
-                    <Menu aria-hidden className="size-6" />
-                  </button>
-                </SheetTrigger>
-                <SheetContent side="left" showCloseButton={false} className="w-[min(86vw,360px)] gap-0 border-line bg-bg p-0">
-                  <SheetHeader className="flex-row items-center gap-3 border-b border-line p-4 pr-3">
-                    <LogoMark className="size-7 text-ink" />
-                    <div className="min-w-0 flex-1">
-                      <SheetTitle className="truncate font-heading text-xl">{companyName}</SheetTitle>
-                      <SheetDescription className="sr-only">Site navigation, colour palette and contact</SheetDescription>
+                <Sheet open={menu} onOpenChange={setMenu}>
+                  <SheetTrigger asChild>
+                    <button
+                      type="button"
+                      className={cn(
+                        "grid size-11 place-items-center rounded-full text-ink transition-colors hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+                        "md:hidden",
+                        compact && "hidden",
+                      )}
+                    >
+                      <span className="sr-only">Open menu</span>
+                      <Menu aria-hidden className="size-6" />
+                    </button>
+                  </SheetTrigger>
+                  <SheetContent side="left" showCloseButton={false} className="w-[min(86vw,360px)] gap-0 border-line bg-bg p-0">
+                    <SheetHeader className="flex-row items-center gap-3 border-b border-line p-4 pr-3">
+                      <LogoMark className="size-7 text-ink" />
+                      <div className="min-w-0 flex-1">
+                        <SheetTitle className="truncate font-heading text-xl">{companyName}</SheetTitle>
+                        <SheetDescription className="sr-only">Site navigation, colour palette and contact</SheetDescription>
+                      </div>
+                      <SheetClose className="grid size-11 shrink-0 place-items-center rounded-full text-muted hover:bg-ink/5 hover:text-ink focus-visible:outline-2 focus-visible:outline-accent">
+                        <X aria-hidden className="size-5" />
+                        <span className="sr-only">Close menu</span>
+                      </SheetClose>
+                    </SheetHeader>
+                    <div className="flex flex-1 flex-col overflow-y-auto">
+                      <nav aria-label="Mobile" className="flex flex-col gap-1 p-3">
+                        <p className="flex items-center gap-2 px-3 pb-1.5 pt-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
+                          <span aria-hidden className="size-1.5 rounded-full bg-accent" />
+                          Explore
+                        </p>
+                        {links.map((l) => (
+                          <SheetClose asChild key={l.href}>
+                            <NavigationLink
+                              href={l.href}
+                              aria-current={active === l.href ? (l.href.startsWith("#") ? "location" : "page") : undefined}
+                              className={cn(
+                                "group flex min-h-12 items-center justify-between rounded-xl border px-3 text-base font-medium transition-colors",
+                                active === l.href ? "border-inverse bg-inverse text-on-inverse shadow-sm" : "border-transparent text-ink hover:bg-ink/5",
+                              )}
+                            >
+                              {l.label}
+                              <ArrowUpRight aria-hidden className={cn("size-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5", active === l.href ? "text-accent-300" : "text-muted")} />
+                            </NavigationLink>
+                          </SheetClose>
+                        ))}
+                      </nav>
+                      <section aria-labelledby="menu-palette" className="mx-3 mt-1 rounded-2xl border border-line bg-neutral-100 p-3">
+                        <h2 id="menu-palette" className="mb-3 flex items-center gap-2 px-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
+                          <Palette aria-hidden className="size-4" />
+                          Colour palette
+                        </h2>
+                        <PaletteChoices compact theme={palette.theme} onSelect={palette.set} />
+                        <p className="mt-2.5 px-1 text-[13px] text-muted">Remembered in this browser.</p>
+                      </section>
                     </div>
-                    <SheetClose className="grid size-11 shrink-0 place-items-center rounded-full text-muted hover:bg-ink/5 hover:text-ink focus-visible:outline-2 focus-visible:outline-accent">
-                      <X aria-hidden className="size-5" />
-                      <span className="sr-only">Close menu</span>
-                    </SheetClose>
-                  </SheetHeader>
-                  <div className="flex flex-1 flex-col overflow-y-auto">
-                    <nav aria-label="Mobile" className="flex flex-col gap-1 p-3">
-                      <p className="flex items-center gap-2 px-3 pb-1.5 pt-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
-                        <span aria-hidden className="size-1.5 rounded-full bg-accent" />
-                        Explore
-                      </p>
-                      {links.map((l) => (
-                        <SheetClose asChild key={l.href}>
-                          <a
-                            href={l.href}
-                            aria-current={active === l.href ? "location" : undefined}
-                            className={cn(
-                              "group flex min-h-12 items-center justify-between rounded-xl border px-3 text-base font-medium transition-colors",
-                              active === l.href ? "border-accent/40 bg-accent/10 text-ink" : "border-transparent text-ink hover:bg-ink/5",
-                            )}
-                          >
-                            {l.label}
-                            <ArrowUpRight aria-hidden className="size-4 text-muted transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                          </a>
-                        </SheetClose>
-                      ))}
-                    </nav>
-                    <section aria-labelledby="menu-palette" className="mx-3 mt-1 rounded-2xl border border-line bg-neutral-100 p-3">
-                      <h2 id="menu-palette" className="mb-3 flex items-center gap-2 px-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
-                        <Palette aria-hidden className="size-4" />
-                        Colour palette
-                      </h2>
-                      <PaletteChoices compact theme={palette.theme} onSelect={palette.set} />
-                      <p className="mt-2.5 px-1 text-[13px] text-muted">Remembered in this browser.</p>
-                    </section>
-                  </div>
-                  {menuCta ? (
-                    <div className="border-t border-line bg-bg p-4 pb-[max(1rem,env(safe-area-inset-bottom))]" onClick={() => setMenu(false)}>
-                      {menuCta}
-                    </div>
-                  ) : null}
-                </SheetContent>
-              </Sheet>
+                    {menuCta ? (
+                      <div className="border-t border-line bg-bg p-4 pb-[max(1rem,env(safe-area-inset-bottom))]" onClick={() => setMenu(false)}>
+                        {menuCta}
+                      </div>
+                    ) : null}
+                  </SheetContent>
+                </Sheet>
+              </div>
 
-              <Link href={homeHref} className="flex shrink-0 items-center gap-2.5 font-heading text-lg text-ink" aria-label={`${companyName} home`}>
+              <Link href={homeHref} className="flex shrink-0 items-center gap-2.5 justify-self-center font-heading text-lg text-ink" aria-label={`${companyName} home`}>
                 <LogoMark className="size-7" />
                 <span>{companyName}</span>
               </Link>
 
-              <div className="flex items-center gap-1 md:gap-3">
+              <div className="flex min-w-0 items-center gap-1 justify-self-end md:gap-3">
                 <nav aria-label="More" className={cn("hidden items-center gap-7", compact ? "lg:flex" : "md:flex")}>
                   {right.map((l) => (
-                    <NavItem key={l.href} link={l} active={active === l.href} register={register} />
+                    <NavItem key={l.href} link={l} active={active === l.href} selected={highlighted === l.href} onSelect={setDestination} register={register} />
                   ))}
                 </nav>
                 <ThemeManager className={cn("hidden md:grid", compact && "max-lg:hidden")} />
@@ -273,7 +335,7 @@ export function NotchHeader({
           <Rules y1={39.5} y2={39.5} />
         </div>
       </header>
-      <div aria-hidden className="h-16" />
+      <div aria-hidden className="h-[var(--site-header-height)]" />
     </>
   );
 }

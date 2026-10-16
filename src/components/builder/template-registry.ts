@@ -1,5 +1,6 @@
 "use client";
 
+import { normalizePackage } from "@/lib/builder/section-labels";
 import { createContext, useEffect, useState } from "react";
 import type { TemplateRef } from "@/lib/builder/site-doc";
 import { templateFileUrl, type TemplatePackage } from "@/lib/builder/template-package";
@@ -23,9 +24,10 @@ export function loadTemplate(ref: TemplateRef): Promise<LoadedTemplate> {
   let p = cache.get(key(ref));
   if (!p) {
     p = Promise.all([
-      fetch(templateFileUrl(ref.slug, ref.version, "template.json")).then((r) => (r.ok ? (r.json() as Promise<TemplatePackage>) : Promise.reject(new Error(`template ${r.status}`)))),
-      fetch(templateFileUrl(ref.slug, ref.version, "theme.css")).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`theme ${r.status}`)))),
-    ]).then(([pkg, css]) => ({ pkg, css }));
+      // Always asked again (cheap when unchanged): a version not yet published can be imported again in its place.
+      fetch(templateFileUrl(ref.slug, ref.version, "template.json"), { cache: "no-cache" }).then((r) => (r.ok ? (r.json() as Promise<TemplatePackage>) : Promise.reject(new Error(`template ${r.status}`)))),
+      fetch(templateFileUrl(ref.slug, ref.version, "theme.css"), { cache: "no-cache" }).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`theme ${r.status}`)))),
+    ]).then(([pkg, css]) => ({ pkg: normalizePackage(pkg), css }));
     p.catch(() => cache.delete(key(ref))); // let a later attempt retry
     cache.set(key(ref), p);
   }
@@ -34,19 +36,25 @@ export function loadTemplate(ref: TemplateRef): Promise<LoadedTemplate> {
 
 /** The template a site is built on, once loaded; undefined while loading or for sites without one. */
 export function useTemplate(ref: TemplateRef | undefined): LoadedTemplate | undefined {
-  const [loaded, setLoaded] = useState<{ key: string; value: LoadedTemplate } | null>(null);
+  return useTemplateStatus(ref).template;
+}
+
+/** The template for `ref`, and whether loading it has finished (loaded, failed, or there's nothing to load). */
+export function useTemplateStatus(ref: TemplateRef | undefined): { template: LoadedTemplate | undefined; settled: boolean } {
+  const [loaded, setLoaded] = useState<{ key: string; value?: LoadedTemplate } | null>(null);
   const wanted = ref ? key(ref) : null;
   useEffect(() => {
     if (!ref) return;
     let live = true;
     loadTemplate(ref).then(
       (value) => live && setLoaded({ key: key(ref), value }),
-      () => undefined,
+      () => live && setLoaded({ key: key(ref) }),
     );
     return () => {
       live = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `wanted` identifies the ref
   }, [wanted]);
-  return loaded && loaded.key === wanted ? loaded.value : undefined;
+  const mine = loaded && loaded.key === wanted ? loaded : null;
+  return { template: mine?.value, settled: !wanted || !!mine };
 }

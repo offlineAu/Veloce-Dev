@@ -1,3 +1,4 @@
+import { SECTION_KINDS } from "../section-labels";
 import { z } from "zod";
 import { PACKAGE_FORMAT, type TemplatePackage, type TreeNode } from "../template-package";
 
@@ -37,6 +38,8 @@ export const templatePackageSchema = z.object({
           z.object({
             id: z.string().regex(/^[a-z0-9-]{1,80}$/),
             label: z.string().max(60),
+            rawLabel: z.string().max(60).optional(),
+            kind: z.enum(SECTION_KINDS).optional(),
             tree: element,
             fields: z.array(field),
             defaults: values,
@@ -47,6 +50,7 @@ export const templatePackageSchema = z.object({
     )
     .min(1),
   notes: z.string().optional(),
+  handWritten: z.boolean().optional(),
   importedAt: z.string(),
 });
 

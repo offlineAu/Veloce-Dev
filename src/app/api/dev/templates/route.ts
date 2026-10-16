@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const MAX_BODY = 4_000_000;
+const MAX_BODY = 24_000_000;
 
 const fail = (status: number, error: string) => NextResponse.json({ ok: false, error }, { status });
 const SESSION_ENDED = "Your developer session has ended. Unlock the panel again.";
@@ -29,7 +29,7 @@ async function session() {
 export async function POST(req: Request) {
   const dev = await session();
   if (!dev) return fail(401, SESSION_ENDED);
-  if (Number(req.headers.get("content-length") ?? 0) > MAX_BODY) return fail(413, "That upload is over 4 MB. Leave out screenshots or split it up.");
+  if (Number(req.headers.get("content-length") ?? 0) > MAX_BODY) return fail(413, "That upload is over 24 MB. Reduce the image sizes or split it up.");
 
   let form: FormData;
   try {
@@ -37,9 +37,30 @@ export async function POST(req: Request) {
   } catch {
     return fail(400, "The upload couldn't be read.");
   }
+  let totalBytes = 0;
+  for (const value of form.values()) totalBytes += value instanceof File ? value.size : Buffer.byteLength(value);
+  if (totalBytes > MAX_BODY) return fail(413, "That upload is over 24 MB. Reduce the image sizes or split it up.");
   const files = form.getAll("files").filter((f): f is File => f instanceof File);
   const screens = form.getAll("screens").map((f) => (f instanceof File && f.size ? f : null));
+  // Each page as its script left it (optional, one per page; components/dev/bake.ts).
+  const rendered = form.getAll("rendered").map((f) => (f instanceof File && f.size ? f : null));
   const design = form.get("designMd");
+  const assets = form.getAll("assets").filter((f): f is File => f instanceof File);
+  if (assets.length > 100 || assets.reduce((n, f) => n + f.size, 0) > 10_000_000) return fail(413, "Image files must total at most 10 MB (100 files maximum).");
+  if (assets.some((f) => !/\.(png|jpe?g|webp|gif|avif|svg)$/i.test(f.name) || f.name.includes("..") || f.name.startsWith("/"))) return fail(400, "Choose image files with relative paths.");
+  const baseVersion = Number(form.get("baseVersion"));
+  if (baseVersion && (!Number.isInteger(baseVersion) || baseVersion < 1)) return fail(400, "Invalid source version.");
+  const sourceSlug = String(form.get("slug") ?? "");
+  const { db } = await import("@/server/db");
+  const previous = baseVersion ? await db.builderTemplateVersion.findFirst({ where: { version: baseVersion, template: { slug: sourceSlug } }, select: { assets: { where: { OR: [{ path: { startsWith: "source/assets/" } }, { path: { startsWith: "img/" } }] }, select: { path: true, bytes: true } } } }) : null;
+  if (baseVersion && !previous) return fail(404, "Template version not found.");
+  const mergedAssets = new Map((previous?.assets ?? []).filter(a => a.path.startsWith("source/assets/")).map((a) => [a.path.slice("source/assets/".length), Buffer.from(a.bytes)]));
+  for (const file of assets) {
+    // Individual files can replace an image previously selected through a folder picker.
+    const matches = [...mergedAssets.keys()].filter(key => key === file.name || key.endsWith(`/${file.name}`));
+    const assetPath = matches.length === 1 ? matches[0]! : file.name;
+    mergedAssets.set(assetPath, Buffer.from(await file.arrayBuffer()));
+  }
 
   const { uploadTemplate } = await import("@/server/builder/upload-service");
   const outcome = await uploadTemplate(
@@ -49,16 +70,23 @@ export async function POST(req: Request) {
       websiteType: String(form.get("websiteType") ?? "BUSINESS"),
       description: String(form.get("description") ?? ""),
       designMd: design instanceof File && design.size ? await design.text() : undefined,
+      storedImageFiles: new Map((previous?.assets ?? []).filter(a => a.path.startsWith("img/")).map(a => [a.path, Buffer.from(a.bytes)])),
+      assets: [...mergedAssets].map(([path, bytes]) => ({ path, bytes })),
       pages: await Promise.all(
         files.map(async (f, i) => ({
           fileName: f.name,
           html: await f.text(),
           screen: screens[i] ? Buffer.from(await screens[i]!.arrayBuffer()) : undefined,
+          rendered: rendered[i] ? await rendered[i]!.text() : undefined,
         })),
       ),
     },
     { uploadedBy: dev.name, ipHash: await clientKey() },
   );
+  if (outcome.ok) {
+    const { revalidatePath } = await import("next/cache");
+    revalidatePath("/build");
+  }
   return outcome.ok ? NextResponse.json(outcome) : fail(outcome.status, outcome.error);
 }
 
@@ -71,4 +99,22 @@ export async function PATCH(req: Request) {
   const { rethemeDraft } = await import("@/server/builder/upload-service");
   const outcome = await rethemeDraft(body.slug, body.version!, body.colors ?? {});
   return outcome.ok ? NextResponse.json(outcome) : fail(outcome.status, outcome.error);
+}
+
+/** Original source is only available to authenticated developers, including after publication. */
+export async function GET(req: Request) {
+  if (!(await session())) return fail(401, SESSION_ENDED);
+  const url = new URL(req.url);
+  const slug = url.searchParams.get("slug") ?? "";
+  const version = Number(url.searchParams.get("version"));
+  if (!/^[a-z0-9-]{1,40}$/.test(slug) || !Number.isInteger(version) || version < 1) return fail(400, "Missing template or version.");
+  const { db } = await import("@/server/db");
+  const row = await db.builderTemplateVersion.findFirst({
+    where: { version, template: { slug } },
+    select: { package: true, assets: { where: { path: "source/design.json" }, select: { bytes: true } } },
+  });
+  if (!row) return fail(404, "Template version not found.");
+  const pkg = row.package as { name?: string; description?: string; websiteType?: string };
+  const source = row.assets[0] ? JSON.parse(Buffer.from(row.assets[0].bytes).toString("utf8")) : { pages: [] };
+  return NextResponse.json({ ok: true, name: pkg.name, description: pkg.description, websiteType: pkg.websiteType, ...source }, { headers: { "Cache-Control": "private, no-store" } });
 }

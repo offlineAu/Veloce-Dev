@@ -5,6 +5,7 @@ import { normalizeTheme, readableOn, type ThemeTokens } from "@/lib/builder/them
 import { uploadBase, type TemplatePackage } from "@/lib/builder/template-package";
 import type { FetchLike } from "@/lib/builder/import/assets";
 import { db } from "@/server/db";
+import { prepareTemplateHtml, SOURCE_PATH } from "./template-source";
 import { createSafeFetch } from "./safe-fetch";
 import { contentTypeFor, isRepoTemplate } from "./template-registry";
 
@@ -14,6 +15,7 @@ import { contentTypeFor, isRepoTemplate } from "./template-registry";
  */
 
 export const MAX_HTML = 1_000_000;
+const MAX_RENDERED = 3_000_000;
 export const MAX_PAGES = 12;
 const MAX_ASSET_BYTES = 10_000_000;
 const WEBSITE_TYPES = ["BUSINESS", "CORPORATE", "ECOMMERCE_STORE", "WEB_APP", "LANDING_PAGE", "OTHER"];
@@ -26,8 +28,11 @@ export interface UploadInput {
   websiteType: string;
   description?: string;
   /** In page order: the first is the home page. */
-  pages: { fileName: string; html: string; screen?: Buffer }[];
+  pages: { fileName: string; html: string; screen?: Buffer; rendered?: string }[];
   designMd?: string;
+  assets?: { path: string; bytes: Buffer }[];
+  /** Images loaded from the selected version by the authenticated upload route. */
+  storedImageFiles?: ReadonlyMap<string, Buffer>;
 }
 
 export type UploadOutcome =
@@ -54,17 +59,37 @@ export async function uploadTemplate(input: UploadInput, ctx: { uploadedBy: stri
   if (!input.pages.length) return fail(400, "Add at least one HTML file.");
   if (input.pages.length > MAX_PAGES) return fail(400, `Up to ${MAX_PAGES} pages per template.`);
   if (input.pages.some((p) => !/\.html?$/i.test(p.fileName) || p.html.length > MAX_HTML)) return fail(400, "Pages must be .html files under 1 MB each.");
+  // The page as its script finished it (captured in the developer's browser, components/dev/bake.ts) is imported
+  // when there is one; the file as written stays the source. Both go through the same importer.
+  if (input.pages.some((p) => (p.rendered?.length ?? 0) > MAX_RENDERED)) return fail(400, "A page grew too large once its script ran (over 3 MB).");
 
   const existing = await db.builderTemplate.findUnique({ where: { slug }, select: { versions: { select: { version: true }, orderBy: { version: "desc" }, take: 1 } } });
   const version = (existing?.versions[0]?.version ?? 0) + 1;
 
+  const assets = new Map((input.assets ?? []).map((a) => [a.path, a.bytes]));
+  if (assets.size > 100 || [...assets.values()].reduce((n, b) => n + b.length, 0) > MAX_ASSET_BYTES) return fail(413, "Upload up to 100 image files, totalling at most 10 MB.");
+  const remote = ctx.fetcher ?? createSafeFetch();
+  const fetchers: FetchLike[] = [];
+  const imageLabels = new Map<string, string>();
   const used = new Set<string>();
-  const pages = input.pages.map((p, i) => {
-    let dir = slugify(p.fileName.replace(/\.html?$/i, "")) || `page-${i + 1}`;
-    while (used.has(dir)) dir = `${dir}-${i + 1}`;
-    used.add(dir);
-    return { dir, html: p.html, screen: p.screen };
-  });
+  let pages;
+  try {
+    pages = input.pages.map((p, i) => {
+      let dir = slugify(p.fileName.replace(/\.html?$/i, "")) || `page-${i + 1}`;
+      while (used.has(dir)) dir = `${dir}-${i + 1}`;
+      used.add(dir);
+      const prepared = prepareTemplateHtml(p.rendered || p.html, p.fileName, assets, remote);
+      // Give each page its own synthetic namespace for local images.
+      const prefix = `https://template-assets.invalid/page-${i}/`;
+      for (const [url, label] of prepared.labels) imageLabels.set(url.replace("https://template-assets.invalid/", prefix), label);
+      fetchers.push(async (url, init) => prepared.fetcher(url.replace(prefix, "https://template-assets.invalid/"), init));
+      return { dir, html: prepared.html.replaceAll("https://template-assets.invalid/", prefix), screen: p.screen };
+    });
+  } catch (e) { return fail(422, (e as Error).message); }
+  const fetcher: FetchLike = (url, init) => {
+    const match = url.match(/^https:\/\/template-assets\.invalid\/page-(\d+)\//);
+    return match && fetchers[Number(match[1])] ? fetchers[Number(match[1])]!(url, init) : remote(url, init);
+  };
 
   const { importTemplate } = await import("@/lib/builder/import");
   let result: Awaited<ReturnType<typeof importTemplate>>;
@@ -79,15 +104,22 @@ export async function uploadTemplate(input: UploadInput, ctx: { uploadedBy: stri
         version,
         keepOrder: true,
         assetBase: uploadBase(slug, version),
-        fetcher: ctx.fetcher ?? createSafeFetch(),
+        strictImages: true,
+        storedImageFiles: input.storedImageFiles,
+        fetcher,
       },
     );
   } catch (e) {
-    return fail(422, `The design couldn't be imported: ${(e as Error).message}`);
+    let message = (e as Error).message;
+    for (const [url, label] of [...imageLabels].sort((a, b) => b[0].length - a[0].length)) message = message.replaceAll(url, label);
+    return fail(422, `The design couldn't be imported: ${message}`);
   }
   const assetBytes = [...result.files.values()].reduce((n, b) => n + b.length, 0);
   if (assetBytes > MAX_ASSET_BYTES) return fail(413, "The design's images and fonts add up to more than 10 MB.");
 
+  // Source files are private: the public asset route only serves fonts, images and thumbnails.
+  result.files.set(SOURCE_PATH, Buffer.from(JSON.stringify({ pages: input.pages.map(({ fileName, html }) => ({ fileName, html })), designMd: input.designMd?.slice(0, 200_000) })));
+  for (const [assetPath, bytes] of assets) result.files.set(`source/assets/${assetPath}`, bytes);
   try {
     await db.$transaction(
       async (tx) => {

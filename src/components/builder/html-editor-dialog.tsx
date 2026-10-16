@@ -19,7 +19,7 @@ import { TemplateContext } from "./template-registry";
  * inside (a Heading dropped into a card) are kept as <!--block:…--> markers and put back where the markers are.
  */
 
-const PIECES = new Set<string>(ELEMENT_TYPES);
+const PIECES = new Set<string>(ELEMENT_TYPES.filter((t) => t !== "DRich"));
 const MAX = 50_000;
 
 function useSelection(): { id: string; blocks: BlockItem[] } | null {

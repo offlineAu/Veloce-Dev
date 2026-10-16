@@ -34,9 +34,9 @@ describe("class groups", () => {
     const before = "vt:flex vt:gap-4 vt:p-8 vt:hover:bg-primary vt:bg-surface-dim vt:md:text-xl vt:text-sm vt-material-symbols";
     const after = writeStyle(before, s, "bg", "primary");
     expect(set(after)).toEqual(set("vt:flex vt:gap-4 vt:p-8 vt:hover:bg-primary vt:bg-primary vt:md:text-xl vt:text-sm vt-material-symbols"));
-    // Text size shows what larger screens get, and one new value applies to every screen.
+    // Text size shows what the desktop gets; a new desktop size reaches the tablet (same value) but phones keep theirs.
     expect(readStyle(before, s).textSize).toBe("xl");
-    expect(set(writeStyle(before, s, "textSize", "2xl"))).toEqual(set("vt:flex vt:gap-4 vt:p-8 vt:hover:bg-primary vt:bg-surface-dim vt:text-2xl vt-material-symbols"));
+    expect(set(writeStyle(before, s, "textSize", "2xl"))).toEqual(set("vt:flex vt:gap-4 vt:p-8 vt:hover:bg-primary vt:bg-surface-dim vt:text-sm vt:md:text-2xl vt-material-symbols"));
   });
 
   it("splits p-N when one axis changes", () => {

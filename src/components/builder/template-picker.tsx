@@ -22,6 +22,11 @@ const STRIPE: Record<string, string> = {
   Faq: "h-4 bg-neutral-100",
   CtaBand: "h-5 bg-(--thumb-accent)/60",
   Contact: "h-6 bg-(--thumb-accent)/15",
+  Stats: "h-5 bg-neutral-200",
+  Steps: "h-6 bg-neutral-100",
+  Gallery: "h-8 bg-neutral-200",
+  Team: "h-7 bg-neutral-100",
+  Logos: "h-3 bg-neutral-200",
   Section: "h-8 bg-neutral-100",
 };
 
@@ -80,7 +85,7 @@ function PickerBody({ templates, highlight, hasContent, onChoose }: PickerProps)
     setLoading(t.slug);
     try {
       const { pkg } = await loadTemplate({ slug: t.slug, version });
-      choose(t.name, docFromTemplate(pkg), t.slug);
+      choose(t.name, docFromTemplate(pkg, "pieces"), t.slug);
     } catch {
       toast.error("That template couldn't be loaded. Please try again.");
     } finally {

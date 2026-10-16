@@ -7,12 +7,23 @@ const optionalString = z
   .transform((v) => (v && v.trim() !== "" ? v.trim() : undefined));
 
 const schema = z.object({
+  ANALYTICS_ENABLED: z.enum(["true", "false"]).default("false"),
+  POSTHOG_PROJECT_KEY: optionalString,
+  POSTHOG_REGION: z.enum(["eu", "us"]).default("eu"),
   DATABASE_URL: z.string().min(1),
   NEXT_PUBLIC_SITE_URL: z.url().default("http://localhost:3000"),
   HASH_SECRET: z.string().min(16),
   COMPANY_NAME: z.string().min(1).default("Your Company"),
   COMPANY_DESCRIPTION: z.string().min(1).default("Build fast. Build what works."),
   COMPANY_CONTACT_EMAIL: z.email().default("hello@example.com"),
+  LEGAL_ENTITY_NAME: optionalString,
+  LEGAL_BUSINESS_ADDRESS: optionalString,
+  PRIVACY_CONTACT_EMAIL: z.preprocess(v => v === "" ? undefined : v, z.email().optional()),
+  LEGAL_HOSTING_PROVIDER: optionalString,
+  LEGAL_DATABASE_PROVIDER: optionalString,
+  LEGAL_PROCESSING_LOCATIONS: optionalString,
+  LEGAL_GOVERNING_LAW: optionalString,
+  PRIVACY_CRON_SECRET: z.preprocess(v => v === "" ? undefined : v, z.string().min(32).optional()),
   COMPANY_TIMEZONE: z.string().default("Asia/Manila"),
   NOTIFY_TEAM_EMAIL: optionalString,
   NOTIFY_FROM_EMAIL: optionalString,

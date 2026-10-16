@@ -103,7 +103,9 @@
   }
   html {
     scroll-behavior: smooth;
-    scroll-padding-top: 5rem;
+    --site-header-height: 4rem;
+    --site-scroll-offset: calc(var(--site-header-height) + 1rem);
+    scroll-padding-top: var(--site-scroll-offset);
   }
   /* Reduced motion: chosen in the palette panel (data-motion="reduced"), or asked for by the device unless the visitor chose "full". */
   :root[data-motion="reduced"] {

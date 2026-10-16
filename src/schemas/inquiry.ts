@@ -1,3 +1,5 @@
+import { analyticsContextSchema } from "@/lib/analytics/shared";
+import { privacyReceiptFields } from "./privacy";
 import { z } from "zod";
 import { emailField, guardFields, optionalText, optionalWebsite, refToken, text } from "./common";
 
@@ -62,7 +64,7 @@ const inquiryShape = {
 };
 
 /** Full server-side schema. */
-export const inquirySchema = z.object({ ...inquiryShape, ...guardFields });
+export const inquirySchema = z.object({ ...inquiryShape, ...guardFields, ...privacyReceiptFields, analytics: analyticsContextSchema });
 /** Browser-side schema: guard fields are added at submit time, not entered by the user. */
 export const inquiryClientSchema = z.object(inquiryShape);
 export type InquiryFormValues = z.input<typeof inquiryClientSchema>;

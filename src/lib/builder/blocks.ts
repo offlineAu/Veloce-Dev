@@ -16,6 +16,11 @@ export const BLOCK_TYPES = [
   "Testimonials",
   "Faq",
   "CtaBand",
+  "Stats",
+  "Steps",
+  "Gallery",
+  "Team",
+  "Logos",
   "Contact",
   "CustomHtml",
   "DesignSection",
@@ -27,9 +32,16 @@ export const BLOCK_TYPES = [
   "DIcon",
   "DField",
   "DRaw",
+  "DRich",
 ] as const;
 
 export type BlockType = (typeof BLOCK_TYPES)[number];
+
+/**
+ * Blocks that are a whole band of the page: they go between the page's sections, never inside a card, a header or a
+ * link of an imported design (dropped there, the editor moves them out to the page; see template-blocks.tsx).
+ */
+export const PAGE_SECTION_TYPES: BlockType[] = ["Section", "Hero", "Features", "Pricing", "Testimonials", "Faq", "CtaBand", "Contact", "Stats", "Steps", "Gallery", "Team", "Logos", "DesignSection"];
 
 export interface BlockItem {
   type: string;

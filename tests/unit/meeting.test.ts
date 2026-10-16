@@ -1,3 +1,4 @@
+import { PRIVACY_NOTICE_VERSION } from "@/lib/legal";
 import { describe, expect, it } from 'vitest';
 import { createHmac } from 'node:crypto';
 import { meetingRequestSchema, meetingSessionSchema, meetingVerificationSchema } from '@/schemas/meeting';
@@ -8,11 +9,11 @@ import { leadAckEmail, leadTeamEmail } from '@/server/notifications/templates';
 describe('meeting boundaries', () => {
   it('requires explicit consent and limits context at both entry points', () => {
     expect(meetingSessionSchema.safeParse({ entryPoint: 'workbench', privacyConsent: false }).success).toBe(false);
-    expect(meetingSessionSchema.safeParse({ entryPoint: 'contact', privacyConsent: true, context: 'x'.repeat(1001) }).success).toBe(false);
-    expect(meetingSessionSchema.parse({ entryPoint: 'workbench', privacyConsent: true, refToken: 'forged!' }).refToken).toBeUndefined();
+    expect(meetingSessionSchema.safeParse({ entryPoint: 'contact', privacyNoticeVersion: PRIVACY_NOTICE_VERSION, privacyConsent: true, context: 'x'.repeat(1001) }).success).toBe(false);
+    expect(meetingSessionSchema.parse({ entryPoint: 'workbench', privacyNoticeVersion: PRIVACY_NOTICE_VERSION, privacyConsent: true, refToken: 'forged!' }).refToken).toBeUndefined();
   });
   it('permits meeting requests without fabricated project details', () => {
-    const value = meetingRequestSchema.parse({ name: ' Alex ', email: 'A@EXAMPLE.COM', privacyConsent: true, idempotencyKey: crypto.randomUUID(), startedAt: Date.now() - 3000 });
+    const value = meetingRequestSchema.parse({ name: ' Alex ', email: 'A@EXAMPLE.COM', privacyNoticeVersion: PRIVACY_NOTICE_VERSION, privacyConsent: true, idempotencyKey: crypto.randomUUID(), startedAt: Date.now() - 3000 });
     expect(value).toMatchObject({ name: 'Alex', email: 'a@example.com' });
     expect(value.context).toBeUndefined();
   });

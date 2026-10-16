@@ -1,4 +1,5 @@
 import "server-only";
+import { normalizePackage } from "@/lib/builder/section-labels";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { currentVersion, findImported, isDraftVersion, isKnownVersion, showDrafts, visibleTemplates } from "@/content/builder-templates";
@@ -50,7 +51,8 @@ function readRepo(slug: string, version: number): LoadedPackage | null {
   if (!cache.has(key)) {
     try {
       const dir = path.join(root, slug, `v${version}`);
-      const pkg = JSON.parse(readFileSync(path.join(dir, "template.json"), "utf8")) as TemplatePackage;
+      // Clean section names and kinds, also for templates imported before they existed (section-labels.ts).
+      const pkg = normalizePackage(JSON.parse(readFileSync(path.join(dir, "template.json"), "utf8")) as TemplatePackage);
       const css = readFileSync(path.join(dir, "theme.css"), "utf8");
       cache.set(key, pkg.slug === slug && pkg.version === version ? { pkg, css } : null);
     } catch {
@@ -89,9 +91,17 @@ export async function readTemplate(slug: string, version: number, access: Access
   const key = `upload:${slug}@${version}`;
   // Published versions never change; drafts can be re-themed while under review, so they are never cached.
   if (row.status !== "DRAFT" && cache.has(key)) return cache.get(key)!;
-  const loaded = { pkg: row.package as unknown as TemplatePackage, css: row.css };
+  const loaded = { pkg: normalizePackage(row.package as unknown as TemplatePackage), css: row.css };
   if (row.status !== "DRAFT") cache.set(key, loaded);
   return loaded;
+}
+
+/** Whether a version is published, and so will never change (anything else may still be replaced or re-themed). */
+export async function isPublishedVersion(slug: string, version: number): Promise<boolean> {
+  if (!SLUG.test(slug) || !Number.isInteger(version)) return false;
+  const repo = findImported(slug);
+  if (repo) return repo.published.includes(version);
+  return !!(await db.builderTemplateVersion.findFirst({ where: { version, template: { slug }, status: "PUBLISHED" }, select: { id: true } }));
 }
 
 /** A font, image or thumbnail of a template version. */

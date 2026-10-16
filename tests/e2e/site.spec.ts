@@ -398,6 +398,21 @@ test.describe("navigation, search and motion", () => {
     await expect(page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Services", exact: true })).toHaveAttribute("aria-current", "location");
   });
 
+  test("notch header keeps the logo centred", async ({ page }) => {
+    const offset = () =>
+      page.locator('header a[aria-label$=" home"]').evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        return Math.abs(r.left + r.width / 2 - document.documentElement.clientWidth / 2);
+      });
+    for (const path of ["/", "/privacy"]) {
+      await page.goto(path);
+      expect(await offset(), `${path} at the top`).toBeLessThanOrEqual(1);
+      await page.evaluate(() => window.scrollTo(0, 1200));
+      await page.waitForTimeout(100);
+      expect(await offset(), `${path} once scrolled`).toBeLessThanOrEqual(1);
+    }
+  });
+
   test("search palette finds a capability and jumps to its section", async ({ page }) => {
     await page.goto("/");
     const dialog = await openSearchWithShortcut(page);

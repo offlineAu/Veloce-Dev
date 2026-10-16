@@ -1,3 +1,4 @@
+import { PRIVACY_NOTICE_VERSION } from "@/lib/legal";
 import { describe, expect, it } from "vitest";
 import { inquirySchema } from "@/schemas/inquiry";
 import { introductionSchema } from "@/schemas/introduction";
@@ -5,7 +6,7 @@ import { introductionSchema } from "@/schemas/introduction";
 const guard = { idempotencyKey: crypto.randomUUID(), startedAt: 0 };
 const inquiry = {
   name: "  Ana   Cruz ", email: " ANA@Example.COM ", projectType: "REDESIGN", projectGoals: "Book online",
-  privacyConsent: true, ...guard,
+  privacyNoticeVersion: PRIVACY_NOTICE_VERSION, privacyConsent: true, ...guard,
 };
 
 describe("inquirySchema", () => {
@@ -25,6 +26,8 @@ describe("inquirySchema", () => {
     [{ projectType: "HACK" }, "projectType"],
     [{ projectGoals: "" }, "projectGoals"],
     [{ privacyConsent: false }, "privacyConsent"],
+    [{ privacyNoticeVersion: undefined }, "privacyNoticeVersion"],
+    [{ privacyNoticeVersion: "old-notice" }, "privacyNoticeVersion"],
     [{ currentWebsite: "javascript:alert(1)" }, "currentWebsite"],
     [{ currentWebsite: "ftp://example.com" }, "currentWebsite"],
     [{ name: "x".repeat(101) }, "name"],
@@ -50,7 +53,7 @@ describe("inquirySchema", () => {
 describe("introductionSchema", () => {
   const intro = {
     referrerName: "Ana", referrerEmail: "ana@example.com", referredName: "Bo", referredEmail: "bo@example.com",
-    projectInterest: "UNSURE", referrerConsent: true, ...guard,
+    projectInterest: "UNSURE", privacyNoticeVersion: PRIVACY_NOTICE_VERSION, referrerConsent: true, ...guard,
   };
   it("accepts a valid introduction", () => {
     expect(introductionSchema.safeParse(intro).success).toBe(true);
