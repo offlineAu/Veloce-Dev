@@ -1,4 +1,5 @@
 import "server-only";
+import { withCapacity } from "@/server/security/budget";
 import { randomBytes } from "node:crypto";
 import sharp, { type OutputInfo } from "sharp";
 import { copy, del, get, list, put, type GetBlobResult } from "@vercel/blob";
@@ -29,14 +30,20 @@ export type StoreOutcome = { ok: true; src: string; width: number; height: numbe
 const fail = (status: number, error: string): StoreOutcome => ({ ok: false, status, error });
 
 export async function storeImage(bytes: Buffer): Promise<StoreOutcome> {
+  return withCapacity("image", 2, () => processImage(bytes));
+}
+
+async function processImage(bytes: Buffer): Promise<StoreOutcome> {
   if (bytes.byteLength > MAX_UPLOAD_BYTES) return fail(413, "That image is over 5 MB. Try a smaller one.");
   let out: { data: Buffer; info: OutputInfo };
   try {
     const input = sharp(bytes, { animated: true, limitInputPixels: 40_000_000, failOn: "error" });
     const meta = await input.metadata();
+    if ((meta.pages ?? 1) > 60 || (meta.width ?? 0) * (meta.pageHeight ?? meta.height ?? 0) * (meta.pages ?? 1) > 40_000_000) return fail(413, "That animation or image has too many pixels.");
     // AVIF reads as "heif"; HEIC photos too, which browsers can't show, so only AV1-coded HEIF is taken.
     if (!meta.format || !FORMATS.has(meta.format) || (meta.format === "heif" && meta.compression !== "av1")) return fail(415, "Use a JPEG, PNG, WebP, AVIF or GIF image.");
     out = await input
+      .timeout({ seconds: 10 })
       .rotate() // upright, from the photo's orientation, before the metadata goes
       .resize({ width: MAX_SIDE, height: MAX_SIDE, fit: "inside", withoutEnlargement: true })
       .webp({ quality: 82, effort: 4 })

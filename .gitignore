@@ -16,3 +16,6 @@ playwright-report
 .next-start.log
 .vercel
 .env*
+
+# Never publish original portfolio assets or private case manifests
+.private-assets/

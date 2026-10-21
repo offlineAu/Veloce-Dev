@@ -93,7 +93,7 @@ export interface ShowcaseSample extends SampleSite {
 }
 
 /**
- * Where `npm run samples:screens` saves a sample page's landing screen (the first screen at tablet size, 3:4, which
+ * Where `npm run samples:screens` saves a sample page's landing screen (the first screen at laptop size, 16:10, which
  * fills a carousel slide), relative to public/.
  */
 export const screenPath = (s: Pick<SampleSite, "slug" | "version">, pageKey: string) => `/images/samples/${s.slug}-v${s.version}-${pageKey || "home"}.webp`;

@@ -1,5 +1,5 @@
 import { SECTION_KINDS } from "../section-labels";
-import { z } from "zod";
+import { z } from "@/lib/security/schema";
 import { PACKAGE_FORMAT, type TemplatePackage, type TreeNode } from "../template-package";
 
 const attr = z.union([z.string(), z.number(), z.boolean(), z.record(z.string(), z.string())]);

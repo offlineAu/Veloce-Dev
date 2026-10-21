@@ -1,3 +1,4 @@
+import { portfolioImageUrl } from "@/lib/security/portfolio-images";
 import Image from "next/image";
 import { CreditCard, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -55,7 +56,7 @@ export function BrowserMock({ className }: { className?: string }) {
 export function HeroComposition() {
   return (
     <Image
-      src="/images/hero-dashboard.webp"
+      src={portfolioImageUrl("/images/hero-dashboard.webp")}
       alt=""
       width={1123}
       height={916}

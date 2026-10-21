@@ -1,5 +1,6 @@
 "use server";
 
+import { securityEvent } from "@/server/security/events";
 import { revalidatePath } from "next/cache";
 import { env } from "@/config/env";
 import { IMPORTED_TEMPLATES } from "@/content/builder-templates";
@@ -22,7 +23,7 @@ async function guarded<T extends object>(fn: () => Promise<DevResult<T>>): Promi
     return await fn();
   } catch (e) {
     if (e instanceof DevAuthError) return { ok: false, error: SESSION_ENDED };
-    console.error("[dev-templates]", e);
+    securityEvent("import_rejected");
     return { ok: false, error: "Something went wrong. Please try again." };
   }
 }
@@ -36,7 +37,8 @@ export async function unlockAction(input: { password: string; name: string }): P
   if (!devUploadsEnabled()) return { ok: false, error: "Template uploads aren't set up on this site." };
   const key = await clientKey();
   const withinLimits = (await allow(`devpw:ip:${key}`, 5, 15 * 60_000)) && (await allow("devpw:all", 30, 3600_000));
-  if (!withinLimits) return { ok: false, error: "Too many attempts. Try again in 15 minutes." };
+  if (!withinLimits) { securityEvent("login_limited"); return { ok: false, error: "Too many attempts. Try again in 15 minutes." }; }
+  if (typeof input.password !== "string" || input.password.length > 200) return { ok: false, error: "Invalid credentials." };
   const name = String(input.name ?? "").replace(/[^\p{L}\p{N} .'-]/gu, "").trim().slice(0, 40);
   if (!name) return { ok: false, error: "Add your name, so uploads show who made them." };
   if (!verifyPassword(String(input.password ?? ""), env().TEMPLATE_UPLOAD_PASSWORD_HASH!)) return { ok: false, error: "That password isn't right." };

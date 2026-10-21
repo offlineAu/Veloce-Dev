@@ -9,6 +9,7 @@ vi.mock("@/server/security/dev-session", () => {
 });
 vi.mock("@/server/builder/upload-service", () => ({ uploadTemplate: mocks.upload }));
 vi.mock("@/server/security/request", () => ({ clientKey: async () => "test" }));
+vi.mock("@/server/security/rate-limit", () => ({ allow: async () => true }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/server/db", () => ({ db: { builderTemplateVersion: { findFirst: mocks.findFirst } } }));
 
@@ -48,7 +49,7 @@ describe("private template HTML source", () => {
     const body = new FormData();
     body.set("slug", "local"); body.set("baseVersion", "1"); body.set("name", "Local");
     body.append("files", new File(["<main>Edited</main>"], "home.html", { type: "text/html" }));
-    expect((await POST(new Request("https://example.com/api/dev/templates", { method: "POST", body }))).status).toBe(200);
+    expect((await POST(new Request("https://example.com/api/dev/templates", { method: "POST", headers: { origin: "https://example.com" }, body }))).status).toBe(200);
     expect(mocks.upload.mock.calls[0]![0].storedImageFiles.get("img/existing.webp")).toEqual(photo);
     expect(mocks.upload.mock.calls[0]![0].assets).toEqual([{ path: "hero.png", bytes: local }]);
   });

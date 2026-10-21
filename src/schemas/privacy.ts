@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "@/lib/security/schema";
 import { PRIVACY_NOTICE_VERSION } from "@/lib/legal";
 
 export const privacyReceiptFields = {

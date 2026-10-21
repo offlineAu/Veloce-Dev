@@ -1,3 +1,6 @@
+import { BodyLimitError, readForm, readJson } from "@/server/security/body";
+import { ProcessingBusyError, withCapacity } from "@/server/security/budget";
+import { allow } from "@/server/security/rate-limit";
 import { NextResponse } from "next/server";
 import { DevAuthError, requireDevSession } from "@/server/security/dev-session";
 import { clientKey } from "@/server/security/request";
@@ -13,7 +16,7 @@ export const maxDuration = 60;
 
 const MAX_BODY = 24_000_000;
 
-const fail = (status: number, error: string) => NextResponse.json({ ok: false, error }, { status });
+const fail = (status: number, error: string) => NextResponse.json({ ok: false, error }, { status, headers: { "Cache-Control": "private, no-store" } });
 const SESSION_ENDED = "Your developer session has ended. Unlock the panel again.";
 
 async function session() {
@@ -27,15 +30,22 @@ async function session() {
 
 /** Upload one or more HTML pages (first = home) as a new draft version. */
 export async function POST(req: Request) {
+  try { return await withCapacity("template-import", 1, () => upload(req)); }
+  catch (error) { if (error instanceof ProcessingBusyError) return fail(503, error.message); throw error; }
+}
+
+async function upload(req: Request) {
   const dev = await session();
   if (!dev) return fail(401, SESSION_ENDED);
+  if (req.headers.get("origin") !== new URL(req.url).origin) return fail(403, "Same-origin request required.");
+  if (!await allow("templates:global:day", 100, 86_400_000)) return fail(429, "Daily import budget reached.");
   if (Number(req.headers.get("content-length") ?? 0) > MAX_BODY) return fail(413, "That upload is over 24 MB. Reduce the image sizes or split it up.");
 
   let form: FormData;
   try {
-    form = await req.formData();
-  } catch {
-    return fail(400, "The upload couldn't be read.");
+    form = await readForm(req, MAX_BODY);
+  } catch (error) {
+    return fail(error instanceof BodyLimitError ? error.status : 400, "The upload could not be read within its limits.");
   }
   let totalBytes = 0;
   for (const value of form.values()) totalBytes += value instanceof File ? value.size : Buffer.byteLength(value);
@@ -94,7 +104,10 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   const dev = await session();
   if (!dev) return fail(401, SESSION_ENDED);
-  const body = (await req.json().catch(() => null)) as { slug?: string; version?: number; colors?: Record<string, string> } | null;
+  if (req.headers.get("origin") !== new URL(req.url).origin) return fail(403, "Same-origin request required.");
+  let input: unknown;
+  try { input = await readJson(req); } catch (error) { return fail(error instanceof BodyLimitError ? error.status : 400, "Invalid request body."); }
+  const body = (input) as { slug?: string; version?: number; colors?: Record<string, string> } | null;
   if (!body?.slug || !Number.isInteger(body.version)) return fail(400, "Missing template or version.");
   const { rethemeDraft } = await import("@/server/builder/upload-service");
   const outcome = await rethemeDraft(body.slug, body.version!, body.colors ?? {});

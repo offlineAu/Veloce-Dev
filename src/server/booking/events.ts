@@ -1,6 +1,6 @@
 import 'server-only';
 import { createHash } from 'node:crypto';
-import { z } from 'zod';
+import { z } from '@/lib/security/schema';
 import { db } from '@/server/db';
 import { getBooking } from './provider';
 import { syncAppointment } from './appointments';

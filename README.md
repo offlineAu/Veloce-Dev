@@ -8,6 +8,8 @@ Docs: [`docs/SOURCE_AUDIT.md`](docs/SOURCE_AUDIT.md) · [`docs/FEATURE_MAPPING.m
 
 Analytics: [setup, dashboards, consent and erasure](docs/ANALYTICS.md). Collection is disabled by default.
 
+Security: [implemented controls and operations](docs/SECURITY.md) · [portfolio security investigation and phased plan](docs/PORTFOLIO_SECURITY_INVESTIGATION.md), including photo protection, browser limitations, access controls and server hardening.
+
 ## Local development (no Docker)
 
 ```bash

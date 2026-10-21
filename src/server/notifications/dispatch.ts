@@ -1,5 +1,7 @@
 import "server-only";
 import type { NotificationKind } from "@/generated/prisma/enums";
+import { allow } from "@/server/security/rate-limit";
+import { securityEvent } from "@/server/security/events";
 import { db } from "@/server/db";
 import { hmac } from "@/server/security/hash";
 import { getProvider } from "./provider";
@@ -55,6 +57,7 @@ export async function deliverLoggedNotification(logId: string, to: string, messa
   }
   await db.notificationLog.update({ where: { id: logId }, data: { attempts: { increment: 1 } } });
   try {
+    if (!await allow("notifications:global:hour", 100, 3600_000) || !await allow("notifications:global:day", 500, 86_400_000)) { securityEvent("quota_exceeded"); throw new Error("Notification budget exceeded"); }
     const { providerRef } = await provider.send({ to, ...message, idempotencyKey: dedupeKey });
     await db.notificationLog.update({ where: { id: logId }, data: { status: "SENT", providerRef, leaseUntil: null, lastError: null } });
     return "SENT";

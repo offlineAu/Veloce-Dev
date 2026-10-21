@@ -1,6 +1,8 @@
+import { BodyLimitError, readBody } from "@/server/security/body";
+import { isOwner } from "@/server/admin/session";
 import { randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
-import { z } from "zod";
+import { z } from "@/lib/security/schema";
 import { db } from "@/server/db";
 import { allow } from "@/server/security/rate-limit";
 import { clientKey } from "@/server/security/request";
@@ -24,12 +26,12 @@ export async function POST(request: Request) {
   if (request.headers.get("origin") !== new URL(request.url).origin) return new Response(null, { status: 403, headers });
   try {
     if (!await allow(`analytics:${await clientKey()}`, 300, 60_000)) return new Response(null, { status: 429, headers });
-    const text = await request.text();
+    const text = new TextDecoder().decode(await readBody(request, 6000));
     if (text.length > 6000) return new Response(null, { status: 413, headers });
     const parsed = schema.safeParse(JSON.parse(text));
     if (!parsed.success) return new Response(null, { status: 400, headers });
     const data = parsed.data;
-    if (data.action !== "withdraw" && (!analyticsConfig().enabled || await readDevSession())) return new Response(null, { status: 403, headers });
+    if (data.action !== "withdraw" && (!analyticsConfig().enabled || await readDevSession() || await isOwner())) return new Response(null, { status: 403, headers });
     const jar = await cookies();
     if (data.action === "withdraw") {
       const visitor = await currentVisitor(true);
@@ -50,5 +52,5 @@ export async function POST(request: Request) {
       if (data.action === "capture") scheduleAnalytics(() => captureBrowser(visitor.id, data.event, data.properties, data.uuid));
     }
     return new Response(null, { status: 204, headers });
-  } catch { return new Response(null, { status: 503, headers }); }
+  } catch (error) { return new Response(null, { status: error instanceof BodyLimitError ? error.status : 503, headers }); }
 }

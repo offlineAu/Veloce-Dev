@@ -40,9 +40,20 @@ export async function submissionTracking(raw: unknown) {
 export async function captureBrowser(visitorId: string, event: BrowserEvent, props: BrowserProperties, uuid: string) {
   const visitor = await db.analyticsVisitor.findUnique({ where: { id: visitorId } });
   if (!visitor || !isActive(visitor)) return;
-  const { first, latest, sessionId, ...safe } = props;
+  const { first, latest, sessionId, duration, pageviewId, ...safe } = props;
+  const isPageEvent = event === "$pageview" || event === "$pageleave";
+  const origin = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").origin;
+  const web = isPageEvent ? {
+    $current_url: `${origin}${safe.page}`, $host: new URL(origin).host, $pathname: safe.page,
+    $device_type: safe.device === "desktop" ? "Desktop" : safe.device === "mobile" ? "Mobile" : safe.device === "tablet" ? "Tablet" : "unknown", $geoip_disable: true,
+    ...(pageviewId ? { $pageview_id: pageviewId } : {}),
+    ...(event === "$pageleave" && duration !== undefined ? { $prev_pageview_duration: duration, $prev_pageview_id: pageviewId, $prev_pageview_pathname: safe.page } : {}),
+    ...(latest?.source ? { utm_source: latest.source } : {}),
+    ...(latest?.medium ? { utm_medium: latest.medium } : {}),
+    ...(latest?.campaign ? { utm_campaign: latest.campaign } : {}),
+  } : {};
   await deliver(event, visitor.identifiedAt ? visitor.reference : visitor.id, {
-    ...safe, ...attributionProperties({ first, latest, sessionId }), $process_person_profile: !!visitor.identifiedAt,
+    ...safe, ...web, ...attributionProperties({ first, latest, sessionId }), $process_person_profile: !!visitor.identifiedAt,
   }, uuid);
 }
 export const unlinkedReference = (key: string) => eventUuid(`unlinked:${key}`);

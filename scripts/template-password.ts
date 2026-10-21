@@ -13,7 +13,8 @@ import { hashPassword } from "../src/server/security/password";
 
 const muted = new Writable({ write: (_chunk, _enc, cb) => cb() });
 const rl = createInterface({ input: process.stdin, output: muted, terminal: true });
-process.stdout.write("Shared developer password (min 12 characters): ");
+const owner = process.argv.includes("--analytics-owner");
+process.stdout.write(owner ? "Analytics owner password (min 12 characters): " : "Shared developer password (min 12 characters): ");
 rl.question("", (password) => {
   rl.close();
   process.stdout.write("\n");
@@ -21,6 +22,6 @@ rl.question("", (password) => {
     console.error("✗ Use at least 12 characters.");
     process.exit(1);
   }
-  console.log(`TEMPLATE_UPLOAD_PASSWORD_HASH=${hashPassword(password)}`);
-  console.log(`DEV_SESSION_SECRET=${randomBytes(32).toString("base64url")}`);
+  console.log(`${owner ? "ANALYTICS_OWNER_PASSWORD_HASH" : "TEMPLATE_UPLOAD_PASSWORD_HASH"}=${hashPassword(password)}`);
+  console.log(`${owner ? "ANALYTICS_OWNER_SESSION_SECRET" : "DEV_SESSION_SECRET"}=${randomBytes(32).toString("base64url")}`);
 });

@@ -13,7 +13,7 @@ export function hashPassword(password: string): string {
 
 export function verifyPassword(password: string, stored: string): boolean {
   const [kind, n, r, p, salt, hash] = stored.split(":");
-  if (kind !== "scrypt" || !salt || !hash) return false;
+  if (password.length > 200 || kind !== "scrypt" || n !== "16384" || r !== "8" || p !== "1" || !salt || !hash || !/^[A-Za-z0-9_-]{22}$/.test(salt) || !/^[A-Za-z0-9_-]{86}$/.test(hash) || stored.split(":").length !== 6) return false;
   const expected = Buffer.from(hash, "base64url");
   let actual: Buffer;
   try {

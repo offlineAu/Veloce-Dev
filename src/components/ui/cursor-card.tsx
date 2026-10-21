@@ -18,12 +18,14 @@ export interface CursorCardProps {
   description: string;
   /** Card width in px; the card is centred under the pointer. */
   width?: number;
+  /** Tailwind aspect class for the image, e.g. "aspect-[16/10]" for landscape screens. */
+  imageAspect?: string;
   className?: string;
 }
 
 const SPRING = { damping: 25, stiffness: 300 };
 
-export function CursorCard({ children, image, imageAlt = "", title, description, width = 240, className }: CursorCardProps) {
+export function CursorCard({ children, image, imageAlt = "", title, description, width = 240, imageAspect = "aspect-[3/4]", className }: CursorCardProps) {
   const [hovered, setHovered] = React.useState(false);
   const [canHover, setCanHover] = React.useState(false);
 
@@ -81,7 +83,7 @@ export function CursorCard({ children, image, imageAlt = "", title, description,
                 className="pointer-events-none fixed left-0 top-0 z-50 rounded-xl border border-line bg-surface p-3 shadow-xl"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={image} alt={imageAlt} loading="lazy" className="mb-3 aspect-[3/4] w-full rounded-md object-cover object-top" />
+                <img src={image} alt={imageAlt} loading="lazy" className={cn("mb-3 w-full rounded-md object-cover object-top", imageAspect)} />
                 {title ? <p className="m-0 mb-1 text-sm font-semibold text-ink">{title}</p> : null}
                 <p className="m-0 text-[13px] leading-relaxed text-muted">{description}</p>
               </m.div>

@@ -460,5 +460,8 @@
   }
 }
 
-/* First-visit loader: skipped once it has been seen this session (set by the inline script in BootLoader). */
+/* First-visit homepage intro: skipped before paint when it should not play (BootInitScript in boot-loader.tsx). While it
+   is up the page does not scroll, and the hero headline waits at the start of its word rise until the overlay dissolves. */
 :root[data-booted] [data-boot-loader] { display: none; }
+:root:is([data-intro="running"], [data-intro="gate"], [data-intro="playing"]) { overflow: hidden; }
+:root:is([data-intro="running"], [data-intro="gate"], [data-intro="playing"], [data-intro="exit"]) .hero-word { animation-play-state: paused; }

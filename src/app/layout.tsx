@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { analyticsConfig } from "@/server/analytics/config";
 import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
@@ -5,6 +6,7 @@ import { env } from "@/config/env";
 import { brand } from "@/content/site";
 import { ThemeScope } from "@/components/site/theme-scope";
 import { MarketingOnly } from "@/components/site/marketing-only";
+import { BootInitScript } from "@/components/site/boot-loader";
 import { DevShortcut } from "@/components/dev/dev-shortcut";
 import { Providers } from "@/components/providers";
 import { ScrollProgress } from "@/components/motion/scroll-progress";
@@ -27,7 +29,8 @@ export function generateMetadata(): Metadata {
   };
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning className={`${heading.variable} ${body.variable} ${mono.variable}`}>
       <body>
@@ -40,11 +43,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <noscript>
           <style>{"[data-reveal]{opacity:1!important;transform:none!important}[data-boot-loader]{display:none!important}"}</style>
         </noscript>
-        <ThemeScope />
+        <ThemeScope nonce={nonce} />
+        <BootInitScript nonce={nonce} />
         <MarketingOnly>
           <ScrollProgress />
         </MarketingOnly>
-        <Providers analyticsEnabled={analyticsConfig().enabled}>
+        <Providers analyticsEnabled={analyticsConfig().enabled} analyticsKey={analyticsConfig().enabled ? analyticsConfig().key : undefined}>
           {children}
           <DevShortcut />
         </Providers>

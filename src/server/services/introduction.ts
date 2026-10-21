@@ -1,7 +1,7 @@
 import { conversion, submissionTracking } from "@/server/analytics/capture";
 import { CONSENT_PURPOSES } from "@/lib/legal";
 import "server-only";
-import { z } from "zod";
+import { z } from "@/lib/security/schema";
 import { env } from "@/config/env";
 import { db } from "@/server/db";
 import { dispatch } from "@/server/notifications/dispatch";
@@ -33,6 +33,7 @@ export async function submitIntroduction(raw: unknown, ctx: { clientKey: string 
     if (existing) return { ok: true, referrerEmailed: false };
 
     const withinLimits =
+      (await allow("intro:global:day", 500, 86_400_000)) &&
       (await allow(`intro:ip:${ctx.clientKey}`, 6, 3600_000)) &&
       (await allow(`intro:referrer:${hmac(input.referrerEmail)}`, 10, 24 * 3600_000));
     if (!withinLimits) return RATE_LIMITED;

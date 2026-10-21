@@ -428,3 +428,35 @@ model AnalyticsVisitor {
   bookingSessions BookingSession[]
   @@index([expiresAt])
 }
+
+// Raw session and invitation tokens are never stored.
+model SecuritySession {
+  id        String   @id
+  kind      String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([kind, expiresAt])
+}
+
+model PrivateCaseStudy {
+  slug      String @id
+  title     String
+  summary   String
+  // [{ file, alt }]; Blob paths are derived server-side, never accepted from a URL.
+  images    Json
+  grants    PrivateAccessGrant[]
+}
+
+model PrivateAccessGrant {
+  id        String @id @default(cuid())
+  tokenHash String @unique
+  caseSlug  String
+  study     PrivateCaseStudy @relation(fields: [caseSlug], references: [slug], onDelete: Cascade)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([caseSlug, expiresAt])
+}

@@ -96,6 +96,13 @@ describe("analytics boundaries", () => {
     expect(JSON.stringify(payloads())).not.toMatch(/private@example|secret|current_url/);
     expect(vi.mocked(fetch).mock.calls[0]![0]).toBe("https://eu.i.posthog.com/capture/");
   });
+  it("builds native web properties only from normalized pages and approved fields", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://veloce.example");
+    const sessionId = crypto.randomUUID(), pageviewId = crypto.randomUUID();
+    expect((await POST(request({ action: "capture", event: "$pageleave", uuid: crypto.randomUUID(), properties: { page: "/refer/[token]", device: "mobile", sessionId, pageviewId, duration: 12.5 } }))).status).toBe(204);
+    await flush();
+    expect(payloads()[0].properties).toMatchObject({ $current_url: "https://veloce.example/refer/[token]", $pathname: "/refer/[token]", $session_id: sessionId, $pageview_id: pageviewId, $prev_pageview_duration: 12.5, $device_type: "Mobile" });
+  });
   it("rejects forged conversions and unsafe paths at the public collector", async () => {
     for (const body of [
       { action: "capture", event: "inquiry_submitted", uuid: crypto.randomUUID(), properties: { page: "/" } },

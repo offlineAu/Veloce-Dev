@@ -1,3 +1,4 @@
+import { portfolioImageUrl } from "@/lib/security/portfolio-images";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowDown, ArrowRight, ArrowUpRight, Clock3, Code2, Globe2, HandHeart, Handshake, Languages, Lightbulb, MapPin, MessageCircle, UserRound } from "lucide-react";
@@ -64,7 +65,7 @@ export default async function AboutPage({ searchParams }: { searchParams: Conten
           <div className={styles.heroVisual}>
             <div className={styles.sunStamp}><PhilippineSun /><span>Rooted in<br />the Philippines</span></div>
             <figure className={styles.postcard}>
-              <div className={styles.heroImage}><Image src="/images/about/el-nido.webp" alt="Turquoise water and limestone cliffs at Big Lagoon in El Nido, Palawan" fill sizes="(max-width: 760px) 90vw, (max-width: 1100px) 48vw, 600px" preload /></div>
+              <div className={styles.heroImage}><Image src={portfolioImageUrl("/images/about/el-nido.webp")} alt="Turquoise water and limestone cliffs at Big Lagoon in El Nido, Palawan" fill sizes="(max-width: 760px) 90vw, (max-width: 1100px) 48vw, 600px" preload /></div>
               <figcaption><div className={styles.location}><MapPin size={14} aria-hidden="true" /><span>El Nido, Palawan</span><span className={styles.locationNumber}>01 / PH</span></div><PhotoCredit photo={photos.palawan} /></figcaption>
             </figure>
             <IslandWaves className={styles.heroWaves} />
@@ -85,8 +86,8 @@ export default async function AboutPage({ searchParams }: { searchParams: Conten
         <section className={styles.landscapes} aria-labelledby="landscapes-title">
           <div className={styles.sectionIntro}><div><p className={styles.eyebrow}>A sense of place</p><h2 id="landscapes-title">A little perspective<br />from home.</h2></div><p>From the terraces of Ifugao to the hills of Bohol, there’s plenty here to make you pause and look a little closer.</p></div>
           <div className={styles.landscapeGrid}>
-            <figure className={styles.terraces}><div className={styles.landscapeImage}><Image src="/images/about/batad-terraces.webp" alt="Layered rice terraces following the mountainside in Batad, Ifugao" fill sizes="(max-width: 760px) 90vw, 56vw" /></div><figcaption><div className={styles.location}><span className={styles.locationNumber}>02</span><span>Batad rice terraces</span><span className={styles.region}>Ifugao, Luzon</span></div><PhotoCredit photo={photos.terraces} /></figcaption></figure>
-            <figure className={styles.hills}><div className={styles.landscapeImage}><Image src="/images/about/chocolate-hills.webp" alt="Green rounded Chocolate Hills stretching beneath a cloudy sky in Bohol" fill sizes="(max-width: 760px) 90vw, 38vw" /></div><figcaption><div className={styles.location}><span className={styles.locationNumber}>03</span><span>Chocolate Hills</span><span className={styles.region}>Bohol, Visayas</span></div><PhotoCredit photo={photos.bohol} /></figcaption><p className={styles.landscapeNote}><PhilippineSun /><span>Different landscapes.<br />One place to call home.</span></p></figure>
+            <figure className={styles.terraces}><div className={styles.landscapeImage}><Image src={portfolioImageUrl("/images/about/batad-terraces.webp")} alt="Layered rice terraces following the mountainside in Batad, Ifugao" fill sizes="(max-width: 760px) 90vw, 56vw" /></div><figcaption><div className={styles.location}><span className={styles.locationNumber}>02</span><span>Batad rice terraces</span><span className={styles.region}>Ifugao, Luzon</span></div><PhotoCredit photo={photos.terraces} /></figcaption></figure>
+            <figure className={styles.hills}><div className={styles.landscapeImage}><Image src={portfolioImageUrl("/images/about/chocolate-hills.webp")} alt="Green rounded Chocolate Hills stretching beneath a cloudy sky in Bohol" fill sizes="(max-width: 760px) 90vw, 38vw" /></div><figcaption><div className={styles.location}><span className={styles.locationNumber}>03</span><span>Chocolate Hills</span><span className={styles.region}>Bohol, Visayas</span></div><PhotoCredit photo={photos.bohol} /></figcaption><p className={styles.landscapeNote}><PhilippineSun /><span>Different landscapes.<br />One place to call home.</span></p></figure>
           </div>
           <p className={styles.imageNote}>Photography resized and cropped for this layout. Original images and licences are linked above.</p>
         </section>

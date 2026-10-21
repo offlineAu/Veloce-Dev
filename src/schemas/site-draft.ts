@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "@/lib/security/schema";
 import { BLOCK_TYPES, mapBlocks, type BlockItem } from "@/lib/builder/blocks";
 import { sanitizeHtmlOnServer, sanitizeRichText } from "@/server/builder/sanitize-html";
 import { MAX_PAGES, PATH_RE, migrateDoc, type SiteDoc, type SitePage } from "@/lib/builder/site-doc";

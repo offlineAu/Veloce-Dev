@@ -1,6 +1,7 @@
 import "server-only";
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
+import { registerSession, sessionActive, revokeSession } from "./sessions";
 import { env } from "@/config/env";
 
 export { hashPassword, verifyPassword } from "./password";
@@ -17,9 +18,10 @@ export const DEV_SESSION_HOURS = 8;
 export interface DevSession {
   name: string;
   exp: number;
+  sid?: string;
 }
 
-const sign = (body: string, secret: string) => createHmac("sha256", secret).update(`dev-session:${body}`).digest("base64url");
+const sign = (body: string, secret: string) => createHmac("sha256", secret).update(`dev-session:v2:${process.env.TEMPLATE_UPLOAD_PASSWORD_HASH ?? ""}:${process.env.DEV_SESSION_VERSION ?? "1"}:${body}`).digest("base64url");
 
 export function encodeSession(s: DevSession, secret: string): string {
   const body = Buffer.from(JSON.stringify(s)).toString("base64url");
@@ -28,15 +30,15 @@ export function encodeSession(s: DevSession, secret: string): string {
 
 /** The session in a cookie value, or null when it is missing, tampered with or expired. */
 export function decodeSession(token: string | undefined, secret: string, now = Date.now()): DevSession | null {
-  if (!token) return null;
-  const [body, mac] = token.split(".");
-  if (!body || !mac) return null;
+  if (!token || token.length > 1024) return null;
+  const [body, mac, extra] = token.split(".");
+  if (!body || !mac || extra) return null;
   const expected = Buffer.from(sign(body, secret));
   const given = Buffer.from(mac);
   if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null;
   try {
     const s = JSON.parse(Buffer.from(body, "base64url").toString()) as DevSession;
-    return typeof s.name === "string" && typeof s.exp === "number" && s.exp > now ? s : null;
+    return (s.sid === undefined || (typeof s.sid === "string" && /^[0-9a-f-]{36}$/.test(s.sid))) && typeof s.name === "string" && s.name.length > 0 && s.name.length <= 40 && typeof s.exp === "number" && Number.isSafeInteger(s.exp) && s.exp > now && s.exp <= now + DEV_SESSION_HOURS * 3600_000 ? s : null;
   } catch {
     return null;
   }
@@ -51,7 +53,8 @@ export function devUploadsEnabled(): boolean {
 export async function readDevSession(): Promise<DevSession | null> {
   const secret = env().DEV_SESSION_SECRET;
   if (!secret || !devUploadsEnabled()) return null;
-  return decodeSession((await cookies()).get(DEV_COOKIE)?.value, secret);
+  const session = decodeSession((await cookies()).get(DEV_COOKIE)?.value, secret);
+  return session && await sessionActive(session.sid, "developer") ? session : null;
 }
 
 export class DevAuthError extends Error {
@@ -69,7 +72,9 @@ export async function requireDevSession(): Promise<DevSession> {
 export async function startDevSession(name: string): Promise<void> {
   const secret = env().DEV_SESSION_SECRET!;
   const exp = Date.now() + DEV_SESSION_HOURS * 3600_000;
-  (await cookies()).set(DEV_COOKIE, encodeSession({ name, exp }, secret), {
+  const sid = randomUUID();
+  await registerSession(sid, "developer", exp);
+  (await cookies()).set(DEV_COOKIE, encodeSession({ name, exp, sid }, secret), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
@@ -79,5 +84,8 @@ export async function startDevSession(name: string): Promise<void> {
 }
 
 export async function endDevSession(): Promise<void> {
-  (await cookies()).delete(DEV_COOKIE);
+  const jar = await cookies();
+  const secret = env().DEV_SESSION_SECRET;
+  const session = secret ? decodeSession(jar.get(DEV_COOKIE)?.value, secret) : null;
+  try { await revokeSession(session?.sid, "developer"); } finally { jar.delete(DEV_COOKIE); }
 }

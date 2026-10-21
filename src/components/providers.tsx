@@ -8,7 +8,7 @@ import { PerfMonitor } from "@/components/site/perf-monitor";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 /** App-wide client providers. Every framer-motion animation honours reduced motion unless the visitor chose "Always animate". */
-export function Providers({ children, analyticsEnabled = false }: { children: ReactNode; analyticsEnabled?: boolean }) {
+export function Providers({ children, analyticsEnabled = false, analyticsKey }: { children: ReactNode; analyticsEnabled?: boolean; analyticsKey?: string }) {
   const reduce = useReducedMotion();
   // Lets CSS pause every looping animation while the tab is in the background.
   useEffect(() => {
@@ -21,7 +21,7 @@ export function Providers({ children, analyticsEnabled = false }: { children: Re
     <LazyMotion features={() => import("./motion/features").then((f) => f.default)} strict>
       <MotionConfig reducedMotion={reduce ? "always" : "never"}>
         {children}
-        <AnalyticsProvider enabled={analyticsEnabled} />
+        <AnalyticsProvider enabled={analyticsEnabled} projectKey={analyticsKey} />
         <PerfMonitor />
         <Toaster />
       </MotionConfig>

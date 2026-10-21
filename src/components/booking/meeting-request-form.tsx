@@ -6,7 +6,7 @@ import { PRIVACY_NOTICE_VERSION } from "@/lib/legal";
 import { useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { z } from '@/lib/security/schema';
 import { meetingRequestClientSchema } from '@/schemas/meeting';
 import { requestMeetingAction } from '@/server/actions/meetings';
 import { Field, TextInput, TextArea } from '@/components/ui/field';

@@ -1,0 +1,44 @@
+# Merge into an existing TLS nginx configuration; do not replace TLS settings.
+# These declarations belong in the http {} context.
+limit_req_zone $binary_remote_addr zone=veloce_api:10m rate=10r/s;
+limit_req_zone $binary_remote_addr zone=veloce_upload:10m rate=10r/m;
+limit_conn_zone $binary_remote_addr zone=veloce_connections:10m;
+# Safe logs: $uri omits invitation/referral/query tokens.
+log_format veloce_safe '$remote_addr $request_method $uri $status $request_time';
+
+# Add these to the server {} context. Bind Next to loopback; firewall its port.
+# If another proxy fronts nginx, configure set_real_ip_from for its exact ranges
+# and real_ip_header from its verified header before using remote_addr for limits.
+#
+# access_log /var/log/nginx/veloce.log veloce_safe;
+# client_body_timeout 15s;
+# limit_req_status 429;
+# limit_conn_status 429;
+# limit_conn veloce_connections 20;
+# location = /api/builder/media {
+#   limit_req zone=veloce_upload burst=5 nodelay;
+#   client_max_body_size 6m;
+#   proxy_set_header Host $host;
+#   proxy_set_header X-Real-IP $remote_addr;
+#   proxy_set_header X-Forwarded-For $remote_addr;
+#   proxy_pass http://127.0.0.1:3000;
+# }
+# location = /api/dev/templates {
+#   limit_req zone=veloce_upload burst=3 nodelay;
+#   client_max_body_size 24m;
+#   proxy_set_header Host $host;
+#   proxy_set_header X-Real-IP $remote_addr;
+#   proxy_set_header X-Forwarded-For $remote_addr;
+#   proxy_pass http://127.0.0.1:3000;
+# }
+# location / {
+#   limit_req zone=veloce_api burst=60 nodelay;
+#   client_max_body_size 1m;
+#   proxy_set_header Host $host;
+#   proxy_set_header X-Real-IP $remote_addr;
+#   proxy_set_header X-Forwarded-For $remote_addr;
+#   proxy_pass http://127.0.0.1:3000;
+# }
+# Start with limit_req_dry_run on; validate nginx -t and legitimate journeys,
+# then switch dry-run off. Do not cache /private/, /api/private/, /admin/,
+# /api/dev/, authenticated template drafts, or nonce-bearing HTML.

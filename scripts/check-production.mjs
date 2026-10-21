@@ -34,6 +34,9 @@ for (const key of ['CAL_API_KEY', 'CAL_WEBHOOK_SECRET', 'BOOKING_FORMAT', 'BOOKI
 }
 if (!e.BOOKING_CRON_SECRET || e.BOOKING_CRON_SECRET.length < 32) fail('BOOKING_CRON_SECRET requires at least 32 characters.');
 if (e.BOOKING_CRON_SECRET && e.BOOKING_CRON_SECRET === e.CAL_WEBHOOK_SECRET) fail('Use different webhook and maintenance secrets.');
+if (e.ANALYTICS_OWNER_PASSWORD_HASH && !/^[A-Z2-7]{32,128}$/.test(e.ANALYTICS_OWNER_TOTP_SECRET ?? '')) fail('Owner access requires ANALYTICS_OWNER_TOTP_SECRET; enroll an authenticator before rollout.');
+if (e.VERCEL !== '1' && !['x-real-ip', 'x-forwarded-for'].includes(e.SECURITY_TRUSTED_IP_HEADER ?? '')) fail('Self-hosted production requires an overwritten trusted ingress IP header and blocked direct app ingress.');
+if (e.SECURITY_CSP_MODE && !['report-only', 'enforce'].includes(e.SECURITY_CSP_MODE)) fail('SECURITY_CSP_MODE must be report-only or enforce.');
 const emailJs = ['EMAILJS_SERVICE_ID', 'EMAILJS_TEMPLATE_ID', 'EMAILJS_PUBLIC_KEY', 'EMAILJS_PRIVATE_KEY'].every(key => e[key]?.trim());
 const resend = Boolean(e.RESEND_API_KEY?.trim() && e.NOTIFY_FROM_EMAIL?.trim());
 if (!emailJs && !resend) console.warn('Email provider is unset: Veloce team notifications will be skipped; Cal.com handles its own booking emails.');
