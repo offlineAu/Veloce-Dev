@@ -1,0 +1,46 @@
+name: Security checks
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+  schedule:
+    - cron: '17 3 * * 1'
+permissions:
+  contents: read
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports: ['5432:5432']
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci
+      HASH_SECRET: ci-fixture-hash-secret-not-for-production
+      ANALYTICS_ENABLED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx prisma migrate deploy
+      - run: npm run build
+      - run: npm run security:check
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npx vitest run --pool=threads --maxWorkers=1
+      - run: npm run security:audit
+      - name: Report development-tooling advisories (tracked upstream issue in docs/SECURITY.md)
+        run: npm run security:audit:all
+        continue-on-error: true

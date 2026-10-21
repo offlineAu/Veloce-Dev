@@ -16,10 +16,11 @@
  * a review report in src/content/builder-templates/reports/, and a manifest entry. New versions start unpublished:
  * review them at /build?template=<slug>&review=1, then run `npm run template:publish -- <slug>`.
  */
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
-import { unzipSync } from "fflate";
+import { readBoundedArchive } from "../src/lib/builder/import/archive";
+import { createSafeFetch } from "../src/server/builder/safe-fetch";
 import { chromium } from "@playwright/test";
 import { importTemplate, type ImportSource } from "../src/lib/builder/import";
 import type { FetchLike } from "../src/lib/builder/import/assets";
@@ -67,13 +68,19 @@ function readExport(file: string): Map<string, Buffer> {
     const walk = (dir: string) => {
       for (const name of readdirSync(dir)) {
         const full = path.join(dir, name);
+        if (lstatSync(full).isSymbolicLink()) fail("Symbolic links are not accepted in template exports.");
         if (statSync(full).isDirectory()) walk(full);
-        else out.set(path.relative(file, full).split(path.sep).join("/"), readFileSync(full));
+        else {
+          if (out.size >= 1000 || statSync(full).size > 15_000_000) fail("Export exceeds file limits.");
+          out.set(path.relative(file, full).split(path.sep).join("/"), readFileSync(full));
+          if ([...out.values()].reduce((n, value) => n + value.length, 0) > 80_000_000) fail("Export exceeds 80 MB.");
+        }
       }
     };
     walk(file);
   } else {
-    for (const [name, data] of Object.entries(unzipSync(readFileSync(file)))) {
+    if (statSync(file).size > 24_000_000) fail("Archive exceeds 24 MB.");
+    for (const [name, data] of readBoundedArchive(readFileSync(file))) {
       if (!name.endsWith("/") && !name.includes("..")) out.set(name, Buffer.from(data));
     }
   }
@@ -174,7 +181,7 @@ async function main() {
     // A recipe lists its pages in order, the home page first.
     keepOrder: Boolean(hintsFile.bake),
     hints: hintsFile.behaviours,
-    fetcher: v.offline ? offline : (fetch as unknown as FetchLike),
+    fetcher: v.offline ? offline : createSafeFetch(),
   }).catch((e: Error) => fail(e.message));
 
   mkdirSync(outDir, { recursive: true });

@@ -3,6 +3,22 @@ import { PRIVACY_NOTICE_VERSION } from "@/lib/legal";
 import { ANALYTICS_ATTRIBUTION_KEY, ANALYTICS_CHOICE_KEY, ANALYTICS_SESSION_KEY, ANALYTICS_MAX_AGE, attributionSchema, campaignLabel, normalizedPage, type AnalyticsContext, type Attribution, type BrowserEvent, type BrowserProperties } from "./shared";
 
 let active = false;
+let sdk: ReturnType<typeof import("./sdk").initializeSdk> | undefined;
+let sdkLoading: Promise<void> | undefined;
+function newSessionId() {
+  // PostHog's web session processing expects UUIDv7, with its creation timestamp encoded.
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  const timestamp = BigInt(Date.now());
+  for (let i = 0; i < 6; i++) bytes[i] = Number((timestamp >> BigInt((5 - i) * 8)) & 255n);
+  bytes[6] = (bytes[6]! & 15) | 0x70; bytes[8] = (bytes[8]! & 63) | 0x80;
+  const hex = Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+export async function startAnalyticsSdk(key: string) {
+  if (sdk) return;
+  if (!sdkLoading) sdkLoading = import("./sdk").then(module => { sdk = module.initializeSdk(key, () => active && !!normalizedPage(location.pathname)); }).finally(() => { sdkLoading = undefined; });
+  await sdkLoading;
+}
 export const setAnalyticsActive = (value: boolean) => { active = value; };
 export function readStorage(key: string) { try { return localStorage.getItem(key); } catch { return null; } }
 export function storeChoice(value: "allow" | "decline") {
@@ -24,7 +40,7 @@ export function clearTrackingStorage() {
 function sessionId() {
   try {
     const previous = JSON.parse(sessionStorage.getItem(ANALYTICS_SESSION_KEY) ?? "null");
-    const id = previous?.lastAt > Date.now() - 30 * 60_000 && typeof previous.id === "string" ? previous.id : crypto.randomUUID();
+    const id = previous?.lastAt > Date.now() - 30 * 60_000 && typeof previous.id === "string" && previous.id[14] === "7" ? previous.id : newSessionId();
     sessionStorage.setItem(ANALYTICS_SESSION_KEY, JSON.stringify({ id, lastAt: Date.now() }));
     return id as string;
   } catch { return undefined; }
@@ -78,11 +94,14 @@ export function submissionAttribution() {
 }
 export function track(event: BrowserEvent, properties: Partial<BrowserProperties> = {}) {
   if (!active) return;
-  const page = normalizedPage(location.pathname);
-  if (!page) return;
+  const currentPage = normalizedPage(location.pathname);
+  const page = properties.page ?? currentPage;
+  if (!currentPage || !page || !normalizedPage(page)) return;
   const context = analyticsContext();
-  void analyticsRequest({ action: "capture", event, uuid: crypto.randomUUID(), properties: {
+  const safe = {
     page, device: innerWidth < 640 ? "mobile" : innerWidth < 1024 ? "tablet" : "desktop",
     first: context?.first, latest: context?.latest, sessionId: context?.sessionId, ...properties,
-  } }).catch(() => { /* Analytics must never interrupt the UI. */ });
+  };
+  // Never initialize or queue an SDK event before consent. Old clients may still use the legacy collector.
+  if (sdk) sdk.capture(event === "page_viewed" ? "$pageview" : event, safe, event === "$pageleave" ? { transport: "sendBeacon", send_instantly: true } : undefined);
 }

@@ -1,4 +1,5 @@
 "use client";
+import { portfolioImageUrl } from "@/lib/security/portfolio-images";
 
 import * as React from "react";
 import Image from "next/image";
@@ -13,7 +14,8 @@ import { CursorCard } from "@/components/ui/cursor-card";
 import { DiagonalCarousel } from "@/components/ui/diagonal-carousel";
 
 /*
- * "Tailored services" as sample websites: a diagonal carousel of each sample's home screen. The active slide links to
+ * "Tailored services" as sample websites: a diagonal carousel of each sample's home screen, landscape and framed as a
+ * browser window. The active slide links to
  * the live preview and, on pointer devices, hovering any slide shows a cursor card with another page of the sample. The text
  * column repeats the active sample's details and links, so nothing depends on hover (touch, keyboard, screen readers).
  */
@@ -64,37 +66,55 @@ export function SampleSites({ samples, photo, initialIndex = 0, refToken }: { sa
         </a>
       </div>
 
-      <div className="relative isolate overflow-hidden rounded-3xl bg-inverse [--stage-y:157px] sm:[--stage-y:204px]">
+      <div className="relative isolate overflow-hidden rounded-3xl bg-inverse [--stage-y:132px] sm:[--stage-y:180px]">
         <StageBackdrop photo={photo} />
         <DiagonalCarousel
           aria-label="Sample websites"
-          items={samples.map((s) => ({ src: s.thumbnail, title: s.title, alt: `${s.title} home page`, href: s.href }))}
+          items={samples.map((s) => ({ src: portfolioImageUrl(s.thumbnail), title: s.title, alt: `${s.title} home page`, href: s.href }))}
           activeIndex={active}
           onActiveIndexChange={setActive}
           loop
-          slideSize={wide ? 240 : 170}
-          slideAspect="3/4"
-          verticalStep={wide ? 140 : 100}
-          className="h-[440px] rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink sm:h-[520px]"
+          slideSize={wide ? 360 : 230}
+          slideAspect="16/10"
+          rotationStep={24}
+          verticalStep={wide ? 110 : 80}
+          className="h-[360px] rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink sm:h-[460px]"
           trackClassName="top-4"
           viewportClassName="[--fade:linear-gradient(to_bottom,black_80%,transparent)] [mask-image:var(--fade)]"
-          imageClassName="object-top"
+          imageClassName="rounded-none object-top shadow-none"
           labelClassName="font-semibold text-white"
           wrapSlide={(slide, item, index, isActive) => {
             const s = samples[index]!;
             const inner = s.pages[1] ?? s.pages[0]!;
             return (
               <CursorCard
-                image={inner.thumbnail ?? s.thumbnail}
+                image={portfolioImageUrl(inner.thumbnail ?? s.thumbnail)}
                 title={s.pages.length > 1 ? `${item.title}: ${inner.title}` : item.title}
                 description={`${s.description} ${isActive ? copy.hint : copy.selectHint}`}
+                width={300}
+                imageAspect="aspect-[16/10]"
               >
-                {slide}
+                <BrowserFrame>{slide}</BrowserFrame>
               </CursorCard>
             );
           }}
         />
       </div>
+    </div>
+  );
+}
+
+/* A browser window around a slide: a title bar with the three window dots and an address pill, then the screen. */
+function BrowserFrame({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="overflow-hidden rounded-lg bg-neutral-900 shadow-2xl ring-1 ring-white/20 sm:rounded-xl">
+      <div aria-hidden className="flex h-4 items-center gap-1 border-b border-white/10 bg-neutral-800 px-2 sm:h-[22px] sm:gap-1.5 sm:px-2.5">
+        <span className="size-1.5 rounded-full bg-[#ff5f57] sm:size-2" />
+        <span className="size-1.5 rounded-full bg-[#febc2e] sm:size-2" />
+        <span className="size-1.5 rounded-full bg-[#28c840] sm:size-2" />
+        <span className="mx-auto h-2 w-2/5 rounded-full bg-white/10 sm:h-3" />
+      </div>
+      {children}
     </div>
   );
 }

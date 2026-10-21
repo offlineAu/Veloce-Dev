@@ -1,3 +1,4 @@
+import { isOwner } from "@/server/admin/session";
 import "server-only";
 import { timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
@@ -17,7 +18,7 @@ export function verifiedVisitor(token?: string) {
   return Buffer.byteLength(signature) === Buffer.byteLength(expected) && timingSafeEqual(Buffer.from(signature), Buffer.from(expected)) ? id : undefined;
 }
 export async function currentVisitor(includeInactive = false) {
-  if (!includeInactive && (!analyticsConfig().enabled || await readDevSession())) return null;
+  if (!includeInactive && (!analyticsConfig().enabled || await readDevSession() || await isOwner())) return null;
   const id = verifiedVisitor((await cookies()).get(ANALYTICS_COOKIE)?.value);
   if (!id) return null;
   const visitor = await db.analyticsVisitor.findUnique({ where: { id } });

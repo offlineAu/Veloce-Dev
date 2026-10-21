@@ -1,3 +1,4 @@
+import { portfolioImageUrl } from "@/lib/security/portfolio-images";
 import { CardRibbons } from "@/components/brand/card-ribbons";
 import { ArrowRight, ArrowUpRight, Check, Minus, MessageCircleMore } from "lucide-react";
 import { HeroHeadline } from "@/components/motion/hero-headline";
@@ -40,12 +41,13 @@ import { publicMeetingConfig } from "@/server/booking/config";
 import { servicePages, servicePageHref, withReferral } from "@/content/seo";
 import { pageMetadata } from "@/lib/seo";
 import { OrganizationData } from "@/components/site/structured-data";
+import { BootLoader } from "@/components/site/boot-loader";
 
 // Same page for every referral or tracking query; only the clean URL is canonical.
 export const metadata = pageMetadata("Business Website Design & Development", "Custom business websites, website redesign, and e-commerce development from Veloce. Practical websites built around your customers and business needs.", "/");
 
 /** Owner-supplied photography: drop files at these paths in public/ and the hero / featured card pick them up. */
-const photo = (file: string) => (existsSync(join(process.cwd(), "public", "images", file)) ? `/images/${file}` : undefined);
+const photo = (file: string) => (existsSync(join(process.cwd(), "public", "images", file)) ? portfolioImageUrl(`/images/${file}`) : undefined);
 
 type HomePageProps = { searchParams: Promise<{ ref?: string | string[]; sample?: string | string[] }> };
 
@@ -80,6 +82,15 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     photo("hero-code-review.webp"), photo("hero-dev-pair.webp"), photo("hero-dev-desk.webp"),
     photo("hero-team-floor.webp"), photo("card-office.webp"), photo("hero-code-closeup.webp"),
   ].filter((src): src is string => !!src);
+  // First-visit intro: the "Tailored services" sample sites play on its laptop (studio photos if there are too few), and
+  // it ends on the hero's first photo, the one waiting underneath, which the laptop screen zooms into.
+  const introFrames = [
+    ...(samples.length >= MIN_SHOWCASE
+      ? samples.slice(0, 10).map((s) => ({ src: portfolioImageUrl(s.thumbnail), title: s.title, screen: true }))
+      : [photo("hero-overhead.webp"), photo("hero-dashboard.webp"), photo("contact-code.webp"), ...heroPhotos.slice(1)]
+        .filter((src): src is string => !!src).map((src) => ({ src, title: "", screen: false }))),
+    ...(heroPhotos[0] ? [{ src: heroPhotos[0], title: "Your website, next", screen: false }] : []),
+  ];
   const teamPhoto = photo("card-builders.webp");
   const reviewPhoto = photo("card-office.webp");
   const contactPhoto = photo("contact-code.webp");
@@ -94,6 +105,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   return (
     <InquiryProvider companyName={company.name} contactEmail={company.contactEmail} refToken={campaign?.token} introducedBy={introducedBy}>
     <MeetingProvider config={publicMeetingConfig()} refToken={campaign?.token} contactEmail={company.contactEmail}>
+      <BootLoader name={company.name} frames={introFrames} />
       <OrganizationData company={company} />
       <SiteHeader companyName={company.name} homeHref={withReferral("/", campaign?.token)} links={links}
         menuCta={<OpenInquiryButton className="w-full">Start a conversation</OpenInquiryButton>} />

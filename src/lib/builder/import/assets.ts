@@ -157,7 +157,7 @@ export async function collectImages(opts: { urls: Iterable<string>; base: string
           src = await download(opts.fetcher, url);
         }
       }
-      const webp = stored ?? await sharp(src).rotate().resize({ width: 1600, withoutEnlargement: true }).webp({ quality: 80 }).toBuffer();
+      const webp = stored ?? await sharp(src, { limitInputPixels: 40_000_000 }).timeout({ seconds: 10 }).rotate().resize({ width: 1600, withoutEnlargement: true }).webp({ quality: 80 }).toBuffer();
       files.set(file, webp);
       map.set(url, `${opts.base}/${file}`);
     } catch (e) {
@@ -178,7 +178,7 @@ export async function collectImages(opts: { urls: Iterable<string>; base: string
 
 /** The top of a full-page screenshot for the template picker, sized for sharp cards on high-density screens. */
 export async function thumbnail(png: Buffer): Promise<Buffer> {
-  const resized = await sharp(png).resize({ width: 960, withoutEnlargement: true }).toBuffer({ resolveWithObject: true });
+  const resized = await sharp(png, { limitInputPixels: 40_000_000 }).timeout({ seconds: 10 }).resize({ width: 960, withoutEnlargement: true }).toBuffer({ resolveWithObject: true });
   return sharp(resized.data)
     .extract({ left: 0, top: 0, width: resized.info.width, height: Math.min(resized.info.height, Math.round(resized.info.width * 4 / 3)) })
     .webp({ quality: 78 })

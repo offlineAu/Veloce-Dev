@@ -8,8 +8,8 @@ import { sanitizeHtml } from "@/lib/builder/sanitize";
  * slipped past the sanitiser it could not reach the editor, this site or its cookies. The only script inside is
  * ours: it reports the content height so the frame can grow to fit.
  */
-const sizer = (id: string) =>
-  `<script>(function(){var s=function(){parent.postMessage({veloceFrame:${JSON.stringify(id)},h:document.documentElement.scrollHeight},"*")};new ResizeObserver(s).observe(document.documentElement);addEventListener("load",s);s()})()</script>`;
+const sizer = (id: string, nonce: string) =>
+  `<script nonce="${nonce}">(function(){var s=function(){parent.postMessage({veloceFrame:${JSON.stringify(id)},h:document.documentElement.scrollHeight},"*")};new ResizeObserver(s).observe(document.documentElement);addEventListener("load",s);s()})()</script>`;
 
 const base = `<style>html,body{margin:0}body{font-family:system-ui,sans-serif;line-height:1.5}img,video,iframe{max-width:100%}</style>`;
 
@@ -33,7 +33,8 @@ export function HtmlFrame({ html, title, editing }: { html: string; title: strin
 
   // Filled in the browser only: the sanitiser needs a real DOM, and the preview page also renders on the server.
   useEffect(() => {
-    if (ref.current) ref.current.srcdoc = `<!doctype html><html><head><meta charset="utf-8">${base}</head><body>${sanitizeHtml(html)}${sizer(id)}</body></html>`;
+    const nonce = ref.current?.ownerDocument.querySelector<HTMLScriptElement>("script[nonce]")?.nonce ?? "";
+    if (ref.current) ref.current.srcdoc = `<!doctype html><html><head><meta charset="utf-8">${base}</head><body>${sanitizeHtml(html)}${sizer(id, /^[A-Za-z0-9+/=]*$/.test(nonce) ? nonce : "")}</body></html>`;
   }, [html, id]);
 
   return (

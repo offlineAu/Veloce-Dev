@@ -1,7 +1,7 @@
 import { conversion, submissionTracking } from "@/server/analytics/capture";
 import { CONSENT_PURPOSES } from "@/lib/legal";
 import "server-only";
-import { z } from "zod";
+import { z } from "@/lib/security/schema";
 import { env } from "@/config/env";
 import { db } from "@/server/db";
 import { dispatch } from "@/server/notifications/dispatch";
@@ -46,6 +46,7 @@ export async function submitInquiry(raw: unknown, ctx: { clientKey: string }): P
     if (existing) return { ok: true };
 
     const withinLimits =
+      (await allow("inq:global:day", 500, 86_400_000)) &&
       (await allow(`inq:ip:${ctx.clientKey}`, 8, 3600_000)) &&
       (await allow(`inq:email:${hmac(input.email)}`, 3, 3600_000));
     if (!withinLimits) return RATE_LIMITED;
@@ -101,7 +102,7 @@ export async function submitInquiry(raw: unknown, ctx: { clientKey: string }): P
     }
     conversion({ event: "inquiry_submitted", key: leadId, visitorId: tracking?.visitorId, linkedAt: tracking?.linkedAt, context: tracking?.context, campaignId: campaign?.id, form: input.intent === "MEETING" ? "meeting_request" : "inquiry", service: input.serviceSlug });
     // Images the visitor uploaded for the design stay as long as the design does (not just the builder's 30 days).
-    if (draft?.success) await keepMedia(JSON.stringify(draft.data.data)).catch((e) => console.error("[builder-media] keep", e));
+    if (draft?.success) await keepMedia(JSON.stringify(draft.data.data)).catch(() => console.error("[builder-media] retention failed"));
 
     const company = await getCompanyProfile();
     const e = env();
@@ -137,8 +138,8 @@ export async function submitInquiry(raw: unknown, ctx: { clientKey: string }): P
     ]);
 
     return { ok: true };
-  } catch (err) {
-    console.error("[inquiry] submission failed", err);
+  } catch {
+    console.error("[inquiry] submission failed");
     return UNAVAILABLE;
   }
 }

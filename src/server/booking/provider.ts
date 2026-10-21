@@ -1,6 +1,6 @@
 import 'server-only';
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { z } from 'zod';
+import { z } from '@/lib/security/schema';
 import { bookingSettings } from './config';
 
 export const calBookingSchema = z.object({

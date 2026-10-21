@@ -1,3 +1,6 @@
+import { BodyLimitError, readForm } from "@/server/security/body";
+import { ProcessingBusyError } from "@/server/security/budget";
+import { securityEvent } from "@/server/security/events";
 import { NextResponse } from "next/server";
 import { MAX_UPLOAD_BYTES } from "@/lib/builder/media";
 import { mediaEnabled, storeImage } from "@/server/builder/media";
@@ -22,10 +25,12 @@ export async function POST(req: Request) {
   if (Number(req.headers.get("content-length") ?? 0) > MAX_UPLOAD_BYTES + 64_000) return json({ error: "That image is over 5 MB. Try a smaller one." }, 413);
 
   const key = await clientKey();
-  if (!(await allow(`media:h:${key}`, 30, 3600_000)) || !(await allow(`media:d:${key}`, 100, 86_400_000)))
+  if (!(await allow("media:global:day", 1000, 86_400_000)) || !(await allow(`media:h:${key}`, 30, 3600_000)) || !(await allow(`media:d:${key}`, 100, 86_400_000)))
     return json({ error: "That's a lot of uploads in a short time. Try again later." }, 429);
 
-  const form = await req.formData().catch(() => null);
+  let form: FormData;
+  try { form = await readForm(req, MAX_UPLOAD_BYTES + 64_000); }
+  catch (error) { return json({ error: "The image upload could not be read within its limits." }, error instanceof BodyLimitError ? error.status : 400); }
   const file = form?.get("file");
   if (!(file instanceof File)) return json({ error: "Choose an image to upload." }, 400);
   if (file.size > MAX_UPLOAD_BYTES) return json({ error: "That image is over 5 MB. Try a smaller one." }, 413);
@@ -34,7 +39,8 @@ export async function POST(req: Request) {
     const r = await storeImage(Buffer.from(await file.arrayBuffer()));
     return r.ok ? json({ src: r.src, width: r.width, height: r.height }, 201) : json({ error: r.error }, r.status);
   } catch (e) {
-    console.error("[builder-media]", e);
+    if (e instanceof ProcessingBusyError) return json({ error: e.message }, 503);
+    securityEvent("import_rejected");
     return json({ error: "The upload didn't go through. Please try again." }, 502);
   }
 }

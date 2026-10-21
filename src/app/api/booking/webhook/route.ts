@@ -1,3 +1,4 @@
+import { BodyLimitError, readBody } from "@/server/security/body";
 import { bookingSettings } from '@/server/booking/config';
 import { after } from 'next/server';
 import { verifyCalSignature } from '@/server/booking/provider';
@@ -7,7 +8,9 @@ export async function POST(request: Request) {
   const secret = bookingSettings().webhookSecret;
   if (!secret) return new Response(null, { status: 503 });
   if (Number(request.headers.get('content-length') ?? 0) > 65536) return new Response(null, { status: 413 });
-  const body = await request.text();
+  let body: string;
+  try { body = new TextDecoder("utf-8", { fatal: true }).decode(await readBody(request, 65536)); }
+  catch (error) { return new Response(null, { status: error instanceof BodyLimitError ? error.status : 400 }); }
   if (Buffer.byteLength(body) > 65536) return new Response(null, { status: 413 });
   if (!verifyCalSignature(body, request.headers.get('x-cal-signature-256'), secret)) return new Response(null, { status: 401 });
   try {

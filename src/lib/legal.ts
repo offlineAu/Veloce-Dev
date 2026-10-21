@@ -1,6 +1,6 @@
 /** Bump when the notice or consent purposes change; preserve the previous release as described in docs/LEGAL_REVIEW.md. */
-export const PRIVACY_NOTICE_VERSION = "2026-10-16.1";
-export const LEGAL_UPDATED_LABEL = "16 October 2026";
+export const PRIVACY_NOTICE_VERSION = "2026-10-19.1";
+export const LEGAL_UPDATED_LABEL = "19 October 2026";
 export const CONSENT_PURPOSES = {
   inquiry: "Respond to an inquiry and send a confirmation",
   design: "Respond to an inquiry, store the submitted design and create a preview accessible to anyone with its link",

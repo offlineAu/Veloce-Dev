@@ -1,3 +1,4 @@
+import { readBody } from "@/server/security/body";
 import { findWebFont } from "@/lib/builder/site-styles";
 
 /*
@@ -18,10 +19,12 @@ export async function GET(req: Request) {
   if (!font) return new Response("/* unknown font */", { status: 404, headers: { "Content-Type": "text/css" } });
 
   const url = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(font.family).replace(/%20/g, "+")}:wght@${font.weights.join(";")}&display=swap`;
-  const res = await fetch(url, { headers: { "User-Agent": UA }, cache: "force-cache", next: { revalidate: 86_400 } }).catch(() => null);
+  const res = await fetch(url, { headers: { "User-Agent": UA }, cache: "force-cache", signal: AbortSignal.timeout(10_000), next: { revalidate: 86_400 } }).catch(() => null);
   if (!res?.ok) return new Response("/* font unavailable */", { status: 502, headers: { "Content-Type": "text/css" } });
 
-  const css = (await res.text())
+  const bytes = await readBody(res, 200_000).catch(() => null);
+  if (!bytes) return new Response("/* font response exceeds limits */", { status: 502 });
+  const css = new TextDecoder().decode(bytes)
     // Only @font-face rules come back; keep nothing that could load from elsewhere.
     .replace(GSTATIC, (_, path: string) => `url(/api/builder/fonts/file?path=${encodeURIComponent(path)})`)
     .replace(/@import[^;]*;/g, "");

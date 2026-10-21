@@ -1,11 +1,11 @@
-import { z } from "zod";
+import { z } from "@/lib/security/schema";
 
 export const ANALYTICS_COOKIE = "veloce_analytics";
 export const ANALYTICS_CHOICE_KEY = "veloce.analytics.choice.v1";
 export const ANALYTICS_ATTRIBUTION_KEY = "veloce.analytics.attribution.v1";
 export const ANALYTICS_SESSION_KEY = "veloce.analytics.session.v1";
 export const ANALYTICS_MAX_AGE = 365 * 24 * 60 * 60;
-export const browserEvents = ["page_viewed", "cta_clicked", "form_opened", "form_started"] as const;
+export const browserEvents = ["page_viewed", "cta_clicked", "form_opened", "form_started", "$pageview", "$pageleave"] as const;
 export type BrowserEvent = typeof browserEvents[number];
 export type ConversionEvent = "inquiry_submitted" | "introduction_submitted" | "booking_started" | "booking_confirmed";
 
@@ -39,6 +39,8 @@ export const browserPropertiesSchema = z.object({
   service: z.string().regex(/^[a-z0-9-]{1,60}$/).optional(),
   device: z.enum(["mobile", "tablet", "desktop"]).optional(),
   sessionId: z.uuid().optional(),
+  duration: z.number().min(0).max(86400).optional(),
+  pageviewId: z.uuid().optional(),
   first: attributionSchema.optional(), latest: attributionSchema.optional(),
 });
 export type BrowserProperties = z.infer<typeof browserPropertiesSchema>;

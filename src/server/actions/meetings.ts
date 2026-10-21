@@ -1,5 +1,5 @@
 'use server';
-import { z } from 'zod';
+import { z } from '@/lib/security/schema';
 import { clientKey } from '@/server/security/request';
 import { allow } from '@/server/security/rate-limit';
 import { startMeetingSession } from '@/server/booking/sessions';

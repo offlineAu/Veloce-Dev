@@ -1,6 +1,6 @@
 import { analyticsContextSchema } from "@/lib/analytics/shared";
 import { privacyReceiptFields } from "./privacy";
-import { z } from 'zod';
+import { z } from '@/lib/security/schema';
 import { emailField, guardFields, optionalText, refToken, text } from './common';
 
 const attribution = {

@@ -1,5 +1,5 @@
 import "server-only";
-import { z } from "zod";
+import { z } from "@/lib/security/schema";
 
 const optionalString = z
   .string()
@@ -7,8 +7,17 @@ const optionalString = z
   .transform((v) => (v && v.trim() !== "" ? v.trim() : undefined));
 
 const schema = z.object({
+  SECURITY_CSP_MODE: z.enum(["report-only", "enforce"]).default("report-only"),
+  SECURITY_TRUSTED_IP_HEADER: z.preprocess(v => v === "" ? undefined : v, z.enum(["x-real-ip", "x-forwarded-for"]).optional()),
+  ANALYTICS_OWNER_TOTP_SECRET: z.preprocess(v => v === "" ? undefined : v, z.string().regex(/^[A-Z2-7]{32,128}$/).optional()),
+  OWNER_SESSION_VERSION: z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/).default("1"),
+  DEV_SESSION_VERSION: z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/).default("1"),
   ANALYTICS_ENABLED: z.enum(["true", "false"]).default("false"),
   POSTHOG_PROJECT_KEY: optionalString,
+  POSTHOG_PROJECT_ID: optionalString,
+  POSTHOG_PERSONAL_API_KEY: optionalString,
+  ANALYTICS_OWNER_PASSWORD_HASH: optionalString,
+  ANALYTICS_OWNER_SESSION_SECRET: z.preprocess(v => v === "" ? undefined : v, z.string().min(32).optional()),
   POSTHOG_REGION: z.enum(["eu", "us"]).default("eu"),
   DATABASE_URL: z.string().min(1),
   NEXT_PUBLIC_SITE_URL: z.url().default("http://localhost:3000"),

@@ -1,12 +1,14 @@
+import { headers } from "next/headers";
 import { env } from "@/config/env";
 import { serializeJsonLd } from "@/lib/seo";
 import type { CompanyProfile } from "@/server/services/company";
 
-export function OrganizationData({ company }: { company: CompanyProfile }) {
+export async function OrganizationData({ company }: { company: CompanyProfile }) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   const base = env().NEXT_PUBLIC_SITE_URL;
   const url = new URL("/", base).toString();
   const social = company.channels.filter((channel) => channel.href && !["email", "whatsapp"].includes(channel.kind)).map((channel) => channel.href!);
-  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd({
+  return <script nonce={nonce} type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd({
     "@context": "https://schema.org",
     "@graph": [
       { "@type": "Organization", "@id": `${url}#organization`, name: company.name, url, logo: new URL("/brand/veloce-logo-original.png", base).toString(), email: company.contactEmail, ...(social.length ? { sameAs: social } : {}) },
@@ -15,9 +17,10 @@ export function OrganizationData({ company }: { company: CompanyProfile }) {
   }) }} />;
 }
 
-export function BreadcrumbData({ label, path }: { label: string; path: string }) {
+export async function BreadcrumbData({ label, path }: { label: string; path: string }) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   const base = env().NEXT_PUBLIC_SITE_URL;
-  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd({
+  return <script nonce={nonce} type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd({
     "@context": "https://schema.org", "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: new URL("/", base).toString() },

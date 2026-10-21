@@ -1,4 +1,5 @@
 import "server-only";
+import { securityEvent } from "./events";
 import { db } from "@/server/db";
 
 /**
@@ -17,5 +18,6 @@ export async function allow(key: string, limit: number, windowMs: number, now = 
     // Opportunistic cleanup of old windows.
     await db.rateLimit.deleteMany({ where: { windowStart: { lt: new Date(now - 24 * 3600_000) } } }).catch(() => undefined);
   }
+  if (row.count === limit + 1) securityEvent("quota_exceeded");
   return row.count <= limit;
 }

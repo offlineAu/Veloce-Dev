@@ -1,6 +1,6 @@
 /**
  * Capture the landing screen of every page of every sample website (src/content/samples.ts) for the home page's
- * carousel: the first screen of the live preview at tablet size (768×1024, the slides' 3:4 shape), so a slide shows
+ * carousel: the first screen of the live preview at laptop size (1440×900, the slides' 16:10 shape), so a slide shows
  * the page's landing area rather than the whole page shrunk down.
  *
  *   npm run samples:screens                       # against http://localhost:3000 (start `npm run dev` first)
@@ -9,11 +9,12 @@
  *
  * Writes public/images/samples/<slug>-v<N>-<page>.webp. Run it again after importing a new version of a sample.
  */
-import { mkdirSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { chromium } from "@playwright/test";
 import sharp from "sharp";
+import { watermarkedPreview } from "../src/lib/security/watermark";
 import { findImported } from "../src/content/builder-templates";
 import { SAMPLE_SITES, screenPath } from "../src/content/samples";
 
@@ -25,14 +26,14 @@ if (!samples.length) {
   process.exit(1);
 }
 
-const VIEWPORT = { width: 768, height: 1024 };
-const OUT = { width: 600, height: 800 };
+const VIEWPORT = { width: 1440, height: 900 };
+const OUT = { width: 960, height: 600 };
 // The preview's own bar (pinned to the bottom) and the Next.js dev badge aren't part of the design.
 const HIDE = "body > div.fixed.bottom-0, nextjs-portal { display: none !important; }";
 
 async function main() {
   const browser = await chromium.launch();
-  const page = await browser.newPage({ viewport: VIEWPORT, deviceScaleFactor: 2 });
+  const page = await browser.newPage({ viewport: VIEWPORT, deviceScaleFactor: 1 });
   mkdirSync(path.join("public", "images", "samples"), { recursive: true });
   try {
     for (const s of samples) {
@@ -49,7 +50,9 @@ async function main() {
         await page.evaluate(() => document.fonts.ready);
         await page.waitForTimeout(500);
         const file = path.join("public", screenPath(s, p.key));
-        await sharp(await page.screenshot()).resize(OUT.width, OUT.height).webp({ quality: 80 }).toFile(file);
+        const original = await sharp(await page.screenshot()).resize(OUT.width, OUT.height).png().toBuffer();
+        const preview = await watermarkedPreview(original, "veloceapp.dev", OUT.width);
+        writeFileSync(file, preview);
         console.log(`✓ ${file}`);
       }
     }
