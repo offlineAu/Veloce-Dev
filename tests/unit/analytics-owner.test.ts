@@ -9,7 +9,7 @@ vi.mock("@/server/security/rate-limit", () => ({ allow: mocks.allow }));
 vi.mock("@/server/db", () => ({ db: { securitySession: { findUnique: mocks.session, create: mocks.register, updateMany: mocks.revoke }, rateLimit: { create: mocks.consume }, lead: { count: mocks.lead }, referralIntroduction: { count: mocks.intro }, appointment: { findMany: mocks.appointments } } }));
 import { encodeOwnerSession, isOwner, validOwnerSession, OWNER_SESSION_SECONDS } from "@/server/admin/session";
 import { ownerLogin, ownerLogout } from "@/app/admin/analytics/actions";
-import { getBusinessReport, getTrafficReport, reportDays, reportWindow, trafficQueries } from "@/server/analytics/report";
+import { getBusinessReport, getTrafficReport, previousWindow, reportDays, reportWindow, trafficQueries } from "@/server/analytics/report";
 const password = "fixture-owner-password";
 const hash = hashPassword(password);
 beforeEach(() => {
@@ -83,15 +83,20 @@ describe("private report queries", () => {
     expect(reportWindow(7, new Date("2026-10-19T01:00:00Z")).start.toISOString()).toBe("2026-10-12T16:00:00.000Z");
     const queries = trafficQueries(new Date("2026-10-01"), new Date("2026-10-19"));
     expect(queries.totals).toContain("'$pageview', 'page_viewed'"); expect(queries.trend).toContain("Asia/Manila");
+    // The comparison window is as long as the report window and ends where it starts.
+    expect(queries.totals).toContain("2026-09-13T00:00:00.000Z");
+    const window = reportWindow(7, new Date("2026-10-19T01:00:00Z"));
+    expect(previousWindow(window)).toEqual({ start: new Date("2026-10-06T07:00:00.000Z"), end: window.start });
   });
   it("keeps the read key on the server and checks auth again before cached results", async () => {
     authenticate();
     vi.mocked(fetch).mockImplementation(async (_url, options) => {
       const body = JSON.parse(options!.body as string);
-      return Response.json({ results: body.query.query.startsWith("SELECT uniq(") ? [[12, 34, 17]] : [] });
+      return Response.json({ results: body.query.query.startsWith("SELECT uniqIf(") ? [[12, 34, 17, 10, 30, 15]] : [] });
     });
     const report = await getTrafficReport(7);
     expect(report.totals).toEqual({ visitors: 12, views: 34, sessions: 17 });
+    expect(report.previous).toEqual({ visitors: 10, views: 30, sessions: 15 });
     expect(JSON.stringify(report)).not.toContain("private-query-key");
     expect(vi.mocked(fetch).mock.calls[0]![0]).toBe("https://eu.posthog.com/api/projects/42/query/");
     expect(vi.mocked(fetch).mock.calls[0]![1]!.headers).toMatchObject({ Authorization: "Bearer private-query-key" });
@@ -106,7 +111,8 @@ describe("private report queries", () => {
   });
   it("counts business records independently of analytics consent", async () => {
     authenticate(); mocks.lead.mockResolvedValue(6); mocks.intro.mockResolvedValue(2); mocks.appointments.mockResolvedValue([{ leadId: "one" }]);
-    expect(await getBusinessReport(30)).toEqual({ inquiries: 6, introductions: 2, confirmedBookings: 1 });
+    const totals = { inquiries: 6, introductions: 2, confirmedBookings: 1 };
+    expect(await getBusinessReport(30)).toEqual({ ...totals, previous: totals });
     expect(mocks.appointments).toHaveBeenCalledWith(expect.objectContaining({ distinct: ["leadId"] }));
     expect(JSON.stringify(mocks.lead.mock.calls)).not.toContain("analyticsVisitorId");
   });
