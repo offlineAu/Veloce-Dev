@@ -7,7 +7,7 @@ vi.mock("next/navigation", () => ({ redirect: (url: string) => { throw new Error
 vi.mock("@/server/security/request", () => ({ clientKey: async () => "fixture-key" }));
 vi.mock("@/server/security/rate-limit", () => ({ allow: mocks.allow }));
 vi.mock("@/server/db", () => ({ db: { securitySession: { findUnique: mocks.session, create: mocks.register, updateMany: mocks.revoke }, rateLimit: { create: mocks.consume }, lead: { count: mocks.lead, groupBy: mocks.groupBy, findFirst: mocks.firstLead }, referralIntroduction: { count: mocks.intro }, appointment: { findMany: mocks.appointments } } }));
-import { encodeOwnerSession, isOwner, validOwnerSession, OWNER_SESSION_SECONDS } from "@/server/admin/session";
+import { encodeOwnerSession, isOwner, ownerReturnPath, validOwnerSession, OWNER_SESSION_SECONDS } from "@/server/admin/session";
 import { ownerLogin, ownerLogout } from "@/app/admin/analytics/actions";
 import { getBusinessReport, getInsightsReport, getPipelineReport, getTrafficReport, insightsQuery, previousWindow, reportDays, reportWindow, trafficQueries } from "@/server/analytics/report";
 const password = "fixture-owner-password";
@@ -138,5 +138,12 @@ describe("private report queries", () => {
     expect(report.stages.map(s => s.count)).toEqual([2, 0, 0, 0, 1, 0]);
     expect(report).toMatchObject({ waiting: 2, oldestWaitingDays: 3, projectTypes: [{ name: "NEW_PROJECT", count: 3 }, { name: "REDESIGN", count: 1 }], sources: [{ name: "DIRECT", count: 4 }] });
     expect(JSON.stringify(mocks.groupBy.mock.calls[0])).toContain("cal:");
+  });
+});
+describe("sign-in return path", () => {
+  it("allows only owner pages", () => {
+    expect(ownerReturnPath("/admin/clients")).toBe("/admin/clients");
+    expect(ownerReturnPath("/admin/clients/cmabc123def456")).toBe("/admin/clients/cmabc123def456");
+    for (const bad of ["https://evil.example", "//evil.example", "/admin/clients/../x", "/build", undefined, 5]) expect(ownerReturnPath(bad)).toBeUndefined();
   });
 });

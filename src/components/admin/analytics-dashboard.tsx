@@ -1,5 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { ArrowUpRight, BellRing, CalendarCheck2, CheckCircle2, Eye, Globe2, Layers, MousePointer2, Users } from "lucide-react";
+import Link from "next/link";
+import { PROJECT_LABEL, SOURCE_LABEL } from "@/lib/admin-labels";
 import type { BusinessReport, InsightsReport, PipelineReport, TrafficReport } from "@/server/analytics/report";
 import { Delta, DeviceArc, Funnel, HourHeatmap, PipelineStages, RankedList, SERIES, Sparkline, TrafficChart } from "@/components/admin/analytics-charts";
 
@@ -33,8 +35,6 @@ function Stat({ label, value, display, previous, days, note, icon: Icon, childre
 const Unavailable = ({ connected }: { connected: boolean }) => <p className="py-6 text-sm text-[var(--dash-muted)]">{connected ? "Temporarily unavailable. Try refreshing shortly." : "Needs PostHog reporting to be connected."}</p>;
 const CHANNEL: Record<string, string> = { direct: "Direct", search: "Search engines", social: "Social media", external: "Other websites" };
 const PLACEMENT: Record<string, string> = { inquiry: "Inquiry", consultation: "Consultation", meeting: "Meeting", service: "Service pages", builder: "Site builder", footer: "Footer", other: "Other" };
-const PROJECT: Record<string, string> = { NEW_PROJECT: "New website", REDESIGN: "Redesign", ECOMMERCE: "Online store", CUSTOM_WEB_APP: "Custom web app", INTEGRATION: "Integration", MAINTENANCE: "Maintenance", OTHER: "Other" };
-const LEAD_SOURCE: Record<string, string> = { DIRECT: "Direct", REFERRAL_VERIFIED: "Referral (verified)", REFERRAL_UNVERIFIED: "Referral (unverified)" };
 const Footnote = ({ children }: { children: ReactNode }) => <p className="mt-6 border-t border-[var(--dash-line)] pt-4 font-mono text-xs text-[var(--dash-muted)]">{children}</p>;
 /** Signed-in report view. Either report may be missing when its source is unavailable; each section degrades on its own. */
 export function OwnerReports({ days, web, sales, insights, pipeline, connected }: { days: 7 | 30 | 90; web?: TrafficReport; sales?: BusinessReport; insights?: InsightsReport; pipeline?: PipelineReport; connected: boolean }) {
@@ -68,6 +68,7 @@ export function OwnerReports({ days, web, sales, insights, pipeline, connected }
         {pipeline ? <>
           {pipeline.waiting ? <p className="mb-6 flex items-start gap-3 rounded-2xl border border-[var(--dash-hi)]/30 bg-[var(--dash-hi)]/10 p-4 text-sm text-[var(--dash-ink)]"><BellRing className="mt-0.5 size-4 shrink-0 text-[var(--dash-accent)]" aria-hidden /><span><strong className="font-semibold">{number(pipeline.waiting)} {pipeline.waiting === 1 ? "inquiry is" : "inquiries are"} waiting for a first reply.</strong>{pipeline.oldestWaitingDays !== null ? ` The oldest arrived ${pipeline.oldestWaitingDays === 0 ? "today" : `${pipeline.oldestWaitingDays} ${pipeline.oldestWaitingDays === 1 ? "day" : "days"} ago`}.` : ""}</span></p> : <p className="mb-6 flex items-center gap-3 rounded-2xl border border-[var(--dash-line)] p-4 text-sm text-[var(--dash-muted)]"><CheckCircle2 className="size-4 shrink-0 text-[var(--dash-accent)]" aria-hidden />No inquiries waiting for a first reply.</p>}
           <PipelineStages stages={pipeline.stages} />
+          <Link href="/admin/clients" className="mt-6 inline-flex min-h-10 items-center gap-1.5 text-sm font-medium text-[var(--dash-accent)] hover:underline">Open the client tracker<ArrowUpRight className="size-4" aria-hidden /></Link>
         </> : <p className="text-sm text-[var(--dash-muted)]">The pipeline is temporarily unavailable.</p>}
       </section>
     </div>
@@ -87,8 +88,8 @@ export function OwnerReports({ days, web, sales, insights, pipeline, connected }
           </div>)}
         </dl>
         {pipeline && (pipeline.projectTypes.length || pipeline.sources.length) ? <div className="mt-8 grid gap-6 border-t border-[var(--dash-line)] pt-6 sm:grid-cols-2">
-          <div><h3 className="mb-4 text-sm text-[var(--dash-ink)]">What they asked for</h3><RankedList rows={pipeline.projectTypes.map(r => ({ name: PROJECT[r.name] ?? r.name, views: r.count }))} label="Project" valueLabel="Inquiries" empty="No inquiries in this period." /></div>
-          <div><h3 className="mb-4 text-sm text-[var(--dash-ink)]">Where inquiries came from</h3><RankedList rows={pipeline.sources.map(r => ({ name: LEAD_SOURCE[r.name] ?? r.name, views: r.count }))} label="Source" valueLabel="Inquiries" empty="No inquiries in this period." /></div>
+          <div><h3 className="mb-4 text-sm text-[var(--dash-ink)]">What they asked for</h3><RankedList rows={pipeline.projectTypes.map(r => ({ name: PROJECT_LABEL[r.name] ?? r.name, views: r.count }))} label="Project" valueLabel="Inquiries" empty="No inquiries in this period." /></div>
+          <div><h3 className="mb-4 text-sm text-[var(--dash-ink)]">Where inquiries came from</h3><RankedList rows={pipeline.sources.map(r => ({ name: SOURCE_LABEL[r.name] ?? r.name, views: r.count }))} label="Source" valueLabel="Inquiries" empty="No inquiries in this period." /></div>
         </div> : null}
       </section>
       {connected ? <section className={`${card} lg:col-span-5`} aria-labelledby="cta-title"><h2 id="cta-title" className={cardTitle}>Calls to action</h2><p className={`${cardNote} mb-5`}>Clicks by button placement</p>{insights ? <RankedList rows={insights.ctas.map(c => ({ name: PLACEMENT[c.name] ?? c.name, views: c.clicks }))} label="Placement" valueLabel="Clicks" empty="No call-to-action clicks in this period." /> : <Unavailable connected />}</section> : null}

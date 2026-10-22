@@ -8,7 +8,7 @@ import { verifyTotp } from "@/server/security/totp";
 import { securityEvent } from "@/server/security/events";
 import { db } from "@/server/db";
 import { createHash } from "node:crypto";
-import { newOwnerSession, endOwnerSession, requireOwner, OWNER_COOKIE, OWNER_SESSION_SECONDS, ownerConfigured } from "@/server/admin/session";
+import { newOwnerSession, endOwnerSession, requireOwner, OWNER_COOKIE, OWNER_SESSION_SECONDS, ownerConfigured, ownerReturnPath } from "@/server/admin/session";
 
 export async function ownerLogin(_previous: { error: string }, form: FormData) {
   const password = form.get("password");
@@ -29,7 +29,7 @@ export async function ownerLogin(_previous: { error: string }, form: FormData) {
       httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "strict", path: "/", maxAge: OWNER_SESSION_SECONDS,
     });
   } catch { return { error: "Sign-in is temporarily unavailable. Please try again." }; }
-  redirect("/admin/analytics");
+  redirect(ownerReturnPath(form.get("next")) ?? "/admin/analytics");
 }
 export async function ownerLogout() {
   await endOwnerSession();

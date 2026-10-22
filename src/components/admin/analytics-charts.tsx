@@ -1,6 +1,7 @@
 "use client";
 import { useId, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
+import { STAGE_LABEL } from "@/lib/admin-labels";
 
 /*
  * Owner dashboard charts, in the Ember palette. Always rendered on the dark dashboard surface (--dash-surface), so the
@@ -242,7 +243,6 @@ export function HourHeatmap({ cells }: { cells: { weekday: number; hour: number;
   </div>;
 }
 
-const STAGE_LABEL: Record<string, string> = { NEW: "New", CONTACTED: "Contacted", CONSULTATION_SCHEDULED: "Consultation", PROPOSAL_IN_PROGRESS: "Proposal", CONVERTED: "Won", NOT_PROCEEDING: "Not proceeding" };
 /** Open inquiries by stage as a segmented strip plus a labelled count per stage. */
 export function PipelineStages({ stages }: { stages: { status: string; count: number }[] }) {
   const total = stages.reduce((sum, s) => sum + s.count, 0);

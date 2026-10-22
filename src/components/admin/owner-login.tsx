@@ -76,7 +76,7 @@ const INSIDE = [
   [Clock3, "When people visit", "The hours and channels that bring people to your site."],
 ] as const;
 
-export function OwnerLogin({ mfa = false }: { mfa?: boolean }) {
+export function OwnerLogin({ mfa = false, next }: { mfa?: boolean; next?: string }) {
   const [state, action, pending] = useActionState(ownerLogin, { error: "" });
   const error = useRef<HTMLParagraphElement>(null);
   useEffect(() => { if (state.error) error.current?.focus(); }, [state]);
@@ -99,6 +99,7 @@ export function OwnerLogin({ mfa = false }: { mfa?: boolean }) {
       <h1 className="mt-6 font-heading text-3xl font-medium tracking-tight text-[var(--dash-ink)] sm:text-4xl">Your site, in numbers.</h1>
       <p className="mt-2 text-sm text-[var(--dash-muted)]">{mfa ? "Sign in with your owner password and authenticator code." : "Sign in with your owner password to view private analytics."}</p>
       <form action={action} className="mt-8 space-y-6" aria-busy={pending}>
+        {next ? <input type="hidden" name="next" value={next} /> : null}
         <PasswordInput />
         {mfa ? <CodeInput /> : null}
         {state.error ? <p ref={error} tabIndex={-1} role="alert" className="flex items-start gap-2.5 rounded-2xl border border-[#ff9f90]/30 bg-[#ff9f90]/10 p-3.5 text-sm text-[#ffc7be] outline-none"><AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />{state.error}</p> : null}

@@ -71,6 +71,8 @@ enum IntroductionStatus {
 enum NotificationKind {
   LEAD_TEAM
   LEAD_ACK
+  /// Owner-approved follow-up about the inquiry, sent from the client tracker.
+  LEAD_FOLLOW_UP
   INTRO_TEAM
   INTRO_REFERRER
 }
@@ -167,6 +169,10 @@ model Lead {
   consentPurpose       String?
   /// Set by the owner's close workflow, not by background updates.
   closedAt             DateTime?
+  /// When the owner last moved the inquiry to a new stage (null: still in its first stage since createdAt).
+  stageChangedAt       DateTime?
+  /// Last owner contact: a follow-up sent from the tracker or a contact the owner logged by hand.
+  lastContactedAt      DateTime?
   retentionHold        Boolean @default(false)
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
@@ -177,12 +183,40 @@ model Lead {
   notifications NotificationLog[]
   appointments  Appointment[]
   siteDraft     SiteDraft?
+  activities    LeadActivity[]
 
   @@index([status, createdAt])
   @@index([referralCampaignId])
   @@index([email])
   @@index([status, closedAt])
 
+}
+
+enum LeadActivityKind {
+  STAGE_CHANGED
+  NOTE
+  CONTACT_LOGGED
+  EMAIL_SENT
+  EMAIL_FAILED
+}
+
+/// Owner-only timeline for an inquiry in the client tracker. Removed with the inquiry by retention cleanup.
+model LeadActivity {
+  id             String           @id @default(cuid())
+  leadId         String
+  kind           LeadActivityKind
+  fromStatus     LeadStatus?
+  toStatus       LeadStatus?
+  /// Follow-up subject, or null.
+  subject        String?
+  /// Note text or follow-up body as sent.
+  body           String?
+  notificationId String?
+  createdAt      DateTime         @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, createdAt])
 }
 
 /// A page the visitor designed in the /build editor and sent with their inquiry.
