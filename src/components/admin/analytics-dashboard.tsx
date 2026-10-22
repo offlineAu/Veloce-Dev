@@ -1,14 +1,14 @@
 import type { CSSProperties, ReactNode } from "react";
-import { ArrowUpRight, CalendarCheck2, Eye, Globe2, Layers, MousePointer2, Users } from "lucide-react";
-import type { BusinessReport, TrafficReport } from "@/server/analytics/report";
-import { Delta, DeviceArc, RankedList, SERIES, Sparkline, TrafficChart, WeekdayDots } from "@/components/admin/analytics-charts";
+import { ArrowUpRight, BellRing, CalendarCheck2, CheckCircle2, Eye, Globe2, Layers, MousePointer2, Users } from "lucide-react";
+import type { BusinessReport, InsightsReport, PipelineReport, TrafficReport } from "@/server/analytics/report";
+import { Delta, DeviceArc, Funnel, HourHeatmap, PipelineStages, RankedList, SERIES, Sparkline, TrafficChart } from "@/components/admin/analytics-charts";
 
 const number = (value: number) => new Intl.NumberFormat("en").format(value);
-export const card = "rounded-[28px] border border-[var(--dash-line)] bg-[var(--dash-surface)] p-5 sm:p-7";
+export const card = "min-w-0 rounded-[28px] border border-[var(--dash-line)] bg-[var(--dash-surface)] p-5 sm:p-7";
 const cardTitle = "font-heading text-base font-medium text-[var(--dash-ink)]";
 const cardNote = "mt-1 text-xs text-[var(--dash-muted)]";
-// Dashboard-only dark surface, built from the brand ink and accent. Charts in analytics-charts.tsx are validated against it.
-export const dashboardTheme = { "--dash-bg": "#141110", "--dash-surface": "#1d1916", "--dash-line": "rgb(245 234 216 / 0.09)", "--dash-line-strong": "rgb(245 234 216 / 0.2)", "--dash-ink": "#f5ead8", "--dash-muted": "rgb(245 234 216 / 0.62)" } as CSSProperties;
+// Dashboard surface in the site's Ember palette (src/lib/themes.ts): #171010 page, #362222 raised, rose accent. Charts in analytics-charts.tsx are validated against it.
+export const dashboardTheme = { "--dash-bg": "#171010", "--dash-surface": "#211716", "--dash-raised": "#362222", "--dash-line": "rgb(243 234 230 / 0.09)", "--dash-line-strong": "rgb(243 234 230 / 0.2)", "--dash-ink": "#f3eae6", "--dash-muted": "#bdb1ab", "--dash-accent": "#f0c3b7", "--dash-mark": "#d66b5c", "--dash-hi": "#e8afa1", "--dash-on-hi": "#171010" } as CSSProperties;
 const manilaDay = (date: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
 export function greeting(now: Date) {
   const hour = Number(new Intl.DateTimeFormat("en", { timeZone: "Asia/Manila", hour: "numeric", hourCycle: "h23" }).format(now));
@@ -24,15 +24,20 @@ function fillDays(report: TrafficReport, days: 7 | 30 | 90) {
 }
 function Stat({ label, value, display, previous, days, note, icon: Icon, children }: { label: string; value?: number; display?: string; previous?: number; days: number; note: string; icon: typeof Eye; children?: ReactNode }) {
   return <div className={`${card} flex flex-col`}>
-    <div className="flex items-start justify-between gap-3"><div><p className={cardTitle}>{label}</p><p className={cardNote}>{note}</p></div><span className="grid size-10 shrink-0 place-items-center rounded-full border border-[var(--dash-line)]"><Icon className="size-4 text-[#f3a877]" aria-hidden /></span></div>
+    <div className="flex items-start justify-between gap-3"><div><p className={cardTitle}>{label}</p><p className={cardNote}>{note}</p></div><span className="grid size-10 shrink-0 place-items-center rounded-full border border-[var(--dash-line)]"><Icon className="size-4 text-[var(--dash-accent)]" aria-hidden /></span></div>
     <p className="mt-6 font-heading text-5xl font-light tracking-tight tabular-nums text-[var(--dash-ink)] sm:text-6xl">{value === undefined ? "—" : display ?? number(value)}</p>
     {value === undefined ? null : <Delta current={value} previous={previous} days={days} />}
     <div className="mt-auto">{children}</div>
   </div>;
 }
+const Unavailable = ({ connected }: { connected: boolean }) => <p className="py-6 text-sm text-[var(--dash-muted)]">{connected ? "Temporarily unavailable. Try refreshing shortly." : "Needs PostHog reporting to be connected."}</p>;
+const CHANNEL: Record<string, string> = { direct: "Direct", search: "Search engines", social: "Social media", external: "Other websites" };
+const PLACEMENT: Record<string, string> = { inquiry: "Inquiry", consultation: "Consultation", meeting: "Meeting", service: "Service pages", builder: "Site builder", footer: "Footer", other: "Other" };
+const PROJECT: Record<string, string> = { NEW_PROJECT: "New website", REDESIGN: "Redesign", ECOMMERCE: "Online store", CUSTOM_WEB_APP: "Custom web app", INTEGRATION: "Integration", MAINTENANCE: "Maintenance", OTHER: "Other" };
+const LEAD_SOURCE: Record<string, string> = { DIRECT: "Direct", REFERRAL_VERIFIED: "Referral (verified)", REFERRAL_UNVERIFIED: "Referral (unverified)" };
 const Footnote = ({ children }: { children: ReactNode }) => <p className="mt-6 border-t border-[var(--dash-line)] pt-4 font-mono text-xs text-[var(--dash-muted)]">{children}</p>;
 /** Signed-in report view. Either report may be missing when its source is unavailable; each section degrades on its own. */
-export function OwnerReports({ days, web, sales, connected }: { days: 7 | 30 | 90; web?: TrafficReport; sales?: BusinessReport; connected: boolean }) {
+export function OwnerReports({ days, web, sales, insights, pipeline, connected }: { days: 7 | 30 | 90; web?: TrafficReport; sales?: BusinessReport; insights?: InsightsReport; pipeline?: PipelineReport; connected: boolean }) {
   const trend = web ? fillDays(web, days) : [];
   const perSession = (t: { views: number; sessions: number }) => t.sessions ? t.views / t.sessions : 0;
   const notice = "mb-5 rounded-2xl border border-[var(--dash-line)] bg-[var(--dash-surface)] p-5 text-sm text-[var(--dash-muted)]";
@@ -49,28 +54,50 @@ export function OwnerReports({ days, web, sales, connected }: { days: 7 | 30 | 9
       <section className={`${card} lg:col-span-8`} aria-labelledby="trend-title">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4"><div><h2 id="trend-title" className={cardTitle}>Traffic over time</h2><p className={cardNote}>Daily · Asia/Manila · last {days} days</p></div><p className="font-heading text-4xl font-light tabular-nums text-[var(--dash-ink)]">{number(web.totals.views)}<span className="ml-2 font-body text-xs text-[var(--dash-muted)]">pageviews</span></p></div>
         <TrafficChart data={trend} />
-        <details className="mt-6 text-sm"><summary className="cursor-pointer font-medium text-[#f3a877]">View daily numbers</summary><div className="mt-3 max-h-56 overflow-auto"><table className="w-full text-left text-sm text-[var(--dash-ink)]"><thead className="text-[var(--dash-muted)]"><tr><th className="py-2 font-normal">Date</th><th className="py-2 text-right font-normal">Pageviews</th><th className="py-2 text-right font-normal">Visitors</th></tr></thead><tbody className="font-mono text-xs">{trend.map(row => <tr key={row.day} className="border-t border-[var(--dash-line)]"><td className="py-2">{row.day}</td><td className="text-right">{number(row.views)}</td><td className="text-right">{number(row.visitors)}</td></tr>)}</tbody></table></div></details>
+        <details className="mt-6 text-sm"><summary className="cursor-pointer font-medium text-[var(--dash-accent)]">View daily numbers</summary><div className="mt-3 max-h-56 overflow-auto"><table className="w-full text-left text-sm text-[var(--dash-ink)]"><thead className="text-[var(--dash-muted)]"><tr><th className="py-2 font-normal">Date</th><th className="py-2 text-right font-normal">Pageviews</th><th className="py-2 text-right font-normal">Visitors</th></tr></thead><tbody className="font-mono text-xs">{trend.map(row => <tr key={row.day} className="border-t border-[var(--dash-line)]"><td className="py-2">{row.day}</td><td className="text-right">{number(row.views)}</td><td className="text-right">{number(row.visitors)}</td></tr>)}</tbody></table></div></details>
       </section>
       <section className={`${card} lg:col-span-4`} aria-labelledby="devices-title"><h2 id="devices-title" className={cardTitle}>Devices</h2><p className={`${cardNote} mb-6`}>Share of pageviews</p><DeviceArc rows={web.devices} /></section>
     </div> : null}
     <div className="mt-4 grid gap-4 lg:grid-cols-12">
-      <section className={`${card} ${web ? "lg:col-span-7" : "lg:col-span-12"}`} aria-labelledby="business-title">
+      <section className={`${card} lg:col-span-7`} aria-labelledby="funnel-title">
+        <h2 id="funnel-title" className={cardTitle}>From visit to inquiry</h2><p className={`${cardNote} mb-6`}>Consenting people who reached each step in this period</p>
+        {insights ? <Funnel steps={insights.funnel} /> : <Unavailable connected={connected} />}
+      </section>
+      <section className={`${card} lg:col-span-5`} aria-labelledby="pipeline-title">
+        <h2 id="pipeline-title" className={cardTitle}>Inquiry pipeline</h2><p className={`${cardNote} mb-6`}>Every open inquiry right now, by stage</p>
+        {pipeline ? <>
+          {pipeline.waiting ? <p className="mb-6 flex items-start gap-3 rounded-2xl border border-[var(--dash-hi)]/30 bg-[var(--dash-hi)]/10 p-4 text-sm text-[var(--dash-ink)]"><BellRing className="mt-0.5 size-4 shrink-0 text-[var(--dash-accent)]" aria-hidden /><span><strong className="font-semibold">{number(pipeline.waiting)} {pipeline.waiting === 1 ? "inquiry is" : "inquiries are"} waiting for a first reply.</strong>{pipeline.oldestWaitingDays !== null ? ` The oldest arrived ${pipeline.oldestWaitingDays === 0 ? "today" : `${pipeline.oldestWaitingDays} ${pipeline.oldestWaitingDays === 1 ? "day" : "days"} ago`}.` : ""}</span></p> : <p className="mb-6 flex items-center gap-3 rounded-2xl border border-[var(--dash-line)] p-4 text-sm text-[var(--dash-muted)]"><CheckCircle2 className="size-4 shrink-0 text-[var(--dash-accent)]" aria-hidden />No inquiries waiting for a first reply.</p>}
+          <PipelineStages stages={pipeline.stages} />
+        </> : <p className="text-sm text-[var(--dash-muted)]">The pipeline is temporarily unavailable.</p>}
+      </section>
+    </div>
+    {connected ? <div className="mt-4 grid gap-4 lg:grid-cols-12">
+      <section className={`${card} lg:col-span-8`} aria-labelledby="hours-title"><h2 id="hours-title" className={cardTitle}>When people visit</h2><p className={`${cardNote} mb-4`}>Pageviews by weekday and hour · Asia/Manila</p>{insights ? <HourHeatmap cells={insights.hours} /> : <Unavailable connected />}</section>
+      <section className={`${card} lg:col-span-4`} aria-labelledby="channels-title"><h2 id="channels-title" className={cardTitle}>How they found you</h2><p className={`${cardNote} mb-5`}>Visitors by latest channel</p>{insights ? <RankedList rows={insights.channels.map(c => ({ name: CHANNEL[c.name] ?? c.name, views: c.people }))} label="Channel" valueLabel="People" empty="No recorded visits in this period." /> : <Unavailable connected />}</section>
+    </div> : null}
+    <div className="mt-4 grid gap-4 lg:grid-cols-12">
+      <section className={`${card} ${connected ? "lg:col-span-7" : "lg:col-span-12"}`} aria-labelledby="business-title">
         <h2 id="business-title" className={cardTitle}>Conversations started</h2><p className={cardNote}>Saved records, including requests made without analytics consent</p>
         <dl aria-label="Business totals" className="mt-6 grid gap-6 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-[var(--dash-line)]">
           {([["Inquiries", "inquiries", ArrowUpRight, "Including meeting requests by email"], ["Introductions", "introductions", Globe2, "Referral introductions"], ["Confirmed bookings", "confirmedBookings", CalendarCheck2, "Currently confirmed, by booking date"]] as const).map(([label, key, Icon, note]) => <div key={key} className="sm:px-6 sm:first:pl-0 sm:last:pr-0">
-            <dt className="flex items-center gap-2 text-sm text-[var(--dash-ink)]"><Icon className="size-4 text-[#f3a877]" aria-hidden />{label}</dt>
+            <dt className="flex items-center gap-2 text-sm text-[var(--dash-ink)]"><Icon className="size-4 text-[var(--dash-accent)]" aria-hidden />{label}</dt>
             <dd className="mt-4 font-heading text-5xl font-light tabular-nums text-[var(--dash-ink)]">{sales ? number(sales[key]) : "—"}</dd>
             <dd>{sales ? <Delta current={sales[key]} previous={sales.previous[key]} days={days} /> : null}</dd>
             <dd className="mt-2 text-xs text-[var(--dash-muted)]">{note}</dd>
           </div>)}
         </dl>
+        {pipeline && (pipeline.projectTypes.length || pipeline.sources.length) ? <div className="mt-8 grid gap-6 border-t border-[var(--dash-line)] pt-6 sm:grid-cols-2">
+          <div><h3 className="mb-4 text-sm text-[var(--dash-ink)]">What they asked for</h3><RankedList rows={pipeline.projectTypes.map(r => ({ name: PROJECT[r.name] ?? r.name, views: r.count }))} label="Project" valueLabel="Inquiries" empty="No inquiries in this period." /></div>
+          <div><h3 className="mb-4 text-sm text-[var(--dash-ink)]">Where inquiries came from</h3><RankedList rows={pipeline.sources.map(r => ({ name: LEAD_SOURCE[r.name] ?? r.name, views: r.count }))} label="Source" valueLabel="Inquiries" empty="No inquiries in this period." /></div>
+        </div> : null}
       </section>
-      {web ? <section className={`${card} lg:col-span-5`} aria-labelledby="weekday-title"><h2 id="weekday-title" className={cardTitle}>Busiest days</h2><p className={`${cardNote} mb-4`}>Average pageviews by weekday</p><WeekdayDots data={trend} /></section> : null}
+      {connected ? <section className={`${card} lg:col-span-5`} aria-labelledby="cta-title"><h2 id="cta-title" className={cardTitle}>Calls to action</h2><p className={`${cardNote} mb-5`}>Clicks by button placement</p>{insights ? <RankedList rows={insights.ctas.map(c => ({ name: PLACEMENT[c.name] ?? c.name, views: c.clicks }))} label="Placement" valueLabel="Clicks" empty="No call-to-action clicks in this period." /> : <Unavailable connected />}</section> : null}
     </div>
     {web ? <div className="mt-4 grid gap-4 lg:grid-cols-12">
       <section className={`${card} lg:col-span-7`} aria-labelledby="pages-title"><h2 id="pages-title" className={`${cardTitle} mb-5`}>Popular pages</h2><RankedList rows={web.pages} label="Page" /></section>
       <section className={`${card} lg:col-span-5`} aria-labelledby="sources-title"><h2 id="sources-title" className={`${cardTitle} mb-5`}>Traffic sources</h2><RankedList rows={web.sources} label="Latest source" /></section>
     </div> : null}
-    <p className="mt-6 max-w-3xl text-xs leading-relaxed text-[var(--dash-muted)]">Traffic covers consenting visitors and delivered events. Business totals come from saved database records, including requests made without analytics consent. Deleted records are excluded. Inquiries and bookings can overlap; they are not distinct customer counts. Changes compare with the equally long period just before this one.{web ? ` Traffic snapshot: ${new Intl.DateTimeFormat("en", { timeZone: "Asia/Manila", dateStyle: "medium", timeStyle: "short" }).format(new Date(web.updatedAt))}, refreshed at most once per minute.` : ""}</p>
+    {insights?.dwell.length ? <section className={`${card} mt-4`} aria-labelledby="dwell-title"><h2 id="dwell-title" className={cardTitle}>Time on page</h2><p className={`${cardNote} mb-5`}>Median time before leaving, for the most-read pages</p><RankedList rows={insights.dwell.map(d => ({ name: d.name, views: d.seconds }))} label="Page" valueLabel="Median" unit="seconds" share={false} /></section> : null}
+    <p className="mt-6 max-w-3xl text-xs leading-relaxed text-[var(--dash-muted)]">Traffic covers consenting visitors and delivered events. Business totals come from saved database records, including requests made without analytics consent. Deleted records are excluded. Inquiries and bookings can overlap; they are not distinct customer counts. Changes compare with the equally long period just before this one. The funnel counts consenting people per step, so later steps can include people whose earlier steps fell outside this period.{web ? ` Traffic snapshot: ${new Intl.DateTimeFormat("en", { timeZone: "Asia/Manila", dateStyle: "medium", timeStyle: "short" }).format(new Date(web.updatedAt))}, refreshed at most once per minute.` : ""}</p>
   </>;
 }

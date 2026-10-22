@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { totpCode } from "@/server/security/totp";
 import { hashPassword } from "@/server/security/password";
-const mocks = vi.hoisted(() => ({ get: vi.fn(), set: vi.fn(), delete: vi.fn(), allow: vi.fn(), owner: vi.fn(), lead: vi.fn(), intro: vi.fn(), appointments: vi.fn(), session: vi.fn(), register: vi.fn(), revoke: vi.fn(), consume: vi.fn() }));
+const mocks = vi.hoisted(() => ({ get: vi.fn(), set: vi.fn(), delete: vi.fn(), allow: vi.fn(), owner: vi.fn(), lead: vi.fn(), intro: vi.fn(), appointments: vi.fn(), groupBy: vi.fn(), firstLead: vi.fn(), session: vi.fn(), register: vi.fn(), revoke: vi.fn(), consume: vi.fn() }));
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: mocks.get, set: mocks.set, delete: mocks.delete }) }));
 vi.mock("next/navigation", () => ({ redirect: (url: string) => { throw new Error(`redirect:${url}`); } }));
 vi.mock("@/server/security/request", () => ({ clientKey: async () => "fixture-key" }));
 vi.mock("@/server/security/rate-limit", () => ({ allow: mocks.allow }));
-vi.mock("@/server/db", () => ({ db: { securitySession: { findUnique: mocks.session, create: mocks.register, updateMany: mocks.revoke }, rateLimit: { create: mocks.consume }, lead: { count: mocks.lead }, referralIntroduction: { count: mocks.intro }, appointment: { findMany: mocks.appointments } } }));
+vi.mock("@/server/db", () => ({ db: { securitySession: { findUnique: mocks.session, create: mocks.register, updateMany: mocks.revoke }, rateLimit: { create: mocks.consume }, lead: { count: mocks.lead, groupBy: mocks.groupBy, findFirst: mocks.firstLead }, referralIntroduction: { count: mocks.intro }, appointment: { findMany: mocks.appointments } } }));
 import { encodeOwnerSession, isOwner, validOwnerSession, OWNER_SESSION_SECONDS } from "@/server/admin/session";
 import { ownerLogin, ownerLogout } from "@/app/admin/analytics/actions";
-import { getBusinessReport, getTrafficReport, previousWindow, reportDays, reportWindow, trafficQueries } from "@/server/analytics/report";
+import { getBusinessReport, getInsightsReport, getPipelineReport, getTrafficReport, insightsQuery, previousWindow, reportDays, reportWindow, trafficQueries } from "@/server/analytics/report";
 const password = "fixture-owner-password";
 const hash = hashPassword(password);
 beforeEach(() => {
@@ -116,5 +116,27 @@ describe("private report queries", () => {
     expect(await getBusinessReport(30)).toEqual({ ...totals, previous: totals });
     expect(mocks.appointments).toHaveBeenCalledWith(expect.objectContaining({ distinct: ["leadId"] }));
     expect(JSON.stringify(mocks.lead.mock.calls)).not.toContain("analyticsVisitorId");
+  });
+  it("builds the insights query from fixed parts and parses each section", async () => {
+    const query = insightsQuery(new Date("2026-10-01T00:00:00Z"), new Date("2026-10-08T00:00:00Z"));
+    expect(query).toContain("'cta_clicked'"); expect(query).toContain("toTimeZone(timestamp, 'Asia/Manila')"); expect(query).toContain("$prev_pageview_duration");
+    authenticate();
+    vi.mocked(fetch).mockResolvedValue(Response.json({ results: [["funnel", "visit", 50, 0], ["funnel", "inquiry", 4, 0], ["cta", "service", 9, 7], ["channel", "search", 20, 60], ["hour", "4:14", 12, 0], ["hour", "9:99", 1, 0], ["dwell", "/about", 75.4, 30]] }));
+    const report = await getInsightsReport(30);
+    expect(report.funnel).toEqual([{ step: "visit", people: 50 }, { step: "cta", people: 0 }, { step: "opened", people: 0 }, { step: "started", people: 0 }, { step: "inquiry", people: 4 }, { step: "booking", people: 0 }]);
+    expect(report.ctas).toEqual([{ name: "service", clicks: 9, people: 7 }]);
+    expect(report.channels).toEqual([{ name: "search", people: 20, views: 60 }]);
+    expect(report.hours).toEqual([{ weekday: 4, hour: 14, views: 12 }]);
+    expect(report.dwell).toEqual([{ name: "/about", seconds: 75, reads: 30 }]);
+    mocks.get.mockReturnValue(undefined); await expect(getInsightsReport(30)).rejects.toThrow("Owner session required");
+  });
+  it("reports the open pipeline by stage and the oldest unanswered inquiry", async () => {
+    authenticate();
+    mocks.groupBy.mockImplementation(async ({ by }: { by: string[] }) => by[0] === "status" ? [{ status: "NEW", _count: { _all: 2 } }, { status: "CONVERTED", _count: { _all: 1 } }] : by[0] === "projectType" ? [{ projectType: "REDESIGN", _count: { _all: 1 } }, { projectType: "NEW_PROJECT", _count: { _all: 3 } }] : [{ source: "DIRECT", _count: { _all: 4 } }]);
+    mocks.firstLead.mockResolvedValue({ createdAt: new Date(Date.now() - 3.5 * 86400_000) });
+    const report = await getPipelineReport(30);
+    expect(report.stages.map(s => s.count)).toEqual([2, 0, 0, 0, 1, 0]);
+    expect(report).toMatchObject({ waiting: 2, oldestWaitingDays: 3, projectTypes: [{ name: "NEW_PROJECT", count: 3 }, { name: "REDESIGN", count: 1 }], sources: [{ name: "DIRECT", count: 4 }] });
+    expect(JSON.stringify(mocks.groupBy.mock.calls[0])).toContain("cal:");
   });
 });
