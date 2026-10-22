@@ -42,3 +42,7 @@ export async function endOwnerSession() {
   const session = decodeOwnerSession(jar.get(OWNER_COOKIE)?.value);
   try { await revokeSession(session?.sid, "owner"); } finally { jar.delete(OWNER_COOKIE); }
 }
+/** Where to go after signing in. Only fixed owner pages are allowed, so the parameter can't redirect elsewhere. */
+export function ownerReturnPath(value: unknown): string | undefined {
+  return typeof value === "string" && /^\/admin\/(analytics|clients)(\/[a-z0-9]{1,40})?$/.test(value) ? value : undefined;
+}

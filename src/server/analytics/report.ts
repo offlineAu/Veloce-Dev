@@ -93,3 +93,82 @@ async function businessTotals({ start, end }: { start: Date; end: Date }): Promi
   ]);
   return { inquiries, introductions, confirmedBookings: bookings.length };
 }
+
+export type FunnelStep = { step: "visit" | "cta" | "opened" | "started" | "inquiry" | "booking"; people: number };
+export type InsightsReport = {
+  funnel: FunnelStep[];
+  ctas: { name: string; clicks: number; people: number }[];
+  channels: { name: string; people: number; views: number }[];
+  /** Pageviews per Manila weekday (1 = Monday … 7 = Sunday) and hour (0–23). */
+  hours: { weekday: number; hour: number; views: number }[];
+  /** Median seconds on page, from page-leave events, for the most-read pages. */
+  dwell: { name: string; seconds: number; reads: number }[];
+};
+const FUNNEL = [["visit", "event IN ('$pageview', 'page_viewed')"], ["cta", "event = 'cta_clicked'"], ["opened", "event = 'form_opened'"], ["started", "event = 'form_started'"], ["inquiry", "event = 'inquiry_submitted'"], ["booking", "event = 'booking_confirmed'"]] as const;
+export function insightsQuery(start: Date, end: Date) {
+  // Fixed query; only server-generated dates are interpolated. Every branch returns (kind, key, number, number).
+  const time = `timestamp >= parseDateTimeBestEffort('${start.toISOString()}') AND timestamp < parseDateTimeBestEffort('${end.toISOString()}')`;
+  const views = `event IN ('$pageview', 'page_viewed') AND ${time}`;
+  const local = `toTimeZone(timestamp, 'Asia/Manila')`;
+  const seconds = `ifNull(toFloat(properties.$prev_pageview_duration), 0)`;
+  return `SELECT 'funnel', multiIf(${FUNNEL.map(([step, where]) => `${where}, '${step}'`).join(", ")}, 'other'), toFloat(uniq(person_id)), toFloat(0) FROM events WHERE ${time} AND (${FUNNEL.map(([, where]) => where).join(" OR ")}) GROUP BY 2
+    UNION ALL SELECT 'cta', coalesce(nullIf(toString(properties.placement), ''), 'other'), toFloat(count()), toFloat(uniq(person_id)) FROM events WHERE event = 'cta_clicked' AND ${time} GROUP BY 2 ORDER BY 3 DESC LIMIT 8
+    UNION ALL SELECT 'channel', coalesce(nullIf(toString(properties.latest_referrer), ''), 'direct'), toFloat(uniq(person_id)), toFloat(count()) FROM events WHERE ${views} GROUP BY 2 ORDER BY 3 DESC LIMIT 6
+    UNION ALL SELECT 'hour', concat(toString(toDayOfWeek(${local})), ':', toString(toHour(${local}))), toFloat(count()), toFloat(0) FROM events WHERE ${views} GROUP BY 2 LIMIT 168
+    UNION ALL SELECT 'dwell', coalesce(nullIf(toString(properties.$prev_pageview_pathname), ''), '/'), toFloat(median(${seconds})), toFloat(count()) FROM events WHERE event = '$pageleave' AND ${time} AND ${seconds} > 0 GROUP BY 2 ORDER BY 4 DESC LIMIT 8`;
+}
+const insightsCache = new Map<number, { expires: number; project: string; pending: Promise<InsightsReport> }>();
+export async function getInsightsReport(days: 7 | 30 | 90): Promise<InsightsReport> {
+  await requireOwner();
+  const config = queryConfig();
+  if (!config) throw new Error("Analytics reporting is not configured");
+  const project = `${config.host}:${config.id}:${config.key}`;
+  const saved = insightsCache.get(days);
+  if (saved && saved.project === project && saved.expires > Date.now()) return saved.pending;
+  const pending = (async () => {
+    const { start, end } = reportWindow(days);
+    const rows = await queryPostHog(insightsQuery(start, end));
+    const of = (kind: string) => rows.filter(row => row[0] === kind).map(row => ({ key: String(row[1] ?? "").slice(0, 120), a: count(Math.round(Number(row[2]))), b: count(Math.round(Number(row[3]))) }));
+    const funnel = of("funnel");
+    return {
+      funnel: FUNNEL.map(([step]) => ({ step, people: funnel.find(row => row.key === step)?.a ?? 0 })),
+      ctas: of("cta").map(row => ({ name: row.key, clicks: row.a, people: row.b })),
+      channels: of("channel").map(row => ({ name: row.key, people: row.a, views: row.b })),
+      hours: of("hour").flatMap(row => { const [weekday = 0, hour = -1] = row.key.split(":").map(Number); return weekday >= 1 && weekday <= 7 && hour >= 0 && hour <= 23 ? [{ weekday, hour, views: row.a }] : []; }),
+      dwell: of("dwell").map(row => ({ name: row.key, seconds: row.a, reads: row.b })),
+    };
+  })();
+  insightsCache.set(days, { expires: Date.now() + 60_000, project, pending });
+  try { return await pending; } catch { if (insightsCache.get(days)?.pending === pending) insightsCache.delete(days); throw new Error("Analytics report unavailable"); }
+}
+
+export const PIPELINE = ["NEW", "CONTACTED", "CONSULTATION_SCHEDULED", "PROPOSAL_IN_PROGRESS", "CONVERTED", "NOT_PROCEEDING"] as const;
+export type PipelineReport = {
+  /** Every open inquiry right now, by stage (not limited to the report window). */
+  stages: { status: (typeof PIPELINE)[number]; count: number }[];
+  /** New inquiries in the window still waiting for a first reply. */
+  waiting: number;
+  oldestWaitingDays: number | null;
+  projectTypes: { name: string; count: number }[];
+  sources: { name: string; count: number }[];
+};
+export async function getPipelineReport(days: 7 | 30 | 90): Promise<PipelineReport> {
+  await requireOwner();
+  const { start, end } = reportWindow(days);
+  const inquiries = { NOT: { idempotencyKey: { startsWith: "cal:" } } };
+  const [stages, oldest, projectTypes, sources] = await Promise.all([
+    db.lead.groupBy({ by: ["status"], where: { ...inquiries, closedAt: null }, _count: { _all: true } }),
+    db.lead.findFirst({ where: { ...inquiries, status: "NEW", closedAt: null }, orderBy: { createdAt: "asc" }, select: { createdAt: true } }),
+    db.lead.groupBy({ by: ["projectType"], where: { ...inquiries, createdAt: { gte: start, lt: end } }, _count: { _all: true } }),
+    db.lead.groupBy({ by: ["source"], where: { ...inquiries, createdAt: { gte: start, lt: end } }, _count: { _all: true } }),
+  ]);
+  const byStatus = new Map(stages.map(row => [row.status, row._count._all]));
+  const sorted = <T extends { _count: { _all: number } }>(rows: T[], name: (row: T) => string) => rows.map(row => ({ name: name(row), count: row._count._all })).sort((a, b) => b.count - a.count);
+  return {
+    stages: PIPELINE.map(status => ({ status, count: byStatus.get(status) ?? 0 })),
+    waiting: byStatus.get("NEW") ?? 0,
+    oldestWaitingDays: oldest ? Math.floor((end.getTime() - oldest.createdAt.getTime()) / 86400_000) : null,
+    projectTypes: sorted(projectTypes, row => row.projectType),
+    sources: sorted(sources, row => row.source),
+  };
+}

@@ -288,3 +288,14 @@ export function introReferrerEmail(d: { company: string; referrerName: string; r
     }),
   };
 }
+
+/** Owner-written follow-up about one inquiry. The body is the owner's plain text, escaped and kept as written. */
+export function followUpEmail(d: { company: string; subject: string; body: string }): Message {
+  const paragraphs = d.body.trim().split(/\n\s*\n/).map(p => `<p style="margin:0 0 16px">${h(p.trim()).replace(/\n/g, "<br>")}</p>`).join("");
+  const preheader = d.body.trim().replace(/\s+/g, " ").slice(0, 110);
+  return {
+    subject: d.subject,
+    text: `${d.body.trim()}\n\n— ${d.company}`,
+    html: wrap(d.company, { eyebrow: "About your inquiry", title: d.subject, preheader, bodyHtml: paragraphs }),
+  };
+}
