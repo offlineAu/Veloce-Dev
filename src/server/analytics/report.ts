@@ -46,7 +46,8 @@ export function trafficQueries(start: Date, end: Date, previousStart = previousW
   const session = `toString(properties.$session_id)`;
   const page = `coalesce(nullIf(toString(properties.$pathname), ''), nullIf(toString(properties.page), ''), '/')`;
   const source = `coalesce(nullIf(toString(properties.latest_source), ''), nullIf(toString(properties.latest_referrer), ''), 'direct')`;
-  const device = `coalesce(nullIf(toString(properties.$device_type), ''), nullIf(toString(properties.device), ''), 'unknown')`;
+  // PostHog's $device_type is capitalised ("Desktop") while our own events send "desktop"; group them as one.
+  const device = `lower(coalesce(nullIf(toString(properties.$device_type), ''), nullIf(toString(properties.device), ''), 'unknown'))`;
   return {
     // Current window first, then the previous window, in one scan.
     totals: `SELECT uniqIf(person_id, ${current}), countIf(${current}), uniqIf(${session}, ${current} AND notEmpty(${session})),

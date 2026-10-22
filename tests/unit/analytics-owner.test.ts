@@ -83,6 +83,7 @@ describe("private report queries", () => {
     expect(reportWindow(7, new Date("2026-10-19T01:00:00Z")).start.toISOString()).toBe("2026-10-12T16:00:00.000Z");
     const queries = trafficQueries(new Date("2026-10-01"), new Date("2026-10-19"));
     expect(queries.totals).toContain("'$pageview', 'page_viewed'"); expect(queries.trend).toContain("Asia/Manila");
+    expect(queries.breakdowns).toContain("lower(coalesce(nullIf(toString(properties.$device_type)");
     // The comparison window is as long as the report window and ends where it starts.
     expect(queries.totals).toContain("2026-09-13T00:00:00.000Z");
     const window = reportWindow(7, new Date("2026-10-19T01:00:00Z"));
