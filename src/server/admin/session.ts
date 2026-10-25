@@ -3,6 +3,7 @@ import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { validTotpSecret } from "@/server/security/totp";
 import { registerSession, sessionActive, revokeSession } from "@/server/security/sessions";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
 export const OWNER_COOKIE = "veloce_owner";
 export const OWNER_SESSION_SECONDS = 8 * 60 * 60;
@@ -32,10 +33,14 @@ export async function newOwnerSession() {
   await registerSession(sid, "owner", expiresAt);
   return encodeOwnerSession(expiresAt, sid);
 }
-export async function isOwner() {
+/**
+ * Whether this request comes from a signed-in owner. Cached per request, so the page and every report it loads share a
+ * single session lookup instead of each querying the database (every caller still checks).
+ */
+export const isOwner = cache(async () => {
   const session = decodeOwnerSession((await cookies()).get(OWNER_COOKIE)?.value);
   return !!session && await sessionActive(session.sid, "owner");
-}
+});
 export async function requireOwner() { if (!await isOwner()) throw new Error("Owner session required"); }
 export async function endOwnerSession() {
   const jar = await cookies();
