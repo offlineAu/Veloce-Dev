@@ -25,14 +25,14 @@ export const SAMPLE_SITES: SampleSite[] = [
     token: "PT2OPZBwy8zmg0uJ4F-yeA",
     slug: "aurelia-advisory",
     version: 1,
-    title: "Advisory firm website",
+    title: "Advisory firm",
     description: "A refined business website for a professional services firm, with practice areas, case results and a consultation request form.",
   },
   {
     token: "ZTfoiqLgccdQmwspyLgAdA",
     slug: "oakwell-home",
     version: 2,
-    title: "Homeware online store",
+    title: "Homeware store",
     description: "An online store for small-batch ceramics, linen and lighting, with shop-by-room, a product grid, makers and reviews.",
   },
   {
@@ -46,7 +46,7 @@ export const SAMPLE_SITES: SampleSite[] = [
     token: "WKEsyGu0E1_N8rEgB0XaWA",
     slug: "trades-home-services",
     version: 1,
-    title: "Trades and home services",
+    title: "Trades & home services",
     description: "A bold one-page site for a plumber or electrician, with an instant estimate, recent jobs, service areas and booking.",
   },
   {
@@ -67,7 +67,7 @@ export const SAMPLE_SITES: SampleSite[] = [
     token: "QcahvZri3XhjbozfBmmu8g",
     slug: "harlow-advisory",
     version: 1,
-    title: "Accountants and advisers",
+    title: "Accountants & advisers",
     description: "A site for an accounting and advisory practice, with services, a cash runway tool, client stories, the team and fees.",
   },
   {

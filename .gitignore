@@ -19,3 +19,9 @@ playwright-report
 
 # Never publish original portfolio assets or private case manifests
 .private-assets/
+
+# macOS folder metadata
+.DS_Store
+
+# Local review captures (screenshots, design exports, zips); files already committed stay tracked
+artifacts/

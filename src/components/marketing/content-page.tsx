@@ -6,6 +6,7 @@ import { SiteFooter, SiteHeader } from "@/components/site/site-chrome";
 import { BreadcrumbData } from "@/components/site/structured-data";
 import { getCompanyProfile } from "@/server/services/company";
 import { getPublicCampaign } from "@/server/services/campaign";
+import sectionSurfaces from "./section-surfaces.module.css";
 
 export type ContentSearchParams = Promise<{ ref?: string | string[] }>;
 
@@ -19,7 +20,7 @@ export async function ContentPage({ label, path, heading, intro, service, search
   const refToken = campaign?.token;
   const links = [
     { label: "Services", href: withReferral("/#services", refToken) },
-    { label: "Our approach", href: withReferral("/#approach", refToken) },
+    { label: "Approach", href: withReferral("/#approach", refToken) },
     { label: "About", href: withReferral("/about", refToken) },
     { label: "Contact", href: "#contact" },
   ];
@@ -31,10 +32,10 @@ export async function ContentPage({ label, path, heading, intro, service, search
         <nav aria-label="Breadcrumb" className="mb-10 text-sm text-muted">
           <ol className="flex flex-wrap gap-2"><li><Link href={withReferral("/", refToken)} className="underline underline-offset-4">Home</Link></li><li aria-hidden>/</li><li aria-current="page">{label}</li></ol>
         </nav>
-        <section className="rounded-[28px] bg-inverse p-8 text-on-inverse sm:p-14" aria-labelledby="page-title">
-          <p className="mb-4 font-mono text-xs uppercase tracking-wider text-accent">{label}</p>
-          <h1 id="page-title" className="max-w-[22ch] text-[clamp(36px,5vw,64px)] leading-tight text-on-inverse">{heading}</h1>
-          <p className="mb-8 mt-6 max-w-2xl text-lg leading-relaxed text-on-inverse/85">{intro}</p>
+        <section className={`${sectionSurfaces.cool} border-b border-line py-12 sm:py-20`} aria-labelledby="page-title">
+          <p className="mb-6 font-mono text-xs uppercase tracking-wider text-muted">{label}</p>
+          <h1 id="page-title" className="max-w-[20ch] text-[clamp(44px,6.5vw,84px)] leading-[1.02] tracking-[-0.05em] text-ink">{heading}</h1>
+          <p className="mb-8 mt-7 max-w-2xl text-lg leading-relaxed text-muted">{intro}</p>
           <OpenInquiryButton service={service}>Discuss your project</OpenInquiryButton>
         </section>
         <div className="py-14 sm:py-20">{children}</div>
@@ -45,9 +46,9 @@ export async function ContentPage({ label, path, heading, intro, service, search
           </ul>
           {path !== "/about" ? <Link href={withReferral("/about", refToken)} className="mt-6 inline-block underline underline-offset-4">Get to know Veloce</Link> : null}
         </section>
-        <section id="contact" aria-labelledby="contact-title" className="mb-10 rounded-[28px] bg-accent-100 p-8 sm:p-12">
-          <h2 id="contact-title" className="text-3xl">Let’s talk about what you need.</h2>
-          <p className="mb-6 mt-4 max-w-2xl text-muted">Tell us about your business, the problem you want to solve, and what you already have. We’ll start with a conversation, then discuss the scope, timing, and cost.</p>
+        <section id="contact" aria-labelledby="contact-title" className="mb-10 rounded-xl bg-inverse p-8 text-on-inverse sm:p-12">
+          <h2 id="contact-title" className="max-w-[20ch] text-[clamp(32px,4.2vw,52px)] leading-[1.05] tracking-[-0.035em] text-on-inverse">Let’s talk about what you need.</h2>
+          <p className="mb-6 mt-5 max-w-2xl text-on-inverse/80">Tell us about your business, the problem you want to solve, and what you already have. We’ll start with a conversation, then discuss the scope, timing, and cost.</p>
           <OpenInquiryButton service={service}>Start a conversation</OpenInquiryButton>
           <a href={`mailto:${company.contactEmail}`} className="mt-5 block w-fit break-all underline underline-offset-4">{company.contactEmail}</a>
         </section>

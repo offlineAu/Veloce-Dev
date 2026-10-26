@@ -44,7 +44,7 @@
 .stageIndex { font-size: 12px; color: var(--color-accent-700); }
 .stageButton .stageArrow { margin-left: auto; width: 15px; }
 .workbench { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 16px; align-items: stretch; }
-.delivery { display: grid; align-content: start; position: relative; overflow: hidden; padding: 36px; background: var(--color-surface); }
+.delivery { display: grid; align-content: start; position: relative; overflow: hidden; padding: 36px; background: var(--color-neutral-100); }
 .deliveryContent { grid-area: 1 / 1; min-width: 0; position: relative; z-index: 1; }
 .deliveryContent[data-state="inactive"] { visibility: hidden; pointer-events: none; }
 .flipHeading { margin: 18px 0 16px; font-size: clamp(28px, 3vw, 39px); line-height: 1.15; perspective: 650px; color: var(--color-accent-700); }
@@ -62,7 +62,7 @@
 .handoff dd { margin: 0; font-size: 14px; line-height: 1.65; color: var(--color-muted); }
 .principle { display: flex; align-items: start; gap: 10px; margin: 24px 0 0; padding-top: 22px; border-top: 1px solid var(--color-line); font-size: 14px; line-height: 1.65; color: var(--color-muted); }
 .principle svg { width: 19px; height: 19px; flex-shrink: 0; margin-top: 2px; color: var(--color-sage-700); }
-.example { padding: 30px; background: var(--color-sage-100); }
+.example { padding: 30px; background: var(--color-neutral-100); }
 .exampleTop { margin-bottom: 20px; }
 .exampleBadge { margin-left: auto; padding: 4px 9px; border: 1px solid var(--color-line); border-radius: 100px; font-size: 10px; font-weight: 700; color: var(--color-sage-800); }
 .examplePicker { display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0; }

@@ -12,7 +12,7 @@ export function ModernTools() {
   return (
     <div
       aria-labelledby="modern-tools-title"
-      className="mt-12 rounded-[28px] border border-line bg-neutral-100 p-6 sm:p-8"
+      className="mt-16 border-t border-line pt-10"
     >
       <div className="max-w-2xl">
         <p className="font-mono text-xs font-bold uppercase tracking-[0.12em] text-accent-700">

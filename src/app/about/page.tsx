@@ -43,7 +43,7 @@ export default async function AboutPage({ searchParams }: { searchParams: Conten
   const refToken = campaign?.token;
   const links = [
     { label: "Services", href: withReferral("/#services", refToken) },
-    { label: "Our approach", href: "#approach" },
+    { label: "Approach", href: "#approach" },
     { label: "About", href: withReferral("/about", refToken) },
     { label: "Contact", href: "#contact" },
   ];

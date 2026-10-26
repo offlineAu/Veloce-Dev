@@ -1,21 +1,16 @@
 import { portfolioImageUrl } from "@/lib/security/portfolio-images";
-import { CardRibbons } from "@/components/brand/card-ribbons";
 import { ArrowRight, ArrowUpRight, CalendarDays, Check, Minus } from "lucide-react";
 import { HeroHeadline } from "@/components/motion/hero-headline";
 import { HeroSlideshow } from "@/components/motion/hero-slideshow";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import Image from "next/image";
 import { fabClass, fabLabelClass } from "@/components/site/cta-style";
 import { ConversationFab } from "@/components/site/conversation-fab";
 import SocialFlipButton from "@/components/ui/social-flip-button";
 import { QuickDock } from "@/components/site/quick-dock";
-import { Aura } from "@/components/motion/aura";
-import { BorderBeam } from "@/components/motion/border-beam";
 import { ExpectationsAccordion } from "@/components/site/expectations-accordion";
 import { buildSearchEntries } from "@/lib/search";
 import { CapabilityTabs } from "@/components/site/capability-tabs";
-import { SectionBackdrop, SectionBand } from "@/components/site/section-backdrop";
 import { KeywordMarquee } from "@/components/marketing/keyword-marquee";
 import { SiteFooter, SiteHeader } from "@/components/site/site-chrome";
 import { InquiryProvider, OpenInquiryButton } from "@/components/forms/inquiry";
@@ -26,7 +21,8 @@ import { ApproachWorkbench } from "@/components/marketing/approach-workbench";
 import { ServicesCarousel } from "@/components/marketing/services-carousel";
 import { SampleSites } from "@/components/marketing/sample-sites";
 import { MIN_SHOWCASE, showcaseSamples } from "@/content/samples";
-import { ApproachRings } from "@/components/marketing/approach-rings";
+import { ApproachStatement } from "@/components/marketing/approach-statement";
+import sectionSurfaces from "@/components/marketing/section-surfaces.module.css";
 import { ModernTools } from "@/components/marketing/modern-tools";
 import { buttonVariants } from "@/components/ui/button";
 import StatsCounter from "@/components/ui/stats-counter";
@@ -71,7 +67,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const introducedBy = campaign?.referrerName ?? null;
   const links = [
     { href: "#services", label: "Services" },
-    { href: "#approach", label: "Our approach" },
+    { href: "#approach", label: "Approach" },
     { href: "#capabilities", label: "Capabilities" },
     { href: "#offer", label: "Offer" },
     { href: withReferral("/about", campaign?.token), label: "About" },
@@ -93,7 +89,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   ];
   const teamPhoto = photo("card-builders.webp");
   const reviewPhoto = photo("card-office.webp");
-  const contactPhoto = photo("contact-code.webp");
   const meetingConfig = publicMeetingConfig();
   const meetingLabel = meetingConfig.enabled ? "Book a Meeting" : "Request a Meeting";
   const search = buildSearchEntries({
@@ -112,19 +107,15 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       <SiteHeader companyName={company.name} homeHref={withReferral("/", campaign?.token)} links={links}
         menuCta={<OpenMeetingButton entryPoint="contact" className="w-full">{meetingLabel}</OpenMeetingButton>} />
       <div className="relative isolate">
-      <Aura />
       <main id="main">
         {/* Full-bleed hero: spans the page with an even gutter and fills the first screen; the rest sits in the page container. */}
         <section className="relative px-3 pb-6 pt-3 md:pb-10" aria-labelledby="hero-title">
-          <div className="relative isolate flex min-h-[max(580px,calc(100svh-5rem))] flex-col justify-between overflow-hidden rounded-[32px] bg-gradient-to-br from-[#1a2e3b] via-[#244252] to-[#12202a] px-6 py-10 text-white shadow-lg sm:p-12 sm:rounded-[40px] lg:px-[max(4rem,calc((100%-80rem)/2+4rem))] lg:py-16">
+          <div className="relative isolate flex min-h-[max(580px,calc(100svh-5rem))] flex-col justify-between overflow-hidden rounded-[32px] bg-inverse px-6 py-10 text-white shadow-lg sm:p-12 sm:rounded-[40px] lg:px-[max(4rem,calc((100%-80rem)/2+4rem))] lg:py-16">
             <div aria-hidden className="absolute inset-0 -z-10">
               {heroPhotos.length ? (
                 <HeroSlideshow photos={heroPhotos} variant="flip" className="object-cover object-center opacity-60 mix-blend-overlay brightness-95" />
-              ) : (
-                <div className="ring-pattern absolute -right-48 -top-48 size-[860px] rounded-full opacity-25 invert" />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-transparent to-black/40" />
+              ) : null}
+              <div className="absolute inset-0 bg-black/55" />
             </div>
 
             <div className="flex max-w-2xl flex-col items-start gap-5 pt-2">
@@ -188,27 +179,24 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           </section>
         ) : null}
 
-        <section id="services" className="relative mt-10 pb-20 md:pb-28" aria-labelledby="services-carousel-title">
-          <SectionBand />
+        <section id="services" className={`${sectionSurfaces.cool} mt-10 pb-20 md:pb-28`} aria-labelledby="services-carousel-title">
           <KeywordMarquee items={services.map((s) => s.title)} secondary={capabilityGroups.flatMap((g) => g.items.map((c) => c.title))} />
           <SectionHeading className="mt-16 md:mt-20 max-w-5xl"
             eyebrow={landing.servicesEyebrow}
             titleId="services-carousel-title" title={showSamples ? landing.samplesTitle : landing.servicesTitle} bold={6}
           />
-          {/* Sample stage photo: "lit desk lamp on top of desk" by JC Gellidon, Unsplash License (unsplash.com/photos/EH9f0TI5wco). */}
           {showSamples ? (
-            <SampleSites samples={samples} photo={photo("samples-night-desk.webp")} initialIndex={activeSample} refToken={campaign?.token} />
+            <SampleSites samples={samples} initialIndex={activeSample} refToken={campaign?.token} />
           ) : (
             <ServicesCarousel services={services} photo={teamPhoto} closingPhoto={reviewPhoto} refToken={campaign?.token} />
           )}
         </section>
 
         <section className="relative py-10" aria-labelledby="fit-title">
-          <ApproachRings />
+          <ApproachStatement />
         </section>
 
-        <section className="relative py-16 md:py-24" aria-labelledby="custom-title">
-          <SectionBackdrop tone="sage" side="right" motif="contours" seed={1} />
+        <section className="relative border-t border-line py-20 md:py-28" aria-labelledby="custom-title">
           <SectionHeading
             eyebrow="Why custom"
             tone="sage"
@@ -231,8 +219,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               </ul>
             </div>
             <div className="relative overflow-hidden rounded-[28px] border border-line bg-surface p-8 text-ink shadow-sm sm:p-11">
-              <div aria-hidden className="ring-pattern pointer-events-none absolute -bottom-56 -right-56 size-[620px] rounded-full opacity-70" />
-              <CardRibbons />
               <p className="relative inline-flex w-fit items-center gap-2 rounded-full bg-accent-100 px-3 py-1 font-mono text-xs font-bold uppercase tracking-[0.12em] text-accent-800">
                 <span aria-hidden className="size-1.5 rounded-full bg-accent-700" />
                 Custom website
@@ -252,10 +238,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           </div>
         </section>
 
-        <section id="approach" className="relative py-16 md:py-24" aria-labelledby="approach-title">
-          <SectionBackdrop tone="accent" side="right" motif="doodles" />
+        <section id="approach" className={`${sectionSurfaces.warm} border-t border-line py-20 md:py-28`} aria-labelledby="approach-title">
           <SectionHeading
-            eyebrow="Our approach"
+            eyebrow="Approach"
             titleId="approach-title" title="From idea to working system." bold={3}
             lead="Think it. Build it. Make it work. Explore how we turn your priorities into a first working version, then improve it through real use."
           />
@@ -280,16 +265,11 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   </li>
                 ))}
               </ol>
-              <div aria-hidden className="flex h-20 items-end gap-1.5 rounded-2xl border border-line bg-neutral-100/70 px-2 pt-3 sm:gap-2">
-                {[30, 38, 46, 54, 62, 70, 78, 86, 94, 100].map((h, i) => (
-                  <span key={h} className={i < 4 ? "flex-1 rounded-t-sm bg-neutral-300" : i < 8 ? "flex-1 rounded-t-sm bg-accent" : "flex-1 rounded-t-sm bg-inverse"} style={{ height: `${h}%` }} />
-                ))}
-              </div>
               <p className="rounded-xl border border-line bg-neutral-100 p-3 text-center font-mono text-[11.5px] uppercase tracking-[0.08em] text-muted">
                 Something real to review at every stage
               </p>
             </div>
-            <div className="flex flex-col justify-between gap-10 rounded-[28px] bg-accent p-8 text-on-accent shadow-sm sm:p-12 lg:col-span-5">
+            <div className="flex flex-col justify-between gap-10 rounded-xl bg-accent-200 p-8 text-ink sm:p-12 lg:col-span-5">
               <div className="flex flex-col gap-4">
                 <p className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.12em]">
                   <span aria-hidden className="size-2 bg-current" />
@@ -308,8 +288,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           </div>
         </section>
 
-        <section id="capabilities" className="relative py-16 md:py-24" aria-labelledby="cap-title">
-          <SectionBackdrop tone="sage" side="left" motif="contours" seed={2} />
+        <section id="capabilities" className="relative border-t border-line py-20 md:py-28" aria-labelledby="cap-title">
           <SectionHeading eyebrow="Capabilities" titleId="cap-title" title="The functionality your business needs." bold={3} />
           <div className="mt-10">
             <CapabilityTabs groups={capabilityGroups} />
@@ -318,8 +297,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <ModernTools />
         </section>
 
-        <section id="all-services" className="relative py-16 md:py-24" aria-labelledby="services-title">
-          <SectionBackdrop tone="accent" side="left" motif="doodles" />
+        <section id="all-services" className="relative border-t border-line py-20 md:py-28" aria-labelledby="services-title">
           <SectionHeading
             eyebrow="Explore every service"
             titleId="services-title" title="Practical systems, built around your business." bold={4}
@@ -328,8 +306,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <ServicesBook services={services} refToken={campaign?.token} />
         </section>
 
-        <section id="offer" className="relative py-12 md:py-20" aria-label="Offer">
-          <SectionBackdrop tone="accent" side="center" />
+        <section id="offer" className={`${sectionSurfaces.accent} border-t border-line py-20 md:py-28`} aria-label="Offer">
           {offer && campaign ? (
             <OfferSplit
               heading={campaign.hasReferrer ? "A special offer for your introduction." : "A special offer for you."}
@@ -353,24 +330,15 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           )}
         </section>
 
-        <section className="relative py-16 md:py-24" aria-labelledby="expect-title">
-          <SectionBackdrop tone="sage" side="left" motif="contours" seed={3} />
+        <section className="relative border-t border-line py-20 md:py-28" aria-labelledby="expect-title">
           <SectionHeading eyebrow="What you can expect" tone="sage" titleId="expect-title" title="No pressure. Just a clear path forward." bold={5} />
           <ExpectationsAccordion items={expectations} />
         </section>
 
         <section id="contact" className="py-12 md:py-20" aria-labelledby="cta-title">
-          <div data-contact-cta className="relative isolate grid gap-10 overflow-hidden rounded-[28px] bg-inverse p-8 text-on-inverse sm:p-14 lg:grid-cols-12 lg:items-center lg:p-16">
-            <BorderBeam />
-            {contactPhoto ? (
-              <div aria-hidden className="absolute inset-0 -z-10">
-                <Image src={contactPhoto} alt="" fill sizes="(min-width: 1280px) 1152px, 100vw" className="object-cover opacity-25 mix-blend-luminosity" />
-                <div className="absolute inset-0 bg-gradient-to-r from-inverse via-inverse/85 to-inverse/40" />
-              </div>
-            ) : null}
-            <div aria-hidden className="pointer-events-none absolute -bottom-24 -right-24 -z-10 size-96 rounded-full bg-accent/15 blur-3xl" />
+          <div data-contact-cta className="relative isolate grid gap-10 overflow-hidden rounded-xl bg-inverse px-7 py-14 text-on-inverse sm:p-14 lg:grid-cols-12 lg:items-center lg:p-16">
             <div className="flex flex-col items-start gap-5 lg:col-span-7">
-              <p className="inline-flex items-center gap-2 rounded-full bg-on-inverse/10 px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-accent">
+              <p className="inline-flex items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-accent">
                 <span aria-hidden className="size-1.5 rounded-full bg-accent" />
                 Start with a conversation
               </p>
