@@ -476,7 +476,7 @@ test.describe("navigation, search and motion", () => {
     await expect(dock).toHaveAttribute("inert", "");
     if ((page.viewportSize()?.width ?? 0) >= 640) {
       await page.mouse.wheel(0, 1400);
-      for (const l of ["Services", "Our approach", "Capabilities", "Offer"]) await expect(dock.getByRole("link", { name: l, exact: true })).toBeVisible();
+      for (const l of ["Services", "Approach", "Capabilities", "Offer"]) await expect(dock.getByRole("link", { name: l, exact: true })).toBeVisible();
       await page.mouse.wheel(0, -1400);
     }
     await page.mouse.wheel(0, 1400);

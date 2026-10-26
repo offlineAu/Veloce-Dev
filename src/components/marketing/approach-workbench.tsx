@@ -4,7 +4,6 @@ import { useId, useRef, useState } from "react";
 import { m } from "framer-motion";
 import { ArrowRight, Check, CheckCheck, ChevronRight, Hammer, Map, RefreshCw } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
-import { CardRibbons } from "@/components/brand/card-ribbons";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { deliveryStages, workflowExamples } from "@/content/site";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
@@ -65,7 +64,6 @@ export function ApproachWorkbench() {
       </TabsList>
       <div className={styles.workbench}>
         <div className={styles.delivery}>
-          <CardRibbons activeStage={activeStage.id} />
           {deliveryStages.map((s, i) => (
             <TabsContent key={s.id} value={s.id} forceMount inert={stage !== s.id} aria-hidden={stage !== s.id} className={styles.deliveryContent}>
               <p className={styles.eyebrow}>Working together / 0{i + 1}</p>

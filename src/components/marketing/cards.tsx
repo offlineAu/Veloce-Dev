@@ -1,6 +1,4 @@
 import type { ReactNode } from "react";
-import { CardRibbons } from "@/components/brand/card-ribbons";
-import { BorderBeam } from "@/components/motion/border-beam";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Reveal } from "@/components/motion/reveal";
@@ -37,7 +35,7 @@ export function SectionHeading({
           {eyebrow}
         </p>
       ) : null}
-      <Tag id={titleId} className="text-[clamp(32px,4.2vw,52px)] leading-[1.05] text-ink">
+      <Tag id={titleId} className="text-[clamp(36px,5.2vw,68px)] leading-[1.02] tracking-[-0.045em] text-ink">
         <StaggerText text={title} bold={bold} />
       </Tag>
       {lead ? <p className="text-[17px] leading-relaxed text-muted">{lead}</p> : null}
@@ -175,7 +173,6 @@ export function ReferralOfferCard({
         dark ? "border border-line bg-surface text-ink" : "bg-accent-100 text-ink",
       )}
     >
-      <CardRibbons />
       <div className="relative flex flex-col items-start gap-5">
         <p className={cn("inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-bold uppercase tracking-[0.08em]", dark ? "bg-accent text-on-accent" : "bg-accent-600 text-on-accent")}>
           <Icon name="gift" className="size-3.5" /> Special offer
@@ -205,7 +202,7 @@ export function ReferralOfferCard({
   );
 }
 
-/** Sales-page offer layout from the original: tinted panel, copy on the left, "your offer" card on the right. */
+/** Open offer layout with the terms grouped in a neutral card. */
 export function OfferSplit({
   heading,
   lead,
@@ -226,15 +223,13 @@ export function OfferSplit({
   children?: ReactNode;
 }) {
   return (
-    <div className="relative grid items-center gap-8 overflow-hidden rounded-xl bg-accent-100 p-7 sm:p-12 lg:grid-cols-2 lg:gap-16">
-      <CardRibbons />
-      <BorderBeam />
+    <div className="relative grid items-center gap-8 py-4 sm:py-8 lg:grid-cols-2 lg:gap-16">
       <div className="relative flex flex-col items-start gap-4">
         <Badge className="px-3.5 py-1.5 text-xs font-bold uppercase tracking-[0.08em]">{badge}</Badge>
         <h2 className="text-[clamp(30px,3.6vw,46px)] leading-[1.1]">{heading}</h2>
         <p className="max-w-[46ch] text-[17px] leading-relaxed text-ink">{lead}</p>
       </div>
-      <div className="relative flex flex-col gap-4 rounded-xl bg-bg p-7 shadow-md sm:p-9">
+      <div className="relative flex flex-col gap-4 rounded-xl border border-line bg-neutral-100 p-7 sm:p-9">
         <div className="flex items-center gap-3">
           <span className="grid size-11 place-items-center rounded-full bg-accent-100 text-accent-700">
             <Icon name="gift" className="size-5" />

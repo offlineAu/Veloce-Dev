@@ -1,0 +1,32 @@
+/* Flat color bands extend beyond the content grid without changing its alignment. */
+.cool,
+.warm,
+.accent {
+  position: relative;
+  isolation: isolate;
+}
+
+.cool {
+  --section-fill: color-mix(in srgb, var(--color-sage-200) 70%, var(--color-bg));
+}
+
+.warm {
+  --section-fill: color-mix(in srgb, var(--color-neutral-200) 85%, var(--color-bg));
+}
+
+.accent {
+  --section-fill: color-mix(in srgb, var(--color-accent-200) 60%, var(--color-bg));
+}
+
+.cool::before,
+.warm::before,
+.accent::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--section-fill);
+  box-shadow: 0 0 0 100vmax var(--section-fill);
+  clip-path: inset(0 -100vmax);
+}
