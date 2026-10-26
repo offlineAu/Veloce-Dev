@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { m, type Transition } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { m, useReducedMotion, type Transition } from "framer-motion";
+import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /*
@@ -23,8 +23,14 @@ export interface DiagonalCarouselProps extends Omit<React.HTMLAttributes<HTMLDiv
   items: DiagonalCarouselItem[];
   activeIndex?: number;
   defaultActiveIndex?: number;
-  onActiveIndexChange?: (index: number) => void;
+  /** `reason` is "auto" when auto-advance moved the carousel, so callers can keep live regions quiet for it. */
+  onActiveIndexChange?: (index: number, reason: "user" | "auto") => void;
   loop?: boolean;
+  /**
+   * Advance to the next slide every this many ms. Pauses while the carousel is hovered, focused, dragged or off screen,
+   * stays off for reduced motion, and adds a pause/play button to the controls.
+   */
+  autoPlay?: number;
   slideSize?: number;
   /** CSS aspect-ratio of each slide, e.g. "3/4" for portrait screenshots. */
   slideAspect?: string;
@@ -68,6 +74,7 @@ export function DiagonalCarousel({
   defaultActiveIndex = 0,
   onActiveIndexChange,
   loop = false,
+  autoPlay,
   slideSize = 260,
   slideAspect = "1/1",
   rotationStep = 30,
@@ -101,14 +108,40 @@ export function DiagonalCarousel({
   const panned = React.useRef(false);
 
   const selectSlide = React.useCallback(
-    (nextIndex: number) => {
+    (nextIndex: number, reason: "user" | "auto" = "user") => {
       if (!items.length) return;
       const resolvedIndex = loop ? (nextIndex + items.length) % items.length : clamp(nextIndex, 0, maxIndex);
       if (activeIndex === undefined) setUncontrolledIndex(resolvedIndex);
-      onActiveIndexChange?.(resolvedIndex);
+      onActiveIndexChange?.(resolvedIndex, reason);
     },
     [activeIndex, items.length, loop, maxIndex, onActiveIndexChange],
   );
+
+  // Auto-advance: each slide change restarts the countdown, so it never jumps right after the visitor moves it.
+  const rootRef = React.useRef<HTMLDivElement>(null);
+  const reducedMotion = useReducedMotion();
+  const [stopped, setStopped] = React.useState(false);
+  const [hovered, setHovered] = React.useState(false);
+  const [focused, setFocused] = React.useState(false);
+  const [onScreen, setOnScreen] = React.useState(false);
+  const canAutoPlay = !!autoPlay && items.length > 1 && !reducedMotion;
+  const autoPlaying = canAutoPlay && !stopped && !hovered && !focused && onScreen && drag === null;
+
+  React.useEffect(() => {
+    const el = rootRef.current;
+    if (!canAutoPlay || !el) return;
+    const observer = new IntersectionObserver(([entry]) => setOnScreen(!!entry?.isIntersecting), { threshold: 0.5 });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [canAutoPlay]);
+
+  React.useEffect(() => {
+    if (!autoPlaying) return;
+    const timer = window.setTimeout(() => {
+      if (!document.hidden) selectSlide(currentIndex + 1, "auto");
+    }, autoPlay);
+    return () => window.clearTimeout(timer);
+  }, [autoPlaying, autoPlay, currentIndex, selectSlide]);
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     onKeyDown?.(event);
@@ -182,8 +215,13 @@ export function DiagonalCarousel({
       role="region"
       aria-roledescription="carousel"
       aria-label="Diagonal image carousel"
+      ref={rootRef}
       tabIndex={tabIndex ?? 0}
       onKeyDown={handleKeyDown}
+      onPointerEnter={(event) => event.pointerType === "mouse" && setHovered(true)}
+      onPointerLeave={() => setHovered(false)}
+      onFocus={(event) => event.target.matches(":focus-visible") && setFocused(true)}
+      onBlur={(event) => !event.currentTarget.contains(event.relatedTarget) && setFocused(false)}
       className={cn("relative isolate h-full w-full overflow-hidden", className)}
       {...props}
     >
@@ -296,6 +334,17 @@ export function DiagonalCarousel({
           <button type="button" aria-label="Show next slide" disabled={isNextDisabled} className={control} onClick={() => selectSlide(currentIndex + 1)}>
             <ChevronRight className="size-5" />
           </button>
+
+          {canAutoPlay && (
+            <button
+              type="button"
+              aria-label={stopped ? "Play slideshow" : "Pause slideshow"}
+              className={control}
+              onClick={() => setStopped((s) => !s)}
+            >
+              {stopped ? <Play className="size-4" /> : <Pause className="size-4" />}
+            </button>
+          )}
         </div>
       )}
     </div>

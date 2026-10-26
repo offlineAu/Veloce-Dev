@@ -31,13 +31,15 @@ const useWide = () =>
 
 export function SampleSites({ samples, initialIndex = 0, refToken }: { samples: ShowcaseSample[]; initialIndex?: number; refToken?: string }) {
   const [active, setActive] = React.useState(initialIndex);
+  // Announce the sample only when the visitor changed it, not on every auto-advance.
+  const [announce, setAnnounce] = React.useState(false);
   const wide = useWide();
   const sample = samples[active] ?? samples[0]!;
   const copy = landing.samples;
 
   return (
     <div className="mt-10 grid items-center gap-8 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-      <div className="flex flex-col gap-4" aria-live="polite">
+      <div className="flex flex-col gap-4" aria-live={announce ? "polite" : "off"}>
         <span className="w-fit rounded border border-line bg-neutral-100 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-muted">
           {copy.label} {active + 1} / {samples.length}
         </span>
@@ -70,8 +72,12 @@ export function SampleSites({ samples, initialIndex = 0, refToken }: { samples: 
           aria-label="Sample websites"
           items={samples.map((s) => ({ src: portfolioImageUrl(s.thumbnail), title: s.title, alt: `${s.title} home page`, href: s.href }))}
           activeIndex={active}
-          onActiveIndexChange={setActive}
+          onActiveIndexChange={(index, reason) => {
+            setActive(index);
+            setAnnounce(reason === "user");
+          }}
           loop
+          autoPlay={5000}
           slideSize={wide ? 360 : 230}
           slideAspect="16/10"
           rotationStep={24}
