@@ -6,6 +6,7 @@ import { isOwner } from "@/server/admin/session";
 import { getClient, MOVABLE } from "@/server/clients/tracker";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { card } from "@/components/admin/analytics-dashboard";
+import { LinkPending } from "@/components/admin/link-pending";
 import { CloseOrReopen, FollowUpComposer, NoteForm, StageForm, StagePill } from "@/components/admin/client-parts";
 import { INTENT_LABEL, PROJECT_LABEL, SOURCE_LABEL, STAGE_LABEL } from "@/lib/admin-labels";
 
@@ -53,7 +54,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
 
   return <AdminShell active="clients">
     <div className="mb-8 mt-8 sm:mt-12">
-      <Link href="/admin/clients" className="inline-flex min-h-10 items-center gap-2 text-sm text-[var(--dash-muted)] hover:text-[var(--dash-ink)]"><ArrowLeft className="size-4" aria-hidden />All clients</Link>
+      <Link href="/admin/clients" className="inline-flex min-h-10 items-center gap-2 text-sm text-[var(--dash-muted)] hover:text-[var(--dash-ink)]"><ArrowLeft className="size-4" aria-hidden />All clients<LinkPending /></Link>
       <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
           <h1 className="font-heading text-3xl font-medium tracking-tight sm:text-5xl">{lead.name}</h1>

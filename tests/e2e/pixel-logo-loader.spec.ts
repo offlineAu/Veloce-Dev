@@ -22,8 +22,8 @@ function holdAction(page: Page, fail = false) {
 }
 
 async function openInquiry(page: Page) {
-  await page.goto("/");
-  await page.locator("[data-hero-cta]").click();
+  await page.goto("/about");
+  await page.getByRole("button", { name: "Start a conversation", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Tell us about your project" });
   await expect(dialog).toBeVisible();
   await dialog.getByLabel(/^Name/).fill("Loader Test");

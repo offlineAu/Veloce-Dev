@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 const HOVER_QUERY = "(hover: hover) and (pointer: fine) and (min-width: 1024px)";
 const hoverCapable = (event: React.PointerEvent) => event.pointerType === "mouse" && window.matchMedia(HOVER_QUERY).matches;
 
-export function ConversationFab({ children, search = [] }: { children: React.ReactNode; search?: SearchEntry[] }) {
+export function ConversationFab({ children, search = [], actionLabel = "chat" }: { children: React.ReactNode; search?: SearchEntry[]; actionLabel?: "chat" | "meeting" }) {
   const reduce = useReducedMotion();
   const [heroVisible, setHeroVisible] = React.useState(true);
   const [expanded, setExpanded] = React.useState(false);
@@ -101,7 +101,7 @@ export function ConversationFab({ children, search = [] }: { children: React.Rea
       <button
         type="button"
         data-fab-toggle
-        aria-label={expanded ? "Close chat and search" : "Open chat and search"}
+        aria-label={`${expanded ? "Close" : "Open"} ${actionLabel} and search`}
         aria-expanded={expanded}
         aria-controls={panelId}
         onClick={() => setExpanded((value) => !value)}

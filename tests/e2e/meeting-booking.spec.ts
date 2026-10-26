@@ -6,7 +6,7 @@ import { resetFixtures, query, TOKENS, uniqueEmail } from './helpers';
 const fixtureServer = process.env.E2E_BOOKING_ENABLED === 'true';
 // Whether the server under test has booking switched on. Read from the page rather than from env files: Next layers
 // .env.development.local / .env.local over .env, which the test runner does not see, so the two can disagree.
-const MEETING_BUTTON = /^(Book|Request) a meeting with Veloce$/;
+const MEETING_BUTTON = /^(Book|Request) a Meeting$/;
 const bookingLive = async (page: Page) =>
   (await page.locator('[data-contact-cta]').getByRole('button', { name: MEETING_BUTTON }).textContent())?.startsWith('Book') ?? false;
 test.beforeAll(resetFixtures);
@@ -40,6 +40,68 @@ test('direct meeting entry needs no demo and has no overflow or axe violations',
   expect((await new AxeBuilder({ page }).include('[data-meeting-panel]').withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze()).violations).toEqual([]);
 });
 
+test('landing meeting actions share a panel and return focus without loading Cal before consent', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const external: string[] = [];
+  page.on('request', request => {
+    if (/cal\.com|localhost:(3002|5555)/.test(request.url())) external.push(request.url());
+  });
+  await page.goto(`/?ref=${TOKENS.active}`);
+  const hero = page.locator('[data-hero-cta]');
+  const label = (await hero.textContent())!.trim();
+  expect(label).toMatch(MEETING_BUTTON);
+  const contact = page.locator('[data-contact-cta]');
+  await expect(contact.getByRole('button', { name: MEETING_BUTTON })).toHaveCount(1);
+  await expect(contact.getByRole('button', { name: 'Request a consultation', exact: true })).toBeVisible();
+  const panel = page.locator('[data-meeting-panel]');
+  for (const trigger of [hero, page.locator('#offer').getByRole('button', { name: MEETING_BUTTON }), contact.getByRole('button', { name: MEETING_BUTTON })]) {
+    await trigger.click();
+    await expect(panel).toBeVisible();
+    await expect(page.locator('#veloce-meeting-title')).toBeFocused();
+    await expect(page.getByRole('dialog', { name: 'Tell us about your project' })).toHaveCount(0);
+    await expect(panel).toHaveCount(1);
+    await panel.getByRole('button', { name: 'Return to page' }).click();
+    await expect(panel).toBeHidden();
+    await expect(trigger).toBeFocused();
+  }
+
+  // The menu opener unmounts on close; return falls back to the visible hero action.
+  if ((page.viewportSize()?.width ?? 0) < 768) {
+    await hero.scrollIntoViewIfNeeded();
+    await page.getByRole('button', { name: 'Open menu', exact: true }).click();
+    const menu = page.getByRole('dialog');
+    await menu.getByRole('button', { name: MEETING_BUTTON }).click();
+    await expect(menu).toBeHidden();
+    await expect(page.locator('#veloce-meeting-title')).toBeFocused();
+    await panel.getByRole('button', { name: 'Return to page' }).click();
+    await expect(hero).toBeFocused();
+  }
+
+  await page.evaluate(() => window.scrollTo(0, 1400));
+  const floating = page.locator('[data-conversation-fab]');
+  await expect(floating).not.toHaveAttribute('inert', '');
+  const toggle = floating.getByRole('button', { name: 'Open meeting and search', exact: true });
+  await toggle.focus();
+  await page.keyboard.press('Enter');
+  const primary = page.locator('[data-primary-cta]');
+  await expect(primary).toHaveAttribute('aria-label', label);
+  await primary.click();
+  await expect(page.locator('#veloce-meeting-title')).toBeFocused();
+  await panel.getByRole('button', { name: 'Return to page' }).click();
+  await expect(hero).toBeFocused();
+
+  // Search can activate the primary button even while its floating container is inert.
+  await page.keyboard.press('Control+k');
+  const search = page.getByRole('dialog', { name: 'Search this site' });
+  await search.getByRole('combobox').fill(label);
+  await search.getByRole('option', { name: new RegExp(label) }).click();
+  await expect(search).toBeHidden();
+  await expect(page.locator('#veloce-meeting-title')).toBeFocused();
+  await expect(panel).toHaveCount(1);
+  expect(external).toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0);
+});
+
 test('meeting request validates and persists a request, never an appointment', async ({ page }) => {
   const email = uniqueEmail('meeting-request');
   await page.goto(`/?ref=${TOKENS.active}`);
@@ -65,20 +127,20 @@ for (const status of ['CONFIRMED', 'REQUESTED'] as const) {
     await page.route('https://app.cal.com/embed/embed.js', route => route.fulfill({ contentType: 'application/javascript', body: readFileSync('tests/fixtures/cal-embed.js', 'utf8') }));
     await page.goto(`/?ref=${TOKENS.active}`);
     const workbench = page.locator('[data-approach-workbench]');
-    await workbench.locator('[data-workbench-meeting]').click();
+    await page.locator('[data-hero-cta]').click();
     const panel = page.locator('[data-meeting-panel]');
     await expect(panel.getByRole('button', { name: 'Choose a real meeting time' })).toBeDisabled();
     await panel.getByLabel(/I agree that Veloce/).check();
     await panel.getByRole('button', { name: 'Choose a real meeting time' }).click();
     await expect(page.locator('[data-calendar-fixture]')).toHaveCount(1);
     await workbench.getByRole('tab', { name: 'Build it.' }).click();
-    await panel.getByRole('button', { name: 'Back to example' }).click();
+    await panel.getByRole('button', { name: 'Return to page' }).click();
     await workbench.locator('[data-workbench-meeting]').click();
     await expect(page.locator('[data-calendar-fixture]')).toHaveCount(1);
     await panel.getByRole('button', { name: status === 'CONFIRMED' ? 'Confirm fixture meeting' : 'Request fixture approval' }).click();
     await expect(panel.getByRole('heading', { name: status === 'CONFIRMED' ? 'Your meeting with Veloce is booked.' : 'Meeting requested—awaiting confirmation.' })).toBeVisible();
-    const rows = await query<{ status: string; source: string }>('SELECT a.status, l.source FROM "Appointment" a JOIN "Lead" l ON l.id=a."leadId" WHERE l.email=$1 ORDER BY a."createdAt" DESC LIMIT 1', ['calendar-fixture@example.com']);
-    expect(rows[0]).toMatchObject({ status, source: 'REFERRAL_VERIFIED' });
+    const rows = await query<{ status: string; source: string; entryPoint: string }>('SELECT a.status, l.source, s."entryPoint" FROM "Appointment" a JOIN "Lead" l ON l.id=a."leadId" JOIN "BookingSession" s ON s.id=a."sessionId" WHERE l.email=$1 ORDER BY a."createdAt" DESC LIMIT 1', ['calendar-fixture@example.com']);
+    expect(rows[0]).toMatchObject({ status, source: 'REFERRAL_VERIFIED', entryPoint: 'contact' });
   });
 }
 

@@ -24,7 +24,8 @@ const openPaletteButton = (page: Page) =>
   (page.viewportSize()?.width ?? 0) >= 1024 ? page.getByRole("button", { name: "Change colour palette" }) : page.getByRole("button", { name: "Colour palette", exact: true });
 
 const openInquiry = async (page: Page) => {
-  await page.locator("[data-hero-cta]").click();
+  await page.goto(`/about${new URL(page.url()).search}`);
+  await page.getByRole("button", { name: "Start a conversation", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Tell us about your project" });
   await expect(dialog).toBeVisible();
   await page.waitForTimeout(1700); // above the minimum fill time used against bots
@@ -204,7 +205,8 @@ test.describe("inquiry form", () => {
     // Deterministic "too fast": the form records its start time from the page clock; an hour ahead is always newer than the server's clock.
     await page.clock.install({ time: Date.now() + 3_600_000 });
     await page.goto("/");
-    await page.locator("[data-hero-cta]").click();
+    await page.goto("/about");
+    await page.getByRole("button", { name: "Start a conversation", exact: true }).click();
     await fillInquiry(page, email);
     await page.getByLabel(/I agree that/).check();
     await page.getByRole("button", { name: "Send project inquiry" }).click();
@@ -354,7 +356,8 @@ test.describe("accessibility", () => {
   test("inquiry dialog: no violations, focus trapped, Esc closes and returns focus", async ({ page }) => {
     await page.goto("/");
     await revealAll(page);
-    const trigger = page.locator("[data-hero-cta]");
+    await page.goto("/about");
+    const trigger = page.getByRole("button", { name: "Start a conversation", exact: true });
     await trigger.click();
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
@@ -444,12 +447,15 @@ test.describe("navigation, search and motion", () => {
     await expect(dialog).toBeHidden();
   });
 
-  test("search palette can open the contact form", async ({ page }) => {
+  test("search palette can open the meeting panel", async ({ page }) => {
     await page.goto("/");
+    const label = (await page.locator('[data-hero-cta]').textContent())!.trim();
     const dialog = await openSearchWithShortcut(page);
-    await dialog.getByRole("combobox").fill("start a conversation");
+    await dialog.getByRole("combobox").fill(label);
+    await expect(dialog.getByRole("option", { name: new RegExp(label) })).toHaveAttribute("data-selected", "true");
     await page.keyboard.press("Enter");
-    await expect(page.getByRole("dialog", { name: "Tell us about your project" })).toBeVisible();
+    await expect(page.locator("[data-meeting-panel]")).toBeVisible();
+    await expect(page.locator("#veloce-meeting-title")).toBeFocused();
   });
 
   test("the Offer tab is always in the nav and the section is honest without an offer", async ({ page }) => {
@@ -483,13 +489,13 @@ test.describe("navigation, search and motion", () => {
     await expect(more).toHaveAttribute("aria-expanded", "false");
   });
 
-  test("conversation FAB reveals chat and search upward on hover or tap", async ({ page }) => {
+  test("meeting FAB reveals booking and search upward on hover or tap", async ({ page }) => {
     await page.goto("/");
     const fab = page.locator("[data-primary-cta]");
     const slot = page.locator("[data-conversation-fab]");
     const toggle = slot.locator("[data-fab-toggle]");
     const panel = slot.locator("[id]").first();
-    await expect(fab).toHaveAttribute("aria-label", "Start a conversation");
+    await expect(fab).toHaveAttribute("aria-label", /^(Book|Request) a Meeting$/);
     await expect(slot).toHaveAttribute("inert", "");
     await expect(slot).toHaveCSS("opacity", "0");
     await expect(page.locator("header [data-primary-cta]")).toHaveCount(0); // not in the notch bar any more
@@ -527,7 +533,8 @@ test.describe("navigation, search and motion", () => {
     await page.keyboard.press("Enter");
     await expect(page.getByRole("navigation", { name: "Quick links" }).getByText("Start a conversation")).toHaveCount(0);
     await fab.click();
-    await expect(page.getByRole("dialog", { name: "Tell us about your project" })).toBeVisible();
+    await expect(page.locator("[data-meeting-panel]")).toBeVisible();
+    await expect(page.locator("#veloce-meeting-title")).toBeFocused();
   });
 
   test("contacts: the closing section has the VELOCE social flip", async ({ page }) => {

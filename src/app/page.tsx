@@ -1,6 +1,6 @@
 import { portfolioImageUrl } from "@/lib/security/portfolio-images";
 import { CardRibbons } from "@/components/brand/card-ribbons";
-import { ArrowRight, ArrowUpRight, Check, Minus, MessageCircleMore } from "lucide-react";
+import { ArrowRight, ArrowUpRight, CalendarDays, Check, Minus } from "lucide-react";
 import { HeroHeadline } from "@/components/motion/hero-headline";
 import { HeroSlideshow } from "@/components/motion/hero-slideshow";
 import { existsSync } from "node:fs";
@@ -94,21 +94,23 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const teamPhoto = photo("card-builders.webp");
   const reviewPhoto = photo("card-office.webp");
   const contactPhoto = photo("contact-code.webp");
+  const meetingConfig = publicMeetingConfig();
+  const meetingLabel = meetingConfig.enabled ? "Book a Meeting" : "Request a Meeting";
   const search = buildSearchEntries({
     links,
     services,
     capabilities: capabilityGroups.flatMap((g) => g.items),
     email: company.contactEmail,
-    ctaLabel: "Start a conversation",
+    ctaLabel: meetingLabel,
   });
 
   return (
     <InquiryProvider companyName={company.name} contactEmail={company.contactEmail} refToken={campaign?.token} introducedBy={introducedBy}>
-    <MeetingProvider config={publicMeetingConfig()} refToken={campaign?.token} contactEmail={company.contactEmail}>
+    <MeetingProvider config={meetingConfig} refToken={campaign?.token} contactEmail={company.contactEmail}>
       <BootLoader name={company.name} frames={introFrames} />
       <OrganizationData company={company} />
       <SiteHeader companyName={company.name} homeHref={withReferral("/", campaign?.token)} links={links}
-        menuCta={<OpenInquiryButton className="w-full">Start a conversation</OpenInquiryButton>} />
+        menuCta={<OpenMeetingButton entryPoint="contact" className="w-full">{meetingLabel}</OpenMeetingButton>} />
       <div className="relative isolate">
       <Aura />
       <main id="main">
@@ -149,9 +151,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               <div className="flex max-w-lg flex-col gap-6 lg:col-span-6">
                 <p className="text-[15px] leading-relaxed text-white/85 sm:text-base">{brand.short}</p>
                 <div className="flex flex-wrap items-center gap-3 pt-2">
-                  <OpenInquiryButton data-hero-cta className="px-7">
-                    Start a conversation <ArrowRight aria-hidden className="size-[18px]" strokeWidth={2.75} />
-                  </OpenInquiryButton>
+                  <OpenMeetingButton data-hero-cta entryPoint="contact" className="px-7">
+                    {meetingLabel} <ArrowRight aria-hidden className="size-[18px]" strokeWidth={2.75} />
+                  </OpenMeetingButton>
                   <a href="#services" className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/20 bg-white/15 px-6 text-[15px] font-medium text-white backdrop-blur-md transition-colors hover:bg-white/25">
                     See what we build
                   </a>
@@ -344,7 +346,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 "Your visit through this link is already linked to the offer. There's nothing to enter or mention.",
               ]}
             >
-              <OpenInquiryButton className="self-start">Start a conversation</OpenInquiryButton>
+              <OpenMeetingButton entryPoint="contact" className="self-start">{meetingLabel}</OpenMeetingButton>
             </OfferSplit>
           ) : (
             <BuilderGuide refToken={campaign?.token} />
@@ -394,9 +396,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 <span className="rounded-md bg-accent px-2 py-0.5 font-mono text-[10.5px] font-bold uppercase text-on-accent">No pressure</span>
               </div>
               <div className="flex flex-col gap-2.5 [&>*]:w-full">
-                <OpenInquiryButton size="lg" variant="dark">Start a conversation</OpenInquiryButton>
+                <OpenMeetingButton size="lg" variant="dark" entryPoint="contact">{meetingLabel}</OpenMeetingButton>
                 <OpenInquiryButton size="lg" variant="outline" intent="CONSULTATION">Request a consultation</OpenInquiryButton>
-                <OpenMeetingButton size="lg" variant="outline" entryPoint="contact" />
               </div>
               <div className="mt-1 flex min-w-0 max-w-full flex-col gap-3 border-t border-line pt-5">
                 <p className="font-mono text-[11px] font-bold uppercase tracking-[0.12em] text-muted">Or reach us directly</p>
@@ -420,11 +421,11 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           { title: "What we build", links: services.slice(0, 5).map((s) => ({ label: s.title, href: "#services" })) },
         ]}
       />
-      <ConversationFab search={search}>
-        <OpenInquiryButton data-primary-cta aria-label="Start a conversation" className={fabClass}>
-          <MessageCircleMore aria-hidden className="size-6 shrink-0" strokeWidth={2} />
-          <span aria-hidden className={fabLabelClass}>Start a conversation</span>
-        </OpenInquiryButton>
+      <ConversationFab search={search} actionLabel="meeting">
+        <OpenMeetingButton data-primary-cta entryPoint="contact" aria-label={meetingLabel} className={fabClass}>
+          <CalendarDays aria-hidden className="size-6 shrink-0" strokeWidth={2} />
+          <span aria-hidden className={fabLabelClass}>{meetingLabel}</span>
+        </OpenMeetingButton>
       </ConversationFab>
     </MeetingProvider>
     </InquiryProvider>

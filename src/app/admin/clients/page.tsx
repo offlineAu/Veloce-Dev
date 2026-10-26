@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Form from "next/form";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AlertCircle, CalendarClock, ChevronRight, Search } from "lucide-react";
@@ -8,6 +9,8 @@ import { listClients, PAGE_SIZE, STAGES } from "@/server/clients/tracker";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { card } from "@/components/admin/analytics-dashboard";
 import { StagePill } from "@/components/admin/client-parts";
+import { LinkPending } from "@/components/admin/link-pending";
+import { SearchButton } from "@/components/admin/search-button";
 import { INTENT_LABEL, PROJECT_LABEL, STAGE_LABEL } from "@/lib/admin-labels";
 
 export const dynamic = "force-dynamic";
@@ -33,19 +36,20 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   return <AdminShell active="clients" attention={attention}>
     <div className="mb-8 mt-10 flex flex-wrap items-end justify-between gap-6 sm:mt-14">
       <div><p className="text-sm text-[var(--dash-muted)]">Client tracker</p><h1 className="mt-2 font-heading text-3xl font-medium tracking-tight sm:text-5xl">Every conversation, in one place.</h1></div>
-      <form role="search" className="flex min-h-11 w-full items-center gap-2 rounded-full border border-[var(--dash-line)] bg-[var(--dash-surface)] pl-4 pr-1 focus-within:border-[var(--dash-hi)] sm:w-80">
+      <Form action="/admin/clients" role="search" className="flex min-h-11 w-full items-center gap-2 rounded-full border border-[var(--dash-line)] bg-[var(--dash-surface)] pl-4 pr-1 focus-within:border-[var(--dash-hi)] sm:w-80">
         <Search className="size-4 shrink-0 text-[var(--dash-muted)]" aria-hidden />
         <input type="hidden" name="stage" value={stage} />
         <label htmlFor="client-search" className="sr-only">Search clients</label>
         <input id="client-search" name="q" defaultValue={q} placeholder="Name, email or company" className="h-10 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--dash-muted)]" />
-        <button type="submit" className="min-h-9 rounded-full px-3 text-sm text-[var(--dash-ink)] hover:bg-white/[0.06]">Search</button>
-      </form>
+        <SearchButton />
+      </Form>
     </div>
 
     <section aria-label="Pipeline summary" className="grid grid-cols-3 gap-2 sm:gap-4">
       {([["Needs attention", attention, "Overdue for a reply or follow-up", "ATTENTION"], ["Open inquiries", open, "New, contacted, consultation or proposal", "OPEN"], ["Won", counts.CONVERTED, "Inquiries that became clients", "CONVERTED"]] as const).map(([label, value, note, f]) =>
-        <Link key={label} href={href(f)} className={`${card} group !p-4 transition-colors hover:border-[var(--dash-line-strong)] sm:!p-7`}>
+        <Link key={label} href={href(f)} className={`${card} group relative !p-4 transition-colors hover:border-[var(--dash-line-strong)] sm:!p-7`}>
           <p className="text-xs text-[var(--dash-ink)] sm:text-sm">{label}</p><p className="mt-1 hidden text-xs text-[var(--dash-muted)] sm:block">{note}</p>
+          <LinkPending className="absolute right-4 top-4 text-[var(--dash-muted)] sm:right-6 sm:top-6" />
           <p className={`mt-3 font-heading text-3xl font-light tabular-nums sm:mt-5 sm:text-5xl ${f === "ATTENTION" && value ? "text-[var(--dash-hi)]" : "text-[var(--dash-ink)]"}`}>{value.toLocaleString("en")}</p>
         </Link>)}
     </section>
@@ -53,7 +57,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
     <nav aria-label="Filter by stage" className="-mx-4 mt-8 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
       <div className="flex w-max gap-1 rounded-full border border-[var(--dash-line)] bg-[var(--dash-surface)] p-1">
         {FILTERS.map(f => <Link key={f} href={href(f)} aria-current={stage === f ? "page" : undefined} className={`inline-flex min-h-9 items-center gap-2 whitespace-nowrap rounded-full px-3.5 text-sm transition-colors ${stage === f ? "bg-[var(--dash-hi)] font-medium text-[var(--dash-on-hi)]" : "text-[var(--dash-muted)] hover:bg-white/[0.06] hover:text-[var(--dash-ink)]"}`}>
-          {filterLabel(f)}<span className={`font-mono text-[11px] ${stage === f ? "" : "text-[var(--dash-muted)]"}`}>{count(f)}</span>
+          {filterLabel(f)}<span className={`font-mono text-[11px] ${stage === f ? "" : "text-[var(--dash-muted)]"}`}>{count(f)}</span><LinkPending className="-ml-1" />
         </Link>)}
       </div>
     </nav>
@@ -71,7 +75,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
               {row.suggestion ? <p className={`flex items-center gap-1.5 ${row.suggestion.overdue ? "text-[var(--dash-hi)]" : "text-[var(--dash-ink)]"}`}>{row.suggestion.overdue ? <AlertCircle className="size-3.5 shrink-0" aria-hidden /> : null}<span className="truncate">{row.suggestion.label} · {row.suggestion.reason}</span></p> : <p className="text-[var(--dash-muted)]">No follow-up due</p>}
               <p className="mt-0.5 text-[var(--dash-muted)]">{row.lastContactedAt ? `Last contacted ${ago(row.lastContactedAt, now)}` : "Not contacted yet"}</p>
             </div>
-            <ChevronRight className="hidden size-4 text-[var(--dash-muted)] transition-transform group-hover:translate-x-0.5 md:block" aria-hidden />
+            <span className="hidden items-center gap-2 text-[var(--dash-muted)] md:flex"><LinkPending /><ChevronRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden /></span>
           </Link>
         </li>)}
       </ul> : <div className="px-7 py-16 text-center">
@@ -81,8 +85,8 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
       {total > PAGE_SIZE ? <nav aria-label="Pages" className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--dash-line)] px-5 py-4 text-sm sm:px-7">
         <span className="text-[var(--dash-muted)]">Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total.toLocaleString("en")}</span>
         <span className="flex gap-2">
-          {page > 1 ? <Link href={href(stage, page - 1)} className="inline-flex min-h-10 items-center rounded-full border border-[var(--dash-line)] px-4 hover:bg-white/[0.06]">Previous</Link> : null}
-          {page < pages ? <Link href={href(stage, page + 1)} className="inline-flex min-h-10 items-center rounded-full border border-[var(--dash-line)] px-4 hover:bg-white/[0.06]">Next</Link> : null}
+          {page > 1 ? <Link href={href(stage, page - 1)} className="inline-flex min-h-10 items-center rounded-full border border-[var(--dash-line)] gap-2 px-4 hover:bg-white/[0.06]"><LinkPending />Previous</Link> : null}
+          {page < pages ? <Link href={href(stage, page + 1)} className="inline-flex min-h-10 items-center rounded-full border border-[var(--dash-line)] gap-2 px-4 hover:bg-white/[0.06]">Next<LinkPending /></Link> : null}
         </span>
       </nav> : null}
     </section>
