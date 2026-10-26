@@ -4,9 +4,11 @@ Implemented locally on 2026-10-07. Live scheduling is disabled until a real Cal.
 
 ## Visitor behavior
 
-The working example offers a meeting invitation at every stage. Its sample time buttons remain examples. The explicit meeting action opens the shared panel; the closing contact section can open the same panel without completing the example.
+The landing page's hero, header menu, referral offer, closing contact card, floating action, and search offer **Book a Meeting** when scheduling is enabled and **Request a Meeting** when disabled. Each opens the same panel without completing the example. The contact card retains a separate consultation inquiry. Direct meeting entries offer **Return to page**, restoring focus to the opener or the hero if the opener has disappeared or become inert.
 
-With scheduling disabled, visitors see **Request a meeting with Veloce**. The form saves a `MEETING` lead and attempts team/visitor notifications. It clearly says that no appointment is reserved. Until an email provider is configured, these notifications are logged as skipped and the team must inspect the database; saving a request does not establish email delivery. The direct email link remains available.
+The working example also offers a meeting invitation at every stage. Its sample time buttons remain examples. Its meeting action supplies discussion context and retains **Back to example**. Reopening from another entry point preserves the existing calendar and session attribution.
+
+With scheduling disabled, the panel and workbench invitation say **Request a meeting with Veloce**. The form saves a `MEETING` lead and attempts team/visitor notifications. It clearly says that no appointment is reserved. Until an email provider is configured, these notifications are logged as skipped and the team must inspect the database; saving a request does not establish email delivery. The direct email link remains available.
 
 With scheduling enabled, visitors review the actual duration, format and cost terms, optionally edit the discussion context, and explicitly agree to sharing details with Veloce and the scheduler. The calendar then loads on demand. Cal.com collects the contact details and reserves time against its calendar configuration. A browser completion event triggers server-side verification before the site shows a confirmed appointment or approval request. Returning to the example preserves the active calendar within the page; reload draft recovery is not promised.
 

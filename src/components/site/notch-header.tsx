@@ -160,6 +160,7 @@ export function NotchHeader({
   }, [destination]);
   const palette = useThemeChoice();
   const [menu, setMenu] = React.useState(false);
+  const meetingSelected = React.useRef(false);
   // Same threshold as the quick dock: once it is on screen, the header keeps only the logo and the conversation button.
   const [compact, setCompact] = React.useState(false);
   React.useEffect(() => {
@@ -261,7 +262,17 @@ export function NotchHeader({
                       <Menu aria-hidden className="size-6" />
                     </button>
                   </SheetTrigger>
-                  <SheetContent side="left" showCloseButton={false} className="w-[min(86vw,360px)] gap-0 border-line bg-bg p-0">
+                  <SheetContent side="left" showCloseButton={false} className="w-[min(86vw,360px)] gap-0 border-line bg-bg p-0"
+                    onCloseAutoFocus={event => {
+                      if (!meetingSelected.current) return;
+                      event.preventDefault();
+                      meetingSelected.current = false;
+                      // Wait until the sheet has released focus and scroll lock.
+                      requestAnimationFrame(() => {
+                        document.getElementById('veloce-meeting-panel')?.scrollIntoView({ block: 'center', behavior: reduce ? 'instant' : 'smooth' });
+                        document.getElementById('veloce-meeting-title')?.focus({ preventScroll: true });
+                      });
+                    }}>
                     <SheetHeader className="flex-row items-center gap-3 border-b border-line p-4 pr-3">
                       <LogoMark className="size-7 text-ink" />
                       <div className="min-w-0 flex-1">
@@ -305,7 +316,10 @@ export function NotchHeader({
                       </section>
                     </div>
                     {menuCta ? (
-                      <div className="border-t border-line bg-bg p-4 pb-[max(1rem,env(safe-area-inset-bottom))]" onClick={() => setMenu(false)}>
+                      <div className="border-t border-line bg-bg p-4 pb-[max(1rem,env(safe-area-inset-bottom))]" onClick={event => {
+                        meetingSelected.current = event.target instanceof Element && !!event.target.closest('[data-meeting-trigger]');
+                        setMenu(false);
+                      }}>
                         {menuCta}
                       </div>
                     ) : null}

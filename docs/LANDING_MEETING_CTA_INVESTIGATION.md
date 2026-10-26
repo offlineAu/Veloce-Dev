@@ -1,5 +1,64 @@
 # Landing page meeting CTA investigation
 
+## Implementation — 2026-10-25
+
+Implemented the recommendation below. All primary landing CTAs now use **Book a Meeting** when scheduling is enabled and **Request a Meeting** when disabled, opening the existing shared panel. The contact card has one primary meeting action and a secondary consultation action. The floating action uses a calendar icon and meeting/search accessibility labels. Menu dismissal, heading focus, direct-entry return focus, workbench return behavior, and retained calendar/session state are covered by browser checks. Provider configuration and environment files were not changed.
+
+Validation completed:
+
+- Production build, TypeScript check, scoped ESLint, and diff whitespace checks passed.
+- Seven booking configuration/endpoint unit tests passed.
+- The meeting suite passed its applicable checks on mobile, tablet, and desktop against the existing local development configuration (12 passed; nine configuration-specific checks skipped).
+- The disabled-booking production test server passed 15 checks across those three viewports, including request persistence and referral attribution; six enabled-scheduler fixture checks were skipped by design.
+- Mocked production scheduler checks passed on mobile and desktop for confirmed and pending-approval bookings, one preserved calendar, verified referral attribution, and the `contact` session entry point. No real provider appointment or external email was created by these checks.
+- Affected inquiry, consultation, accessibility, loader, floating action, and search checks passed across all three viewports. The search test was corrected to select the complete meeting label before keyboard activation.
+- An additional 320px browser check confirmed heading focus, a visible floating booking button, and zero horizontal page overflow.
+
+Temporary production servers used test-only configuration overrides and were stopped after testing. Hosted Cal.com account/calendar activation and deployed environment readiness remain separate from this application change. The following sections preserve the investigation record.
+
+## Current review — 2026-10-25
+
+Rechecked the current source and local environment configuration for the requested **Book a Meeting** landing-page action. This section supersedes the earlier review where wording or verification differs. Application code and environment settings were not changed.
+
+**Recommendation:** use **Book a Meeting** for enabled landing-page primary actions and **Request a Meeting** when scheduling is disabled. Wire these actions to the existing `OpenMeetingButton` with `entryPoint="contact"`. A text-only replacement would still open the inquiry form. The existing provider, booking panel, Cal embed, session creation, server verification, webhook handling, and referral attribution can be reused without a new dependency, API, or database migration for this scope.
+
+The proposed visitor path is:
+
+1. Click **Book a Meeting** from the hero, header menu, referral offer, contact card, floating action, or site search.
+2. Open and focus the existing meeting panel in the approach section; trying the example is optional.
+3. Review meeting terms, optionally enter discussion context, and consent to loading Cal.com.
+4. Choose a real time in the embedded calendar and enter contact details there.
+5. Show the booking result after server verification. Keep the existing direct booking-page link and email-request fallback available.
+
+The first click currently opens the Veloce booking panel, rather than immediately opening an external Cal.com tab or popup. Reusing this flow preserves its consent, attribution, and booking-record behavior. If a popup is preferred later, use the same panel/session flow inside a suitable dialog and validate its mobile layout and keyboard behavior; that is a larger UI change than promoting the existing panel.
+
+### Connection status observed in this checkout
+
+Read the installed Next.js environment-variable guide and resolved development and production configuration independently with `@next/env`. Reported only flags, URL classification, and required-value presence; credential values are omitted.
+
+| Environment | Observed configuration | What this establishes |
+| --- | --- | --- |
+| Development | Booking enabled; local mode enabled; event points to the local Cal instance on port 3002; required booking values are populated. | The checkout is configured for local scheduling. Availability and provider connectivity were not exercised in this review. |
+| Production file resolution in this checkout | Booking disabled; local mode disabled; booking URL is invalid or a placeholder. Other required booking variables are populated, which does not establish their validity. | These files do not establish a usable hosted Cal.com connection. Actual deployed environment settings and account/calendar readiness remain unverified. |
+
+No server answered at `http://localhost:3000` during this review, so no new browser interaction, consent submission, external booking, or calendar delivery was tested. Browser results below belong to the earlier 2026-10-16 review and should not be treated as newly reproduced.
+
+### Concrete implementation scope
+
+- In `src/app/page.tsx`, resolve `publicMeetingConfig()` once, derive the short enabled/disabled CTA label, and use it for the header menu, hero, active offer, floating button, its accessible name, and search entry. Replace their `OpenInquiryButton` actions with `OpenMeetingButton` and retain existing styling and CTA data markers.
+- In the contact card, promote its existing meeting action to the primary dark button and remove the old conversation button to avoid two equivalent booking actions. Retain the consultation action and `InquiryProvider`, which other landing-page features still require.
+- In `meeting-provider.tsx` and `meeting-panel.tsx`, make return behavior appropriate for direct entry. The current return button always says **Back to example** and always focuses the workbench invitation. Remember a usable opener, provide a visible fallback for dismissed menu/search controls, and preserve an existing calendar session.
+- In `conversation-fab.tsx`, allow landing-specific meeting/search accessible wording while retaining existing behavior on other pages. Use a calendar icon for the landing booking action.
+- Update the affected site/navigation/meeting browser tests for the new labels and destinations. Cover all entry points, one panel/one calendar, no demo prerequisite, no Cal request before consent, menu/search focus, repeat opens, referral attribution, disabled scheduling, and mobile layout.
+
+The longer workbench invitation and panel title can remain **Book a meeting with Veloce**. About and service-page inquiry actions remain outside this landing-page scope.
+
+**Verification in this review:** `npm test -- tests/unit/meeting-config.test.ts tests/unit/cal-endpoints.test.ts` passed: two files, seven tests. No full suite, build, or new browser tests were run for this documentation-only investigation.
+
+Reviewed the official [Cal embed event documentation](https://cal.com/help/embedding/embed-events) and [booking form prefilling documentation](https://cal.com/help/embedding/prefill-booking-form-embed). They document the existing `bookingSuccessfulV2` event and metadata-prefilling approach. The event alone does not guarantee confirmation, so retain server verification. Hosted launch checks remain in [Meeting booking setup and operation](MEETING_BOOKING.md).
+
+## Earlier review — 2026-10-16
+
 Investigated 2026-10-16 against the current working tree and the running site at `http://localhost:3000`. Scope: replacing the landing page's **Start a conversation** action with **Book a meeting with Veloce**. Application code was not changed; existing uncommitted work was preserved.
 
 ## Recommendation
