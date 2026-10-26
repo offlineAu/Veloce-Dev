@@ -36,7 +36,7 @@ export interface DiagonalCarouselProps extends Omit<React.HTMLAttributes<HTMLDiv
   showDots?: boolean;
   wrapSlide?: (slide: React.ReactNode, item: DiagonalCarouselItem, index: number, isActive: boolean) => React.ReactNode;
   viewportClassName?: string;
-  /** Positions the row of slides inside the viewport (default: 30% from the top). */
+  /** Positions the row of slides inside the viewport: the active slide is centred on this point (default: the middle). */
   trackClassName?: string;
   slideClassName?: string;
   imageClassName?: string;
@@ -93,6 +93,12 @@ export function DiagonalCarousel({
   const currentIndex = clamp(activeIndex ?? uncontrolledIndex, 0, maxIndex);
   const safeSlideSize = Math.max(120, slideSize);
   const safeInactiveScale = clamp(inactiveScale, 0.35, 1);
+  // Horizontal drag offset in px while a pan is under way; null at rest.
+  const [drag, setDrag] = React.useState<number | null>(null);
+  // The pointer that went down on the stage, its start and its latest sample (for the flick velocity).
+  const pointer = React.useRef<{ id: number; x: number; y: number; lastX: number; lastT: number; velocity: number } | null>(null);
+  // Set once a pan starts, so the click that ends it doesn't also open or select a slide.
+  const panned = React.useRef(false);
 
   const selectSlide = React.useCallback(
     (nextIndex: number) => {
@@ -117,7 +123,54 @@ export function DiagonalCarousel({
     }
   };
 
+  /*
+   * Drag to scroll, with plain pointer events (the app's LazyMotion bundle leaves out framer's pan gesture). A press only
+   * becomes a pan after a few px of mostly horizontal travel, so taps still click and vertical swipes still scroll.
+   */
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    panned.current = false;
+    pointer.current = { id: event.pointerId, x: event.clientX, y: event.clientY, lastX: event.clientX, lastT: event.timeStamp, velocity: 0 };
+  };
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const p = pointer.current;
+    if (!p || p.id !== event.pointerId) return;
+    const dx = event.clientX - p.x;
+    if (!panned.current) {
+      if (Math.abs(dx) < 6) return;
+      if (Math.abs(event.clientY - p.y) > Math.abs(dx)) {
+        pointer.current = null;
+        return;
+      }
+      panned.current = true;
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+    const dt = event.timeStamp - p.lastT;
+    if (dt > 0) p.velocity = ((event.clientX - p.lastX) / dt) * 1000;
+    p.lastX = event.clientX;
+    p.lastT = event.timeStamp;
+    setDrag(dx);
+  };
+
+  const handlePointerEnd = (event: React.PointerEvent<HTMLDivElement>) => {
+    const p = pointer.current;
+    if (!p || p.id !== event.pointerId) return;
+    pointer.current = null;
+    if (!panned.current) return;
+    const dx = event.clientX - p.x;
+    let steps = -Math.round(dx / safeSlideSize);
+    if (steps === 0 && Math.abs(p.velocity) > 400) steps = p.velocity < 0 ? 1 : -1;
+    setDrag(null);
+    if (steps) selectSlide(currentIndex + steps);
+  };
+
   if (!items.length) return null;
+
+  // While dragging, slides follow the pointer by a fraction of a slot; without loop, the ends resist past the last slide.
+  const rawShift = (drag ?? 0) / safeSlideSize;
+  const shift = loop ? rawShift : clamp(rawShift, currentIndex - maxIndex - 0.35, currentIndex + 0.35);
+  const slideTransition: Transition = drag === null ? transition : { duration: 0 };
 
   const isPreviousDisabled = !loop && currentIndex === 0;
   const isNextDisabled = !loop && currentIndex === maxIndex;
@@ -134,11 +187,23 @@ export function DiagonalCarousel({
       className={cn("relative isolate h-full w-full overflow-hidden", className)}
       {...props}
     >
-      <div className={cn("absolute inset-0 overflow-hidden", viewportClassName)}>
-        <div className={cn("absolute left-1/2 top-[30%]", trackClassName)}>
+      <div
+        className={cn("absolute inset-0 cursor-grab touch-pan-y select-none overflow-hidden active:cursor-grabbing", viewportClassName)}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerEnd}
+        onClickCapture={(event) => {
+          if (!panned.current) return;
+          event.preventDefault();
+          event.stopPropagation();
+          panned.current = false;
+        }}
+      >
+        <div className={cn("absolute left-1/2 top-1/2", trackClassName)}>
           {items.map((item, index) => {
             const isActive = currentIndex === index;
-            const distance = slotOf(index, currentIndex, items.length, loop);
+            const distance = slotOf(index, currentIndex, items.length, loop) + shift;
             // Looping, a slide wraps from one end of the ring to the other; fading the far ends hides that jump.
             const hidden = loop && Math.abs(distance) > VISIBLE_RANGE;
             const image = (
@@ -154,7 +219,7 @@ export function DiagonalCarousel({
             const frame = "block w-full cursor-pointer";
             const slide =
               isActive && item.href ? (
-                <Link href={item.href} aria-label={`Open ${item.title}`} className={frame} style={{ aspectRatio: slideAspect }}>
+                <Link href={item.href} aria-label={`Open ${item.title}`} draggable={false} className={frame} style={{ aspectRatio: slideAspect }}>
                   {image}
                 </Link>
               ) : (
@@ -174,16 +239,16 @@ export function DiagonalCarousel({
               <m.div
                 key={`${item.src}-${index}`}
                 inert={hidden}
-                className={cn("absolute left-0 top-0 flex flex-col items-center gap-2 will-change-transform", slideClassName)}
-                style={{ width: safeSlideSize, marginLeft: -safeSlideSize / 2, zIndex: items.length - Math.abs(distance) }}
+                className={cn("absolute left-0 top-0 flex -translate-y-1/2 flex-col items-center gap-2 will-change-transform", slideClassName)}
+                style={{ width: safeSlideSize, marginLeft: -safeSlideSize / 2, zIndex: Math.round(items.length - Math.abs(distance)) }}
                 animate={{
                   x: distance * safeSlideSize,
                   rotate: distance * rotationStep,
-                  scale: isActive ? 1 : safeInactiveScale,
+                  scale: 1 - Math.min(Math.abs(distance), 1) * (1 - safeInactiveScale),
                   y: distance * verticalStep,
                   opacity: hidden ? 0 : 1,
                 }}
-                transition={transition}
+                transition={slideTransition}
               >
                 <m.p
                   className={cn("whitespace-nowrap text-sm", labelClassName)}
