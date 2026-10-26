@@ -48,6 +48,20 @@ const DEFAULT_TRANSITION: Transition = { type: "spring", bounce: 0.16, duration:
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
+/** Slides further than this from the active one are faded out, so a looping slide can cross over unseen. */
+const VISIBLE_RANGE = 2;
+
+/**
+ * Signed slot of slide `index` relative to the active one. Looping, it is the shorter way round the ring, so the
+ * active slide always has neighbours on both sides and the ring never rewinds.
+ */
+const slotOf = (index: number, current: number, count: number, loop: boolean) => {
+  const distance = index - current;
+  if (!loop) return distance;
+  const wrapped = ((distance % count) + count) % count;
+  return wrapped > count / 2 ? wrapped - count : wrapped;
+};
+
 export function DiagonalCarousel({
   items,
   activeIndex,
@@ -121,14 +135,12 @@ export function DiagonalCarousel({
       {...props}
     >
       <div className={cn("absolute inset-0 overflow-hidden", viewportClassName)}>
-        <m.div
-          className={cn("absolute left-1/2 top-[30%] flex w-fit", trackClassName)}
-          animate={{ x: -(currentIndex * safeSlideSize + safeSlideSize / 2) }}
-          transition={transition}
-        >
+        <div className={cn("absolute left-1/2 top-[30%]", trackClassName)}>
           {items.map((item, index) => {
             const isActive = currentIndex === index;
-            const distance = index - currentIndex;
+            const distance = slotOf(index, currentIndex, items.length, loop);
+            // Looping, a slide wraps from one end of the ring to the other; fading the far ends hides that jump.
+            const hidden = loop && Math.abs(distance) > VISIBLE_RANGE;
             const image = (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -161,9 +173,16 @@ export function DiagonalCarousel({
             return (
               <m.div
                 key={`${item.src}-${index}`}
-                className={cn("flex shrink-0 flex-col items-center gap-2 will-change-transform", slideClassName)}
-                style={{ width: safeSlideSize }}
-                animate={{ rotate: distance * rotationStep, scale: isActive ? 1 : safeInactiveScale, y: distance * verticalStep }}
+                inert={hidden}
+                className={cn("absolute left-0 top-0 flex flex-col items-center gap-2 will-change-transform", slideClassName)}
+                style={{ width: safeSlideSize, marginLeft: -safeSlideSize / 2, zIndex: items.length - Math.abs(distance) }}
+                animate={{
+                  x: distance * safeSlideSize,
+                  rotate: distance * rotationStep,
+                  scale: isActive ? 1 : safeInactiveScale,
+                  y: distance * verticalStep,
+                  opacity: hidden ? 0 : 1,
+                }}
                 transition={transition}
               >
                 <m.p
@@ -177,7 +196,7 @@ export function DiagonalCarousel({
               </m.div>
             );
           })}
-        </m.div>
+        </div>
       </div>
 
       {showControls && (

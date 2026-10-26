@@ -41,7 +41,7 @@ export function SampleSites({ samples, initialIndex = 0, refToken }: { samples: 
         <span className="w-fit rounded border border-line bg-neutral-100 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-muted">
           {copy.label} {active + 1} / {samples.length}
         </span>
-        <h3 className="text-2xl font-bold tracking-tight text-ink">{sample.title}</h3>
+        <h3 className="text-2xl font-bold uppercase tracking-wide text-ink">{sample.title}</h3>
         <p className="text-[15px] leading-relaxed text-muted">{sample.description}</p>
         {sample.pages.length > 1 ? (
           <p className="text-[13px] text-muted">{sample.pages.map((p) => p.title).join(" · ")}</p>
@@ -80,7 +80,7 @@ export function SampleSites({ samples, initialIndex = 0, refToken }: { samples: 
           trackClassName="top-4"
           viewportClassName="[--fade:linear-gradient(to_bottom,black_80%,transparent)] [mask-image:var(--fade)]"
           imageClassName="rounded-none object-top shadow-none"
-          labelClassName="font-semibold text-white"
+          labelClassName="text-xs font-bold uppercase tracking-[0.14em] text-white"
           wrapSlide={(slide, item, index, isActive) => {
             const s = samples[index]!;
             const inner = s.pages[1] ?? s.pages[0]!;
