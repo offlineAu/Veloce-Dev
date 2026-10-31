@@ -56,16 +56,28 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
 
     <nav aria-label="Filter by stage" className="-mx-4 mt-8 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
       <div className="flex w-max gap-1 rounded-full border border-[var(--dash-line)] bg-[var(--dash-surface)] p-1">
-        {FILTERS.map(f => <Link key={f} href={href(f)} aria-current={stage === f ? "page" : undefined} className={`inline-flex min-h-9 items-center gap-2 whitespace-nowrap rounded-full px-3.5 text-sm transition-colors ${stage === f ? "bg-[var(--dash-hi)] font-medium text-[var(--dash-on-hi)]" : "text-[var(--dash-muted)] hover:bg-white/[0.06] hover:text-[var(--dash-ink)]"}`}>
+        {FILTERS.map(f => <Link key={f} href={href(f)} aria-current={stage === f ? "page" : undefined} className={`inline-flex min-h-9 items-center gap-2 whitespace-nowrap rounded-full px-3.5 text-sm transition-colors ${stage === f ? "bg-[var(--dash-hi)] font-medium text-[var(--dash-on-hi)]" : "text-[var(--dash-muted)] hover:bg-ink/[0.06] hover:text-[var(--dash-ink)]"}`}>
           {filterLabel(f)}<span className={`font-mono text-[11px] ${stage === f ? "" : "text-[var(--dash-muted)]"}`}>{count(f)}</span><LinkPending className="-ml-1" />
         </Link>)}
       </div>
     </nav>
 
     <section aria-label="Clients" className={`${card} mt-4 !p-0`}>
-      {rows.length ? <ul className="divide-y divide-[var(--dash-line)]">
+      {rows.length ? <>
+      <div className="hidden overflow-x-auto md:block">
+        <table className="w-full text-left text-sm">
+          <thead className="border-b border-[var(--dash-line)] text-xs font-medium text-[var(--dash-muted)]"><tr><th scope="col" className="px-7 py-4 font-medium">Client</th><th scope="col" className="px-4 py-4 font-medium">Stage</th><th scope="col" className="px-4 py-4 font-medium">Next action</th><th scope="col" className="px-4 py-4 font-medium"><span className="sr-only">Open client</span></th></tr></thead>
+          <tbody className="divide-y divide-[var(--dash-line)]">{rows.map(row => <tr key={row.id} className="transition-colors hover:bg-ink/[0.03]">
+            <td className="px-7 py-5"><Link href={`/admin/clients/${row.id}`} className="font-semibold text-[var(--dash-ink)] hover:underline">{row.name}</Link>{row.companyName ? <p className="mt-1 text-xs text-[var(--dash-muted)]">{row.companyName}</p> : null}<p className="mt-1 text-xs text-[var(--dash-muted)]">{INTENT_LABEL[row.intent]} · {PROJECT_LABEL[row.projectType]} · {date(row.createdAt)}</p></td>
+            <td className="px-4 py-5"><StagePill status={row.status} />{row.nextCall ? <p className="mt-2 text-xs text-[var(--dash-muted)]">Meeting · {date(row.nextCall)}</p> : null}</td>
+            <td className="px-4 py-5 text-xs">{row.suggestion ? <p className={row.suggestion.overdue ? "text-[var(--dash-hi)]" : "text-[var(--dash-ink)]"}>{row.suggestion.label} · {row.suggestion.reason}</p> : <p className="text-[var(--dash-muted)]">No follow-up due</p>}<p className="mt-1 text-[var(--dash-muted)]">{row.lastContactedAt ? `Last contacted ${ago(row.lastContactedAt, now)}` : "Not contacted yet"}</p></td>
+            <td className="px-4 py-5"><Link href={`/admin/clients/${row.id}`} aria-label={`Open ${row.name}`} className="inline-flex min-h-11 min-w-11 items-center justify-center text-[var(--dash-muted)] hover:text-[var(--dash-ink)]"><ChevronRight className="size-4" aria-hidden /></Link></td>
+          </tr>)}</tbody>
+        </table>
+      </div>
+      <ul className="divide-y divide-[var(--dash-line)] md:hidden">
         {rows.map(row => <li key={row.id}>
-          <Link href={`/admin/clients/${row.id}`} className="group grid gap-3 px-5 py-4 transition-colors hover:bg-white/[0.03] sm:px-7 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1.3fr)_auto] md:items-center">
+          <Link href={`/admin/clients/${row.id}`} className="group grid gap-3 px-5 py-4 transition-colors hover:bg-ink/[0.03] sm:px-7 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1.3fr)_auto] md:items-center">
             <div className="min-w-0">
               <p className="truncate font-medium text-[var(--dash-ink)]">{row.name}{row.companyName ? <span className="font-normal text-[var(--dash-muted)]"> · {row.companyName}</span> : null}</p>
               <p className="mt-0.5 truncate text-xs text-[var(--dash-muted)]">{INTENT_LABEL[row.intent]} · {PROJECT_LABEL[row.projectType]} · {date(row.createdAt)}</p>
@@ -78,15 +90,15 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
             <span className="hidden items-center gap-2 text-[var(--dash-muted)] md:flex"><LinkPending /><ChevronRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden /></span>
           </Link>
         </li>)}
-      </ul> : <div className="px-7 py-16 text-center">
+      </ul></> : <div className="px-7 py-16 text-center">
         <p className="font-heading text-xl text-[var(--dash-ink)]">{q ? "No matches" : stage === "ATTENTION" ? "You're all caught up" : "Nothing here yet"}</p>
         <p className="mt-2 text-sm text-[var(--dash-muted)]">{q ? `No inquiries match "${q}" in ${filterLabel(stage).toLowerCase()}.` : stage === "ATTENTION" ? "No inquiry is overdue for a reply or follow-up." : "Inquiries from the site will appear here as they arrive."}</p>
       </div>}
       {total > PAGE_SIZE ? <nav aria-label="Pages" className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--dash-line)] px-5 py-4 text-sm sm:px-7">
         <span className="text-[var(--dash-muted)]">Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total.toLocaleString("en")}</span>
         <span className="flex gap-2">
-          {page > 1 ? <Link href={href(stage, page - 1)} className="inline-flex min-h-10 items-center rounded-full border border-[var(--dash-line)] gap-2 px-4 hover:bg-white/[0.06]"><LinkPending />Previous</Link> : null}
-          {page < pages ? <Link href={href(stage, page + 1)} className="inline-flex min-h-10 items-center rounded-full border border-[var(--dash-line)] gap-2 px-4 hover:bg-white/[0.06]">Next<LinkPending /></Link> : null}
+          {page > 1 ? <Link href={href(stage, page - 1)} className="inline-flex min-h-10 items-center rounded-full border border-[var(--dash-line)] gap-2 px-4 hover:bg-ink/[0.06]"><LinkPending />Previous</Link> : null}
+          {page < pages ? <Link href={href(stage, page + 1)} className="inline-flex min-h-10 items-center rounded-full border border-[var(--dash-line)] gap-2 px-4 hover:bg-ink/[0.06]">Next<LinkPending /></Link> : null}
         </span>
       </nav> : null}
     </section>

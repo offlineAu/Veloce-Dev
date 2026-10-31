@@ -62,7 +62,7 @@ function PasswordInput() {
       <KeyRound className="size-4 shrink-0 text-[var(--dash-muted)]" aria-hidden />
       <input id="owner-password" name="password" type={visible ? "text" : "password"} required maxLength={200} autoComplete="current-password" autoFocus onKeyDown={capsCheck} onKeyUp={capsCheck}
         className="h-13 min-w-0 flex-1 bg-transparent text-base text-[var(--dash-ink)] outline-none placeholder:text-[var(--dash-muted)]/60" placeholder="Enter your password" />
-      <button type="button" onClick={() => setVisible(v => !v)} aria-label={visible ? "Hide password" : "Show password"} aria-pressed={visible} className="-mr-2 grid size-10 place-items-center rounded-xl text-[var(--dash-muted)] transition-colors hover:bg-white/[0.06] hover:text-[var(--dash-ink)]">
+      <button type="button" onClick={() => setVisible(v => !v)} aria-label={visible ? "Hide password" : "Show password"} aria-pressed={visible} className="-mr-2 grid size-10 place-items-center rounded-xl text-[var(--dash-muted)] transition-colors hover:bg-ink/[0.06] hover:text-[var(--dash-ink)]">
         {visible ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
       </button>
     </div>
@@ -102,8 +102,8 @@ export function OwnerLogin({ mfa = false, next }: { mfa?: boolean; next?: string
         {next ? <input type="hidden" name="next" value={next} /> : null}
         <PasswordInput />
         {mfa ? <CodeInput /> : null}
-        {state.error ? <p ref={error} tabIndex={-1} role="alert" className="flex items-start gap-2.5 rounded-2xl border border-[#ff9f90]/30 bg-[#ff9f90]/10 p-3.5 text-sm text-[#ffc7be] outline-none"><AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />{state.error}</p> : null}
-        <button type="submit" disabled={pending} className="inline-flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-[var(--dash-hi)] px-6 text-sm font-semibold text-[var(--dash-on-hi)] transition-[background-color,transform] hover:bg-[#f0c3b7] active:scale-[0.99] disabled:opacity-70">
+        {state.error ? <p ref={error} tabIndex={-1} role="alert" className="flex items-start gap-2.5 rounded-2xl border border-[#ff9f90]/30 bg-[#ff9f90]/10 p-3.5 text-sm text-danger outline-none"><AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />{state.error}</p> : null}
+        <button type="submit" disabled={pending} className="inline-flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-[var(--dash-hi)] px-6 text-sm font-semibold text-[var(--dash-on-hi)] transition-[background-color,transform] hover:opacity-90 active:scale-[0.99] disabled:opacity-70">
           {pending ? <><LoaderCircle className="size-4 motion-safe:animate-spin" aria-hidden />Signing in…</> : "View analytics"}
         </button>
       </form>

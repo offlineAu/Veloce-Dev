@@ -6,7 +6,7 @@ import { STAGE_LABEL } from "@/lib/admin-labels";
 
 const TONE: Record<string, string> = {
   NEW: "border-[var(--dash-hi)]/40 bg-[var(--dash-hi)]/15 text-[var(--dash-accent)]",
-  CONVERTED: "border-[#1fa093]/40 bg-[#1fa093]/15 text-[#7fd6cb]",
+  CONVERTED: "border-[#1fa093]/40 bg-[#1fa093]/15 text-sage-700",
   NOT_PROCEEDING: "border-[var(--dash-line)] text-[var(--dash-muted)]",
 };
 export function StagePill({ status }: { status: string }) {
@@ -14,12 +14,12 @@ export function StagePill({ status }: { status: string }) {
 }
 
 const input = "w-full rounded-2xl border border-[var(--dash-line-strong)] bg-[var(--dash-bg)] px-4 py-3 text-sm text-[var(--dash-ink)] outline-none transition-[border-color,box-shadow] placeholder:text-[var(--dash-muted)]/70 focus:border-[var(--dash-hi)] focus:ring-4 focus:ring-[var(--dash-hi)]/15";
-const primary = "inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-[var(--dash-hi)] px-5 text-sm font-semibold text-[var(--dash-on-hi)] transition-colors hover:bg-[#f0c3b7] disabled:opacity-60";
-const secondary = "inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-[var(--dash-line-strong)] px-5 text-sm text-[var(--dash-ink)] transition-colors hover:bg-white/[0.06] disabled:opacity-60";
+const primary = "inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-[var(--dash-hi)] px-5 text-sm font-semibold text-[var(--dash-on-hi)] transition-colors hover:opacity-90 disabled:opacity-60";
+const secondary = "inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-[var(--dash-line-strong)] px-5 text-sm text-[var(--dash-ink)] transition-colors hover:bg-ink/[0.06] disabled:opacity-60";
 
 function Status({ state }: { state: ActionState }) {
-  if (state.error) return <p role="alert" className="flex items-start gap-2 text-sm text-[#ffc7be]"><AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />{state.error}</p>;
-  if (state.ok) return <p role="status" className="flex items-center gap-2 text-sm text-[#7fd6cb]"><Check className="size-4" aria-hidden />{state.ok}</p>;
+  if (state.error) return <p role="alert" className="flex items-start gap-2 text-sm text-danger"><AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />{state.error}</p>;
+  if (state.ok) return <p role="status" className="flex items-center gap-2 text-sm text-sage-700"><Check className="size-4" aria-hidden />{state.ok}</p>;
   return null;
 }
 const Spinner = () => <LoaderCircle className="size-4 motion-safe:animate-spin" aria-hidden />;
