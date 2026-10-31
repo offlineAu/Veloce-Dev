@@ -90,6 +90,8 @@ export interface ShowcaseSample extends SampleSite {
   startSlug: string;
   pages: { title: string; thumbnail?: string }[];
   thumbnail: string;
+  /** The home page's first screen on a phone, when captured (`npm run samples:screens -- --phone`). */
+  phone?: string;
 }
 
 /**
@@ -97,6 +99,8 @@ export interface ShowcaseSample extends SampleSite {
  * fills a carousel slide), relative to public/.
  */
 export const screenPath = (s: Pick<SampleSite, "slug" | "version">, pageKey: string) => `/images/samples/${s.slug}-v${s.version}-${pageKey || "home"}.webp`;
+/** Where the home page's first screen on a phone (390 wide, 9:19.5) is saved, relative to public/. */
+export const phoneScreenPath = (s: Pick<SampleSite, "slug" | "version">) => `/images/samples/${s.slug}-v${s.version}-phone.webp`;
 
 /**
  * Samples that can be shown: the template exists, the pinned version is imported, and (in production) published.
@@ -115,6 +119,7 @@ export function showcaseSamples(samples: SampleSite[] = SAMPLE_SITES, drafts = s
       const screen = screenPath(s, p.key);
       return { title: p.title, thumbnail: hasScreen(screen) ? screen : t.thumbnails[i] ? `${base}/${t.thumbnails[i]}` : undefined };
     });
-    return [{ ...s, href: `/build/preview/${s.token}`, startSlug: currentVersion(t, drafts) ? t.slug : "", pages, thumbnail: pages[0]!.thumbnail ?? `${base}/${t.thumbnails[0]}` }];
+    const phone = phoneScreenPath(s);
+    return [{ ...s, href: `/build/preview/${s.token}`, startSlug: currentVersion(t, drafts) ? t.slug : "", pages, thumbnail: pages[0]!.thumbnail ?? `${base}/${t.thumbnails[0]}`, ...(hasScreen(phone) ? { phone } : {}) }];
   });
 }

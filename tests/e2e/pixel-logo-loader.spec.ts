@@ -23,7 +23,8 @@ function holdAction(page: Page, fail = false) {
 
 async function openInquiry(page: Page) {
   await page.goto("/about");
-  await page.getByRole("button", { name: "Start a conversation", exact: true }).click();
+  // The closing section's button: on wide screens the header carries one with the same name.
+  await page.locator("#contact").getByRole("button", { name: "Start a conversation" }).click();
   const dialog = page.getByRole("dialog", { name: "Tell us about your project" });
   await expect(dialog).toBeVisible();
   await dialog.getByLabel(/^Name/).fill("Loader Test");
@@ -35,42 +36,32 @@ async function openInquiry(page: Page) {
   return dialog;
 }
 
-test("streams a branded home fallback, then replaces it without changing referral 404s", async ({ page }) => {
-  const blocker = new Client({ connectionString: process.env.DATABASE_URL });
-  await blocker.connect();
-  try {
-    await blocker.query("BEGIN");
-    await blocker.query('LOCK TABLE "Company" IN ACCESS EXCLUSIVE MODE');
-    await page.goto("/", { waitUntil: "commit" });
-    const loader = page.locator('[data-pixel-loader="page"]');
-    await expect(loader).toBeVisible();
-    await expect(page.getByRole("status").filter({ hasText: "Loading…" })).toBeVisible();
-    await expect(page.locator("main#main")).toBeVisible();
-    // Check real CSS animations, not just animation-name: CSS modules must resolve keyframes.
+test.describe("home page while the database is slow", () => {
+  // Automated browsers skip the intro, so pose as a regular visitor.
+  test.use({ userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36" });
+
+  test("streams the intro before the data, then the page, without changing referral 404s", async ({ page }) => {
+    await page.addInitScript(() => Object.defineProperty(Navigator.prototype, "webdriver", { get: () => false }));
     await page.emulateMedia({ reducedMotion: "no-preference" });
-    // The loader's CSS-module stylesheet streams in just after the markup, so wait for the animation to attach.
-    await expect.poll(() => loader.locator("rect").first().evaluate((tile) => tile.getAnimations().length)).toBe(1);
-    const assembled = await loader.evaluate((svg) => {
-      for (const animation of svg.getAnimations({ subtree: true })) {
-        animation.pause();
-        animation.currentTime = 700;
-      }
-      return [...svg.querySelectorAll("rect")].map((rect) => getComputedStyle(rect).opacity);
-    });
-    expect(assembled).toContain("0");
-    expect(assembled).toContain("1");
-    await loader.evaluate((svg) => {
-      for (const animation of svg.getAnimations({ subtree: true })) animation.currentTime = 1500;
-    });
-    await expect(loader.locator("g").last()).toHaveCSS("opacity", "1");
-    await blocker.query("ROLLBACK");
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    await expect(loader).toHaveCount(0);
-  } finally {
-    await blocker.query("ROLLBACK");
-    await blocker.end();
-  }
-  expect((await page.goto("/refer/not-a-real-token-1234"))?.status()).toBe(404);
+    const blocker = new Client({ connectionString: process.env.DATABASE_URL });
+    await blocker.connect();
+    try {
+      await blocker.query("BEGIN");
+      await blocker.query('LOCK TABLE "Company" IN ACCESS EXCLUSIVE MODE');
+      await page.goto("/", { waitUntil: "commit" });
+      // The intro is in the first flush, ahead of the database work the page is waiting on.
+      await expect(page.locator("[data-boot-loader]")).toBeVisible();
+      await expect(page.locator("#hero-title")).toHaveCount(0);
+      await blocker.query("ROLLBACK");
+      await expect(page.locator("#hero-title")).toBeAttached();
+      await expect(page.locator("[data-boot-loader]")).toBeHidden({ timeout: 15_000 });
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    } finally {
+      await blocker.query("ROLLBACK");
+      await blocker.end();
+    }
+    expect((await page.goto("/refer/not-a-real-token-1234"))?.status()).toBe(404);
+  });
 });
 
 test("inquiry loader respects motion preferences, inherits theme color, and clears on failure", async ({ page }) => {

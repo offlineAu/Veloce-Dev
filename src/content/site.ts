@@ -149,6 +149,35 @@ export const landing = {
   },
 };
 
+/**
+ * The homepage reads as one story, each section heading picking up from the last: the workarounds a business runs on,
+ * what a working version looks like, the part to change first, how it gets built, and the first conversation.
+ * Describes common situations, never a named client or a result.
+ */
+export const story = {
+  problemTitle: "Most businesses run on workarounds.",
+  problems: [
+    "Booking requests scattered across messages",
+    "Orders and approvals tracked in spreadsheets and email",
+    "A website that hasn't kept up with the business",
+  ],
+  resolutionTitle: "We turn them into one working system.",
+  resolutions: [
+    "Customers book, buy or get in touch without the back-and-forth",
+    "Your team works from one place shaped around how it already works",
+    "The system keeps improving as the business changes",
+  ],
+  resolutionCta: "See what that looks like",
+  examplesTitle: "Picture it working.",
+  examplesLead: "Sample websites, stores and business tools. Open any of them, then make it your own.",
+  servicesTitle: "Choose what needs to change first.",
+  servicesLead: "Reaching customers, running the day-to-day, or improving what you already have. Start where it matters most.",
+  approachTitle: "Then we build it with you.",
+  approachLead: "You see something real early, and every improvement after that comes from how people actually use it.",
+  expectTitle: "What happens when you get in touch.",
+  contactTitle: "Your idea shouldn't stay an idea.",
+} as const;
+
 /** Technology choices and their purpose; no vendor partnerships or delivery guarantees. */
 export const modernTools = {
   eyebrow: "Built with modern tools",

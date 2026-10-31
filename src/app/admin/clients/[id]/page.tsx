@@ -80,7 +80,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
           <ol className="mt-8 space-y-0">
             {events.map((e, i) => <li key={i} className="relative flex gap-4 pb-6 last:pb-0">
               {i < events.length - 1 ? <span className="absolute left-[19px] top-10 h-[calc(100%-2.5rem)] w-px bg-[var(--dash-line)]" aria-hidden /> : null}
-              <span className={`grid size-10 shrink-0 place-items-center rounded-full border ${e.tone === "warn" ? "border-[#ff9f90]/40 text-[#ffc7be]" : "border-[var(--dash-line-strong)] text-[var(--dash-accent)]"} bg-[var(--dash-surface)]`}><e.icon className="size-4" aria-hidden /></span>
+              <span className={`grid size-10 shrink-0 place-items-center rounded-full border ${e.tone === "warn" ? "border-[#ff9f90]/40 text-danger" : "border-[var(--dash-line-strong)] text-[var(--dash-accent)]"} bg-[var(--dash-surface)]`}><e.icon className="size-4" aria-hidden /></span>
               <div className="min-w-0 pt-1.5">
                 <p className="text-sm text-[var(--dash-ink)]">{e.title}</p>
                 <p className="mt-0.5 font-mono text-[11px] text-[var(--dash-muted)]">{when(e.at)}</p>

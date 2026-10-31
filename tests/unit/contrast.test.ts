@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { emberTheme, periwinkleTheme, pistachioTheme } from "../../src/lib/themes";
+import { darkTheme, lightTheme } from "../../src/lib/themes";
 
 const css = readFileSync(new URL("../../src/app/globals.css", import.meta.url), "utf8");
 const parse = (name: string, source: string) => {
@@ -58,14 +58,14 @@ const common: [string, string, number, string][] = [
   ["on-accent", "accent", 3, "text on accent fill (large/bold only)"],
   ["on-inverse", "inverse", 4.5, "copy on dark panels (hero, closing CTA, footer)"],
   ["accent", "inverse", 4.5, "accent text and eyebrows on dark panels"],
+  ["chart-third", "surface", 3, "third chart series on the dashboard"],
 ];
 // Pairs that only exist on the dark Ember surfaces (cards and code blocks drawn on `surface`).
 const emberOnly: [string, string, number, string][] = [];
 
 const themes: [string, string, [string, string, number, string][]][] = [
-  ["pistachio (default)", `${css};${toVars(pistachioTheme)}`, common],
-  ["periwinkle (option)", `${css};${toVars(periwinkleTheme)}`, common],
-  ["ember (option)", `${css};${toVars(emberTheme)}`, [...common, ...emberOnly]],
+  ["light (default)", `${css};${toVars(lightTheme)}`, common],
+  ["dark", `${css};${toVars(darkTheme)}`, [...common, ...emberOnly]],
 ];
 
 describe.each(themes)("design token contrast (WCAG AA): %s", (_name, source, pairs) => {

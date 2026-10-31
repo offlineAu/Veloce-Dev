@@ -50,6 +50,10 @@ export interface DiagonalCarouselProps extends Omit<React.HTMLAttributes<HTMLDiv
   controlsClassName?: string;
 }
 
+const subscribeHydration = () => () => {};
+const isHydrated = () => true;
+const isServer = () => false;
+
 const DEFAULT_TRANSITION: Transition = { type: "spring", bounce: 0.16, duration: 0.85 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
@@ -120,6 +124,7 @@ export function DiagonalCarousel({
   // Auto-advance: each slide change restarts the countdown, so it never jumps right after the visitor moves it.
   const rootRef = React.useRef<HTMLDivElement>(null);
   const reducedMotion = useReducedMotion();
+  const mounted = React.useSyncExternalStore(subscribeHydration, isHydrated, isServer);
   const [stopped, setStopped] = React.useState(false);
   const [hovered, setHovered] = React.useState(false);
   const [focused, setFocused] = React.useState(false);
@@ -208,7 +213,7 @@ export function DiagonalCarousel({
   const isPreviousDisabled = !loop && currentIndex === 0;
   const isNextDisabled = !loop && currentIndex === maxIndex;
   const control =
-    "inline-flex size-9 items-center justify-center rounded-full transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-35";
+    "inline-flex size-8 items-center justify-center rounded-full transition-colors sm:size-10 hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-35";
 
   return (
     <div
@@ -305,7 +310,7 @@ export function DiagonalCarousel({
       {showControls && (
         <div
           className={cn(
-            "absolute inset-x-4 bottom-5 z-10 mx-auto flex w-fit items-center justify-center gap-3 rounded-full border border-line bg-surface/80 px-2 text-ink shadow-sm backdrop-blur-sm",
+            "absolute inset-x-4 bottom-5 z-10 mx-auto flex w-fit items-center justify-center gap-1 rounded-full border border-line bg-surface/80 px-2 text-ink shadow-sm backdrop-blur-sm",
             controlsClassName,
           )}
         >
@@ -314,19 +319,18 @@ export function DiagonalCarousel({
           </button>
 
           {showDots && (
-            <div className="flex items-center justify-center gap-2">
+            <div className="flex items-center justify-center">
               {items.map((item, index) => (
                 <button
                   key={`${item.title}-${index}`}
                   type="button"
                   aria-label={`Show slide ${index + 1}: ${item.title}`}
                   aria-current={currentIndex === index ? "true" : undefined}
-                  className={cn(
-                    "h-2 rounded-full bg-current transition-[width,opacity] duration-300",
-                    currentIndex === index ? "w-7 opacity-100" : "w-2 opacity-30",
-                  )}
+                  className="grid h-8 w-6 place-items-center rounded-full sm:size-8"
                   onClick={() => selectSlide(index)}
-                />
+                >
+                  <span aria-hidden className={cn("h-2 rounded-full bg-current transition-[width,opacity] duration-300", currentIndex === index ? "w-4 opacity-100" : "w-2 opacity-30")} />
+                </button>
               ))}
             </div>
           )}
@@ -335,7 +339,7 @@ export function DiagonalCarousel({
             <ChevronRight className="size-5" />
           </button>
 
-          {canAutoPlay && (
+          {mounted && canAutoPlay && (
             <button
               type="button"
               aria-label={stopped ? "Play slideshow" : "Pause slideshow"}

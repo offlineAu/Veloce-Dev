@@ -6,6 +6,7 @@ import { brand } from "@/content/site";
 import SocialFlipButton from "@/components/ui/social-flip-button";
 import type { Channel } from "@/server/services/company";
 import { NotchHeader } from "./notch-header";
+import type { SearchEntry } from "@/lib/search";
 import { ThemeManager } from "./theme-manager";
 
 export interface NavLink {
@@ -22,8 +23,8 @@ export function Brand({ name }: { name: string }) {
   );
 }
 
-export function SiteHeader({ companyName, links, menuCta, homeHref, compactOnScroll }: { companyName: string; links: NavLink[]; menuCta?: ReactNode; homeHref?: string; compactOnScroll?: boolean }) {
-  return <NotchHeader companyName={companyName} links={links} menuCta={menuCta} homeHref={homeHref} compactOnScroll={compactOnScroll} />;
+export function SiteHeader({ companyName, links, menuCta, homeHref, compactOnScroll, search }: { companyName: string; links: NavLink[]; menuCta?: ReactNode; homeHref?: string; compactOnScroll?: boolean; search?: SearchEntry[] }) {
+  return <NotchHeader companyName={companyName} links={links} menuCta={menuCta} homeHref={homeHref} compactOnScroll={compactOnScroll} search={search} />;
 }
 
 export interface FooterColumn {

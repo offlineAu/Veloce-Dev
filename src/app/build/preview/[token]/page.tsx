@@ -107,7 +107,7 @@ export default async function DraftPreviewPage({ params, searchParams }: Props) 
       <div className="fixed inset-x-0 bottom-0 z-[100] flex flex-wrap items-center justify-center gap-x-4 gap-y-2 bg-ink px-4 py-2 text-sm text-bg shadow-lg">
         {preview.startSlug ? (
           // Back to the home page's samples, with this sample in front.
-          <Link href={`/?sample=${encodeURIComponent(token)}#services`} className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-semibold hover:bg-bg/15">
+          <Link href={`/?sample=${encodeURIComponent(token)}#examples`} className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-semibold hover:bg-bg/15">
             <ArrowLeft aria-hidden className="size-4" />
             {landing.samples.back}
           </Link>

@@ -179,6 +179,10 @@
 }
 
 /* Gentle entrance for dialogs and menus. */
+/* The hero laptop's screen light, breathing slowly behind it (frozen with reduced motion, like every animation). */
+@keyframes screen-glow {
+  50% { opacity: 0.75; transform: scale(1.05); }
+}
 @keyframes rise {
   from {
     opacity: 0;
@@ -460,8 +464,31 @@
   }
 }
 
-/* First-visit homepage intro: skipped before paint when it should not play (BootInitScript in boot-loader.tsx). While it
+/* First-visit homepage intro: skipped before paint when it should not play (BootInitScript in boot-loader.tsx; boot-intro.ts runs it). While it
    is up the page does not scroll, and the hero headline waits at the start of its word rise until the overlay dissolves. */
 :root[data-booted] [data-boot-loader] { display: none; }
-:root:is([data-intro="running"], [data-intro="gate"], [data-intro="playing"]) { overflow: hidden; }
-:root:is([data-intro="running"], [data-intro="gate"], [data-intro="playing"], [data-intro="exit"]) .hero-word { animation-play-state: paused; }
+:root:is([data-intro="running"], [data-intro="playing"]) { overflow: hidden; }
+:root:is([data-intro="running"], [data-intro="playing"], [data-intro="exit"]) .hero-word { animation-play-state: paused; }
+
+/* Editor chrome follows the site theme; the authored site remains isolated in its own iframe. */
+.builder-workspace {
+  --puck-color-surface: var(--color-surface);
+  --puck-color-surface-muted: var(--color-neutral-100);
+  --puck-color-surface-subtle: var(--color-bg);
+  --puck-color-surface-inverse: var(--color-inverse);
+  --puck-color-border: var(--color-line);
+  --puck-color-border-hover: var(--color-neutral-700);
+  --puck-color-border-muted: var(--color-line);
+  --puck-color-text: var(--color-ink);
+  --puck-color-text-secondary: var(--color-muted);
+  --puck-color-text-muted: var(--color-muted);
+  --puck-color-text-subtle: var(--color-muted);
+  --puck-color-text-inverse: var(--color-on-inverse);
+  --puck-color-interactive: var(--color-accent-700);
+  --puck-color-interactive-hover: var(--color-accent-800);
+  --puck-color-interactive-active: var(--color-accent-800);
+  --puck-color-interactive-subtle: var(--color-accent-200);
+  --puck-color-interactive-soft: var(--color-accent-100);
+  --puck-color-interactive-soft-hover: var(--color-neutral-200);
+  --puck-color-focus-ring: var(--color-accent-700);
+}

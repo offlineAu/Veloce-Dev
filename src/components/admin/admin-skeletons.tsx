@@ -1,7 +1,7 @@
 import { CardSkeleton, card } from "@/components/admin/analytics-dashboard";
 
 /** Loading-screen building blocks for owner pages, matching the real layouts so content doesn't jump in. */
-const bar = "rounded-full bg-white/[0.06] motion-safe:animate-pulse";
+const bar = "rounded-full bg-ink/[0.06] motion-safe:animate-pulse";
 export function HeadingSkeleton({ wide = false }: { wide?: boolean }) {
   return <div className="mb-8 mt-10 sm:mt-14" role="status" aria-label="Loading">
     <div className={`${bar} h-4 w-28`} />

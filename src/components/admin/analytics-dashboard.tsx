@@ -7,11 +7,11 @@ import type { BusinessReport, InsightsReport, PipelineReport, TrafficReport } fr
 import { Delta, DeviceArc, Funnel, HourHeatmap, PipelineStages, RankedList, SERIES, Sparkline, TrafficChart } from "@/components/admin/analytics-charts";
 
 const number = (value: number) => new Intl.NumberFormat("en").format(value);
-export const card = "min-w-0 rounded-[28px] border border-[var(--dash-line)] bg-[var(--dash-surface)] p-5 sm:p-7";
+export const card = "min-w-0 rounded-2xl border border-[var(--dash-line)] bg-[var(--dash-surface)] p-5 sm:p-7";
 const cardTitle = "font-heading text-base font-medium text-[var(--dash-ink)]";
 const cardNote = "mt-1 text-xs text-[var(--dash-muted)]";
-// Dashboard surface in the site's Ember palette (src/lib/themes.ts): #171010 page, #362222 raised, rose accent. Charts in analytics-charts.tsx are validated against it.
-export const dashboardTheme = { "--dash-bg": "#171010", "--dash-surface": "#211716", "--dash-raised": "#362222", "--dash-line": "rgb(243 234 230 / 0.09)", "--dash-line-strong": "rgb(243 234 230 / 0.2)", "--dash-ink": "#f3eae6", "--dash-muted": "#bdb1ab", "--dash-accent": "#f0c3b7", "--dash-mark": "#d66b5c", "--dash-hi": "#e8afa1", "--dash-on-hi": "#171010" } as CSSProperties;
+// Admin surfaces follow the same light/dark semantic tokens as the public site.
+export const dashboardTheme = { "--dash-bg": "var(--color-bg)", "--dash-surface": "var(--color-surface)", "--dash-raised": "var(--color-neutral-100)", "--dash-line": "var(--color-line)", "--dash-line-strong": "var(--color-neutral-300)", "--dash-ink": "var(--color-ink)", "--dash-muted": "var(--color-muted)", "--dash-accent": "var(--color-accent-700)", "--dash-mark": "var(--color-accent-700)", "--dash-hi": "var(--color-accent-700)", "--dash-on-hi": "var(--color-bg)" } as CSSProperties;
 const manilaDay = (date: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
 export function greeting(now: Date) {
   const hour = Number(new Intl.DateTimeFormat("en", { timeZone: "Asia/Manila", hour: "numeric", hourCycle: "h23" }).format(now));
@@ -40,10 +40,10 @@ const Footnote = ({ children }: { children: ReactNode }) => <p className="mt-6 b
 /** Card-shaped placeholder shown while that card's data loads. */
 export function CardSkeleton({ className = "", lines = 3, tall = false }: { className?: string; lines?: number; tall?: boolean }) {
   return <div className={`${card} ${className}`} aria-hidden>
-    <div className="h-4 w-32 rounded-full bg-white/[0.07] motion-safe:animate-pulse" />
-    <div className="mt-2 h-3 w-48 rounded-full bg-white/[0.05] motion-safe:animate-pulse" />
-    <div className={`mt-6 rounded-2xl bg-white/[0.04] motion-safe:animate-pulse ${tall ? "h-56 sm:h-64" : "h-14"}`} />
-    {Array.from({ length: lines }, (_, i) => <div key={i} className="mt-3 h-3 rounded-full bg-white/[0.04] motion-safe:animate-pulse" style={{ width: `${88 - i * 14}%` }} />)}
+    <div className="h-4 w-32 rounded-full bg-ink/[0.07] motion-safe:animate-pulse" />
+    <div className="mt-2 h-3 w-48 rounded-full bg-ink/[0.05] motion-safe:animate-pulse" />
+    <div className={`mt-6 rounded-2xl bg-ink/[0.04] motion-safe:animate-pulse ${tall ? "h-56 sm:h-64" : "h-14"}`} />
+    {Array.from({ length: lines }, (_, i) => <div key={i} className="mt-3 h-3 rounded-full bg-ink/[0.04] motion-safe:animate-pulse" style={{ width: `${88 - i * 14}%` }} />)}
   </div>;
 }
 

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { OpenInquiryButton } from "@/components/forms/inquiry";
-import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { builderGuide } from "@/content/site";
 
@@ -14,34 +13,20 @@ const buildHref = (refToken?: string, template?: string) => {
   return s ? `/build?${s}` : "/build";
 };
 
-/** "What we offer": how to design a site in the builder, with a way into it. */
-/** Sets the last sentence of a heading bold ("Design it yourself. **We build it for real.**"). Same text, same accessible name. */
-function boldTail(text: string) {
-  const at = text.lastIndexOf(". ", text.length - 2);
-  if (at < 0) return text;
-  return (
-    <>
-      {text.slice(0, at + 2)}
-      <strong>{text.slice(at + 2)}</strong>
-    </>
-  );
-}
-
 export function BuilderGuide({ refToken }: { refToken?: string }) {
   const { heading, lead, steps, templates, note } = builderGuide;
   return (
     <div data-builder-guide className="relative grid gap-10 overflow-hidden py-4 sm:py-8 lg:grid-cols-[1fr_1.1fr] lg:gap-16">
       <div className="relative flex flex-col items-start gap-5">
-        <Badge variant="tag" className="rounded-full bg-surface px-3 py-1">What we offer</Badge>
-        <h2 id="offer-title" className="text-[clamp(32px,3.8vw,50px)] leading-[1.05]">{boldTail(heading)}</h2>
-        <p className="max-w-[46ch] text-[17px] leading-relaxed text-ink">{lead}</p>
+        <h2 id="offer-title" className="text-[clamp(32px,3.8vw,50px)] leading-[1.05]">{heading.split(/(?<=\.) /).map((line) => <span key={line} className="block">{line}</span>)}</h2>
+        <p className="max-w-[460px] text-pretty text-[17px] leading-relaxed text-ink">{lead}</p>
         <div className="flex flex-wrap items-center gap-3">
           <Link data-analytics-placement="builder" href={buildHref(refToken)} className={buttonVariants({ size: "lg" })}>
             Open the builder <ArrowRight aria-hidden />
           </Link>
           <OpenInquiryButton variant="outline" size="lg">Rather just talk?</OpenInquiryButton>
         </div>
-        <div className="flex flex-col gap-2">
+        <div className="mt-1 flex flex-col gap-2">
           <p className="text-sm font-semibold text-ink">Or jump straight into a template:</p>
           <ul className="flex flex-wrap gap-2" aria-label="Start from a template">
             {templates.map((t) => (

@@ -3,14 +3,10 @@ import { useId, useState, type CSSProperties, type KeyboardEvent, type PointerEv
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { STAGE_LABEL } from "@/lib/admin-labels";
 
-/*
- * Owner dashboard charts, in the Ember palette. Always rendered on the dark dashboard surface (--dash-surface), so the
- * series steps below were validated for that surface only: ember coral/teal/violet pass the colour checks in all pairs. A fourth category
- * folds into "Other" instead of getting a generated hue. Every value a hover shows is also printed or in a table.
- */
-export const SERIES = ["#d66b5c", "#1fa093", "#8c84e6"] as const;
-const OTHER = "#6e6260";
-const HIGHLIGHT = "#e8afa1";
+/* Every value a hover shows is also printed or in a table. Series follow the selected theme. */
+export const SERIES = ["var(--color-accent-700)", "var(--color-sage-700)", "var(--color-chart-third)"] as const;
+const OTHER = "var(--color-neutral-700)";
+const HIGHLIGHT = "var(--color-chart-third)";
 
 export type Day = { day: string; views: number; visitors: number };
 export type Row = { name: string; views: number };
@@ -97,7 +93,7 @@ export function TrafficChart({ data }: { data: Day[] }) {
         className="relative h-60 flex-1 touch-pan-y rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-[var(--dash-hi)] sm:h-72"
       >
         {ticks.map(t => <div key={t} className={`absolute inset-x-0 border-t ${t === 0 ? "border-[var(--dash-line-strong)]" : "border-dashed border-[var(--dash-line)]"}`} style={{ top: `${y(t)}%` }} aria-hidden />)}
-        {active !== null ? <div className="absolute inset-y-0 rounded-md bg-white/[0.045]" style={{ left: `${active / n * 100}%`, width: `${100 / n}%` }} aria-hidden /> : null}
+        {active !== null ? <div className="absolute inset-y-0 rounded-md bg-ink/[0.045]" style={{ left: `${active / n * 100}%`, width: `${100 / n}%` }} aria-hidden /> : null}
         <div className="absolute inset-0 flex items-end gap-[2px]" aria-hidden>
           {data.map((d, i) => <div key={d.day} className="flex h-full min-w-0 flex-1 items-end justify-center">
             <div className={`${n > 45 ? "w-full" : "w-[62%]"} max-w-8 rounded-t-[4px] transition-[background-color,opacity] duration-150`} style={{ height: `${d.views / max * 100}%`, background: active === i ? HIGHLIGHT : SERIES[0], opacity: active === null || active === i ? 1 : 0.4 }} />
@@ -162,7 +158,7 @@ export function DeviceArc({ rows }: { rows: Row[] }) {
     <ul className="mt-6 space-y-1">
       {parts.map((part, i) => <li key={part.name}>
         <button type="button" onPointerEnter={() => setActive(i)} onPointerLeave={() => setActive(null)} onFocus={() => setActive(i)} onBlur={() => setActive(null)} aria-label={`${title(part.name)}: ${number(part.views)} pageviews, ${percent(part.views / total, 1)}`}
-          className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm transition-colors ${active === i ? "bg-white/[0.06]" : "hover:bg-white/[0.04]"}`}>
+          className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm transition-colors ${active === i ? "bg-ink/[0.06]" : "hover:bg-ink/[0.04]"}`}>
           <span className="h-2.5 w-2.5 shrink-0 rounded-[3px]" style={{ background: part.color }} aria-hidden />
           <span className="flex-1 truncate text-[var(--dash-ink)]">{title(part.name)}</span>
           <span className="font-mono text-xs text-[var(--dash-muted)]">{number(part.views)}</span>
