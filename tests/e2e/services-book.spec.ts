@@ -56,8 +56,15 @@ test("cover and page surfaces stay clickable across their area and during page t
   await page.goto("/");
   await page.evaluate(() => { document.documentElement.dataset.motion = "full"; });
   const book = page.locator("[data-services-book]");
+  const stage = book.locator("[data-cover-phase]");
   const cover = book.getByRole("button", { name: "Open service book", exact: true });
+  // Scrolling to the book opens it once; closed again, it stays closed for the visitor to open.
+  await stage.evaluate((el) => el.scrollIntoView({ block: "center" }));
+  await expect(stage).toHaveAttribute("data-cover-phase", "open");
+  await book.getByRole("button", { name: "Close book" }).click();
+  await expect(stage).toHaveAttribute("data-cover-phase", "closed");
   await cover.scrollIntoViewIfNeeded();
+  await expect(stage).toHaveAttribute("data-cover-phase", "closed");
   // Verify actual browser hit targets across the cover, including artwork and footer.
   expect(await cover.evaluate((button) => {
     const box = button.getBoundingClientRect();
@@ -81,6 +88,18 @@ test("cover and page surfaces stay clickable across their area and during page t
   await expect(book.getByRole("heading", { name: "Customer-facing web applications", exact: true })).toBeVisible();
   await page.mouse.click(corner!.x + 15, corner!.y + 15);
   await expect(book.getByRole("heading", { name: "Internal business systems", exact: true })).toBeVisible();
+});
+
+test("the book opens on its own when scrolled to, without moving focus", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => { document.documentElement.dataset.motion = "full"; });
+  const book = page.locator("[data-services-book]");
+  const stage = book.locator("[data-cover-phase]");
+  await expect(stage).toHaveAttribute("data-cover-phase", "closed");
+  await stage.evaluate((el) => el.scrollIntoView({ block: "center" }));
+  await expect(stage).toHaveAttribute("data-cover-phase", "open");
+  await expect(book.getByRole("heading", { name: "Business websites", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
 });
 
 test("service book supports direct selection, navigation, inquiry and list mode", async ({ page }) => {

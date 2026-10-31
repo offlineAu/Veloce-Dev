@@ -25,8 +25,8 @@ const caption = (frames: IntroFrame[], i: number) =>
 
 /**
  * First-visit homepage intro (after theartofdocumentary.com's preloader): it starts on its own as the page loads, the
- * sample sites step through a laptop screen on a steady beat, and the last frame, the hero's own photo, zooms to full
- * bleed and dissolves into the page. It is decorative, so it is hidden from assistive technology.
+ * sample sites step through a laptop screen on a steady beat, and the last frame zooms to full bleed and dissolves into
+ * the page. It is decorative, so it is hidden from assistive technology.
  * Server-rendered markup only: the head script's engine (boot-intro.ts) drives it, so it plays before hydration. The
  * homepage renders this ahead of its data, so it is the first thing to arrive. Elements the engine changes are marked
  * suppressHydrationWarning, because the visitor may already be watching the sequence when React hydrates.
