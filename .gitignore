@@ -25,3 +25,9 @@ playwright-report
 
 # Local review captures (screenshots, design exports, zips); files already committed stay tracked
 artifacts/
+
+# Local Claude Code state and agent skills installed with `npx skills add`
+.claude/skills/
+.claude/scheduled_tasks.lock
+.claude/settings.local.json
+skills-lock.json
