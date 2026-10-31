@@ -64,15 +64,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   // Sample websites replace the service cards once there are enough to fill the carousel.
   const samples = showcaseSamples(undefined, undefined, (file) => existsSync(join(process.cwd(), "public", file)));
   const heroPhotos = heroPhotoFiles.map(photo).filter((src): src is string => !!src);
-  // The "Tailored services" sample sites play on the intro's laptop (studio photos if there are too few), and it ends
-  // on a studio photo, which the laptop screen zooms into before the page appears.
-  const introFrames = [
-    ...(samples.length >= MIN_SHOWCASE
-      ? samples.slice(0, 10).map((s) => ({ src: portfolioImageUrl(s.thumbnail), title: s.title, screen: true }))
-      : [photo("hero-overhead.webp"), photo("hero-dashboard.webp"), photo("contact-code.webp"), ...heroPhotos.slice(1)]
-        .filter((src): src is string => !!src).map((src) => ({ src, title: "", screen: false }))),
-    ...(heroPhotos[0] ? [{ src: heroPhotos[0], title: "Your website, next", screen: false }] : []),
-  ];
+  // The "Tailored services" sample sites play on the intro's laptop (studio photos if there are too few); the last one
+  // is what the laptop screen zooms into before the page appears.
+  const introFrames = samples.length >= MIN_SHOWCASE
+    ? samples.slice(0, 10).map((s) => ({ src: portfolioImageUrl(s.thumbnail), title: s.title, screen: true }))
+    : [photo("hero-overhead.webp"), photo("hero-dashboard.webp"), photo("contact-code.webp"), ...heroPhotos.slice(1)]
+      .filter((src): src is string => !!src).map((src) => ({ src, title: "", screen: false }));
 
   const content = <HomeContent searchParams={searchParams} samples={samples} />;
   if (onePass) return content;

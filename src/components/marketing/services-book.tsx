@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { m } from "framer-motion";
 import { ArrowRight, BookOpen, ChevronLeft, ChevronRight, List, RotateCcw, X } from "lucide-react";
@@ -60,13 +60,33 @@ export function ServicesBook({ services, refToken }: { services: ServiceItem[]; 
   const modeRef = useRef<HTMLButtonElement>(null);
   const flipSequence = useRef(0);
   const pendingService = useRef<string | null>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  // Set once the book has been opened, by the visitor or by scrolling to it, so it never reopens on its own.
+  const opensOnScroll = useRef(true);
   const index = Math.max(0, services.findIndex((service) => service.slug === selected));
   const service = services[index];
   const isOpen = opened || reduce;
   const groups = [...servicePaths.map((path) => ({ label: path.label, items: services.filter((s) => category(s.slug)?.id === path.id) })),
     { label: "Other services", items: services.filter((s) => !category(s.slug)) }].filter((group) => group.items.length);
 
+  // The first time most of the book scrolls into view, the cover opens on its own (focus stays where it is).
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el || reduce || list || !opensOnScroll.current) return;
+    const io = new IntersectionObserver(([entry]) => {
+      if (!entry?.isIntersecting || !opensOnScroll.current) return;
+      if (entry.intersectionRatio < 0.6 && entry.intersectionRect.height < innerHeight * 0.6) return;
+      opensOnScroll.current = false;
+      io.disconnect();
+      setOpened(true);
+      setCoverPhase("opening");
+    }, { threshold: [0.3, 0.6, 1] });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [reduce, list]);
+
   function openBook() {
+    opensOnScroll.current = false;
     setOpened(true);
     if (!reduce) setCoverPhase("opening");
     requestAnimationFrame(() => { (nextRef.current?.disabled ? modeRef.current : nextRef.current)?.focus({ preventScroll: true }); });
@@ -188,7 +208,7 @@ export function ServicesBook({ services, refToken }: { services: ServiceItem[]; 
             </div>
           </aside>
           <div className={styles.reader}>
-            <div className={styles.stage} data-open={isOpen} data-cover-phase={reduce ? "open" : coverPhase} data-static={reduce}>
+            <div ref={stageRef} className={styles.stage} data-open={isOpen} data-cover-phase={reduce ? "open" : coverPhase} data-static={reduce}>
               <div className={styles.bookFrame}>
               <div className={styles.spread} ref={pageRef} id={`${id}-page`} inert={!isOpen} aria-hidden={!isOpen}>
                 {services.map(item => <div key={`size-${item.slug}`} className={`${styles.rightLeaf} ${styles.pageSizer}`} aria-hidden="true" inert>
