@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { db } from "@/server/db";
 import { CASE_FILE, CASE_SLUG, currentCaseGrant } from "@/server/portfolio/access";
 import { InvitationForm } from "./invitation-form";
@@ -10,7 +11,7 @@ export default async function PrivateCasePage({ params }: { params: Promise<{ sl
   const { slug } = await params;
   if (!CASE_SLUG.test(slug) || slug.length > 60) notFound();
   const grant = await currentCaseGrant(slug);
-  if (!grant) return <main id="main" className="mx-auto max-w-lg px-6 py-24"><h1 className="font-heading text-3xl">Private case study</h1><p className="mt-4">Enter the invitation code shared with you.</p><InvitationForm slug={slug} /></main>;
+  if (!grant) return <main id="main" className="mx-auto max-w-lg px-6 py-24"><Link href="/" className="text-sm font-semibold text-accent-700 hover:underline">← Back to Veloce</Link><p className="mt-14 text-xs font-semibold uppercase tracking-widest text-muted">Private access</p><h1 className="mt-4 font-heading text-4xl font-semibold tracking-tight">Private case study</h1><p className="mt-4 leading-relaxed text-muted">Enter the invitation code shared with you.</p><InvitationForm slug={slug} /></main>;
   const study = await db.privateCaseStudy.findUnique({ where: { slug } });
   if (!study) notFound();
   const images = Array.isArray(study.images) ? study.images as { file: string; alt: string }[] : [];

@@ -118,7 +118,7 @@ test("service book supports direct selection, navigation, inquiry and list mode"
   await expect(page).toHaveURL(/\/services\/business-websites$/);
   await page.goBack();
   if ((page.viewportSize()?.width ?? 0) <= 600) await book.getByLabel("Choose a service").selectOption("8");
-  else await book.getByRole("button", { name: /09 Ongoing development and support/ }).click();
+  else await book.getByRole("button", { name: "Ongoing development and support", exact: true }).click();
   await expect(book.getByRole("button", { name: "Next service", exact: true })).toBeDisabled();
   await expect(book.getByRole("button", { name: "Turn to next service" })).toBeDisabled();
   await book.getByRole("button", { name: "Ask about Ongoing development and support" }).click();
@@ -162,4 +162,15 @@ test("services remain readable without JavaScript", async ({ browser }) => {
   await expect(book.locator("noscript p").filter({ hasText: "Websites that present your business clearly" })).toBeVisible();
   await expect(book.getByRole("link", { name: "Explore this service" }).first()).toHaveAttribute("href", "/services/business-websites");
   await context.close();
+});
+
+test("service book remains accessible in dark mode", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("veloce-theme", "dark"));
+  await page.goto("/");
+  const book = page.locator("[data-services-book]");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  const violations = (await new AxeBuilder({ page }).include("[data-services-book]").analyze()).violations;
+  expect(violations.filter(violation => violation.impact === "serious" || violation.impact === "critical")).toEqual([]);
+  await book.getByRole("button", { name: "Open service book" }).click();
+  await expect(book.getByRole("heading", { name: "Business websites", exact: true })).toBeVisible();
 });

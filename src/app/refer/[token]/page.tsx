@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ArrowRight, Heart, MessageCircle, MessageCircleMore } from "lucide-react";
+import { ArrowRight, Heart, MessageCircle } from "lucide-react";
 import { env } from "@/config/env";
 import { IntroductionProvider, OpenIntroductionButton } from "@/components/forms/introduction";
 import { ShareActions } from "@/components/forms/share-actions";
@@ -10,9 +10,7 @@ import { Reveal } from "@/components/motion/reveal";
 import { buildSearchEntries } from "@/lib/search";
 import { BrowserMock } from "@/components/marketing/mockups";
 import { SiteFooter, SiteHeader } from "@/components/site/site-chrome";
-import { fabClass, fabLabelClass } from "@/components/site/cta-style";
-import { ConversationFab } from "@/components/site/conversation-fab";
-import { QuickDock } from "@/components/site/quick-dock";
+import { StickyAction } from "@/components/site/sticky-meeting";
 import { buttonVariants } from "@/components/ui/button";
 import { brand, philosophy, referralSteps } from "@/content/site";
 import { formatOfferDate } from "@/lib/offer";
@@ -64,7 +62,7 @@ export default async function ReferralPage({ params }: { params: Promise<{ token
     <IntroductionProvider companyName={company.name} contactEmail={company.contactEmail} refToken={campaign.token}>
       <SiteHeader
         companyName={company.name}
-        links={links}
+        links={links} search={search}
         menuCta={<OpenIntroductionButton className="w-full">Make an introduction</OpenIntroductionButton>}
       />
       <main id="main" className="mx-auto max-w-page px-5 sm:px-10 lg:px-16">
@@ -81,7 +79,7 @@ export default async function ReferralPage({ params }: { params: Promise<{ token
               them a ready-made message, or tell us about them directly.
             </p>
             <div className="flex flex-wrap gap-3">
-              <OpenIntroductionButton size="lg" data-hero-cta>
+              <OpenIntroductionButton size="lg" data-hero-cta data-primary-cta>
                 Make an introduction <ArrowRight aria-hidden className="size-[18px]" strokeWidth={2.75} />
               </OpenIntroductionButton>
               <a href="#share" className={buttonVariants({ variant: "outline", size: "lg" })}>Share a message</a>
@@ -89,9 +87,7 @@ export default async function ReferralPage({ params }: { params: Promise<{ token
             {name ? <ReferralBadge name={name} initials={initials(name)} /> : null}
           </div>
           <div aria-hidden className="relative mx-auto w-full max-w-md">
-            <div className="absolute right-0 -top-8 size-56 rounded-full bg-sage-200" />
-            <div className="absolute -bottom-6 left-0 size-32 rounded-full bg-accent-200" />
-            <BrowserMock className="relative" />
+            <div className="rounded-3xl bg-sage-100 p-6 sm:p-10"><BrowserMock className="relative" /></div>
           </div>
         </section>
 
@@ -190,7 +186,7 @@ export default async function ReferralPage({ params }: { params: Promise<{ token
         </section>
 
         <section className="py-12 md:py-20" aria-labelledby="cta-title">
-          <div className="flex flex-col items-start gap-5 rounded-xl bg-sage-100 p-8 sm:p-14">
+          <div data-contact-cta className="flex flex-col items-start gap-5 rounded-xl bg-sage-100 p-8 sm:p-14">
             <h2 id="cta-title" className="max-w-[20ch] text-[clamp(30px,4vw,50px)] leading-[1.08]">Know someone whose idea should be working software?</h2>
             <p className="max-w-[44ch] text-[18px] leading-relaxed text-sage-800">Introduce them to our team and we&apos;ll explore what we can build together.</p>
             <OpenIntroductionButton size="lg">Make an introduction</OpenIntroductionButton>
@@ -206,19 +202,7 @@ export default async function ReferralPage({ params }: { params: Promise<{ token
         </section>
       </main>
       <SiteFooter name={company.name} description={company.description} email={company.contactEmail} websiteUrl={company.websiteUrl} channels={company.channels} />
-      <QuickDock
-        shortcuts={links}
-        columns={[
-          { title: "Explore", links },
-          { title: "What we build", links: services.slice(0, 4).map((s) => ({ label: s.title, href: "#what-we-do" })) },
-        ]}
-      />
-      <ConversationFab search={search}>
-        <OpenIntroductionButton data-primary-cta aria-label="Make an introduction" className={fabClass}>
-          <MessageCircleMore aria-hidden className="size-6 shrink-0" strokeWidth={2} />
-          <span aria-hidden className={fabLabelClass}>Make an introduction</span>
-        </OpenIntroductionButton>
-      </ConversationFab>
+      <StickyAction><OpenIntroductionButton className="w-full">Make an introduction</OpenIntroductionButton></StickyAction>
     </IntroductionProvider>
   );
 }

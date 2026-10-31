@@ -41,7 +41,7 @@ test("declining leaves browsing untracked and sales forms usable", async ({ page
   await preferences.getByRole("button", { name: "Decline", exact: true }).click();
   await expect(preferences).not.toBeVisible();
   await page.goto("/about");
-  await page.getByRole("button", { name: "Start a conversation", exact: true }).click();
+  await page.locator("#contact").getByRole("button", { name: "Start a conversation" }).click();
   const dialog = page.getByRole("dialog", { name: "Tell us about your project" });
   await expect(dialog).toBeVisible();
   await dialog.getByLabel(/^Name/).fill("Browser fixture");
@@ -79,7 +79,7 @@ test("request linking defaults off and form input values are never captured", as
   await page.goto("/");
   await page.getByRole("button", { name: "Allow analytics", exact: true }).click();
   await page.goto("/about");
-  await page.getByRole("button", { name: "Start a conversation", exact: true }).click();
+  await page.locator("#contact").getByRole("button", { name: "Start a conversation" }).click();
   const dialog = page.getByRole("dialog", { name: "Tell us about your project" });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole("checkbox", { name: /Optionally connect/ })).not.toBeChecked();

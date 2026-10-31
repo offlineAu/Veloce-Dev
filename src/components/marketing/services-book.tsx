@@ -170,7 +170,6 @@ export function ServicesBook({ services, refToken }: { services: ServiceItem[]; 
       {list ? <ServicesExplorer services={services} refToken={refToken} /> : (
         <div className={styles.layout}>
           <aside className={styles.contents} aria-label="Service book contents">
-            <p className={styles.eyebrow}>Contents</p>
             <h3>Find your next chapter.</h3>
             <p className={styles.intro}>Start with what your business needs. We’ll work out the right scope together.</p>
             <label className={styles.mobileContents}>Choose a service
@@ -183,7 +182,7 @@ export function ServicesBook({ services, refToken }: { services: ServiceItem[]; 
               {groups.map((group) => <div key={group.label}>
                 <p className={styles.groupLabel}>{group.label}</p>
                 {group.items.map((item) => <button key={item.slug} type="button" aria-controls={`${id}-page`} aria-current={isOpen && service.slug === item.slug ? "page" : undefined} onClick={() => choose(services.indexOf(item))}>
-                  <span>{String(services.indexOf(item) + 1).padStart(2, "0")}</span>{item.title}<ArrowRight aria-hidden />
+                  {item.title}<ArrowRight aria-hidden />
                 </button>)}
               </div>)}
             </div>
@@ -242,11 +241,12 @@ export function ServicesBook({ services, refToken }: { services: ServiceItem[]; 
               <p role="status" aria-live="polite" aria-atomic="true">{isOpen ? `${index + 1} / ${services.length} · ${service.title}` : "Open the book or choose a service"}</p>
               <button ref={nextRef} type="button" className={styles.iconButton} aria-label="Next service" disabled={!isOpen || index === services.length - 1} onClick={() => choose(index + 1)}><ChevronRight aria-hidden /></button>
             </div>
-            {isOpen && <p className={styles.turnHint}>Turn the page to explore <ArrowRight aria-hidden /></p>}
-            {isOpen && <div className={styles.readerTools}>
+            {/* Rendered closed too, so opening the book (on the client under reduced motion) never shifts the page. */}
+            <p className={styles.turnHint} data-reserved={!isOpen || undefined} aria-hidden={!isOpen || undefined}>Turn the page to explore <ArrowRight aria-hidden /></p>
+            <div className={styles.readerTools} data-reserved={!isOpen || undefined} inert={!isOpen}>
               <button type="button" className={styles.textButton} onClick={() => choose(0)}><RotateCcw aria-hidden />Back to the beginning</button>
               {!reduce && <button type="button" className={styles.textButton} onClick={close}><X aria-hidden />Close book</button>}
-            </div>}
+            </div>
           </div>
         </div>
       )}

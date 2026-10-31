@@ -87,6 +87,15 @@ async function requestedDoc(requested: string | undefined, templates: TemplateLi
 // Stable across renders: Puck re-runs its viewport setup when this object changes, and on a fresh history that
 // overwrites the starting point, so the first edit couldn't be undone.
 const IFRAME = { enabled: true, waitForStyles: true };
+
+/** Puck owns the iframe element; its iframe override gives us the document so we can name it for assistive technology. */
+function EditorFrame({ children, document }: { children: ReactNode; document?: Document }) {
+  useEffect(() => {
+    const frame = document?.defaultView?.frameElement;
+    frame?.setAttribute("title", "Website design preview");
+  }, [document]);
+  return <>{children}</>;
+}
 /** The left sidebar's extra tabs, after Blocks and Outline: the design system and the site's assets. */
 const PLUGINS = [
   { name: "styles", label: "Styles", icon: <Palette aria-hidden size={20} />, render: () => <StylesPanel /> },
@@ -314,6 +323,7 @@ export default function BuilderApp({ companyName, contactEmail, refToken, reques
 
   const overrides = useMemo<Partial<Overrides>>(
     () => ({
+      iframe: ({ children, document }) => <EditorFrame document={document}>{children}</EditorFrame>,
       headerActions: () => <HeaderActions onOpen={setPanel} onPreview={setPreviewMode} getDoc={() => latest.current!.doc} />,
       actionBar: ({ children, label, parentAction }) => <BlockActionBar label={label} parentAction={parentAction}>{children}</BlockActionBar>,
       outline: ({ children }) => <OutlineWithNames>{children}</OutlineWithNames>,
@@ -342,6 +352,7 @@ export default function BuilderApp({ companyName, contactEmail, refToken, reques
         <>
           {children}
           <EditorExtras />
+          <MobileActions onOpen={setPanel} onPreview={setPreviewMode} getDoc={() => latest.current!.doc} />
         </>
       ),
     }),
@@ -379,11 +390,11 @@ export default function BuilderApp({ companyName, contactEmail, refToken, reques
       <UploadsContext.Provider value={uploads}>
       <TemplateContext.Provider value={template}>
         <PagesContext.Provider value={pages}>
-          <div className="flex h-dvh flex-col">
-            <p className="bg-ink px-4 py-2 text-center text-sm text-bg lg:hidden">The builder works best on a laptop or desktop. You can still edit here.</p>
+          <div className="builder-workspace flex h-dvh flex-col">
+            <p className="border-b border-line bg-neutral-100 px-4 py-2 text-center text-xs text-muted lg:hidden">Use the menu to open editing tools and the bottom bar to preview or send your design.</p>
             {review ? <ReviewBanner review={review} pkg={template?.pkg} /> : null}
             <PageTabs pages={pages} activeId={active.id} sources={sources} onAction={onPageAction} />
-            <div className="min-h-0 flex-1">
+            <div className="min-h-0 flex-1 pb-[68px] lg:pb-0">
               <ExtrasContext.Provider value={extras}>
               <Puck
                 key={`${mount}:${active.id}`}
@@ -425,6 +436,31 @@ export default function BuilderApp({ companyName, contactEmail, refToken, reques
   );
 }
 
+function MobileActions({ onOpen, onPreview, getDoc }: { onOpen: (p: Panel) => void; onPreview: (m: PreviewMode) => void; getDoc: () => SiteDoc }) {
+  const previewMode = usePuck((s) => s.appState.ui.previewMode);
+  const dispatch = usePuck((s) => s.dispatch);
+  const editing = previewMode !== "interactive";
+  const wiring = useWiring();
+  const exportJson = () => {
+    const blob = new Blob([JSON.stringify(getDoc(), null, 2)], { type: "application/json" });
+    const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: "my-website-design.json" });
+    a.click(); URL.revokeObjectURL(a.href);
+  };
+  return <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-2 border-t border-line bg-surface p-2 pb-[max(.5rem,env(safe-area-inset-bottom))] lg:hidden">
+    <Button variant="outline" size="sm" className="flex-1" aria-pressed={!editing} onClick={() => { const next = editing ? "interactive" : "edit"; onPreview(next); dispatch({ type: "setUi", ui: { previewMode: next } }); }}>{editing ? "Preview" : "Edit"}</Button>
+    <OpenInquiryButton size="sm" className="flex-1">Send design</OpenInquiryButton>
+    <details className="relative">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center rounded-lg border border-line px-3 text-sm font-semibold">Tools</summary>
+      <div className="absolute bottom-full right-0 mb-2 grid w-56 gap-1 rounded-xl border border-line bg-surface p-2 shadow-lg">
+        <Link href="/#offer" className="rounded-lg px-3 py-2 text-sm hover:bg-neutral-200">Back to the site</Link>
+        {([["sections", "Add a section"], ["templates", "Templates"], ["import", "Import HTML"], ["saveTemplate", "Save as template"]] as const).map(([panel, label]) => <button key={panel} type="button" className="rounded-lg px-3 py-2 text-left text-sm hover:bg-neutral-200" onClick={(event) => { onOpen(panel); event.currentTarget.closest("details")?.removeAttribute("open"); }}>{label}</button>)}
+        <button type="button" className="rounded-lg px-3 py-2 text-left text-sm hover:bg-neutral-200" onClick={exportJson}>Export design</button>
+        <button type="button" aria-pressed={wiring} disabled={!editing} className="rounded-lg px-3 py-2 text-left text-sm hover:bg-neutral-200 disabled:opacity-50" onClick={() => wiringStore.set(!wiring)}>Wiring</button>
+      </div>
+    </details>
+  </div>;
+}
+
 function HeaderActions({ onOpen, onPreview, getDoc }: { onOpen: (p: Panel) => void; onPreview: (m: PreviewMode) => void; getDoc: () => SiteDoc }) {
   const previewMode = usePuck((s) => s.appState.ui.previewMode);
   const dispatch = usePuck((s) => s.dispatch);
@@ -439,15 +475,20 @@ function HeaderActions({ onOpen, onPreview, getDoc }: { onOpen: (p: Panel) => vo
   };
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="hidden items-center gap-1 lg:flex">
       {/* Less-used actions are icon-only (named for screen readers and on hover) so the toolbar fits on one row. */}
       <Button asChild variant="ghost" size="icon" title="Back to the site">
         <Link href="/#offer" aria-label="Back to the site"><ArrowLeft aria-hidden /></Link>
       </Button>
       <Button variant="ghost" size="icon" title="Add a section" aria-label="Add a section" onClick={() => onOpen("sections")}><Shapes aria-hidden /></Button>
-      <Button variant="ghost" size="icon" title="Import HTML" aria-label="Import HTML" onClick={() => onOpen("import")}><Code2 aria-hidden /></Button>
-      <Button variant="ghost" size="icon" title="Save as template" aria-label="Save as template" onClick={() => onOpen("saveTemplate")}><Bookmark aria-hidden /></Button>
-      <Button variant="ghost" size="icon" title="Export design (JSON)" aria-label="Export design" onClick={exportJson}><Download aria-hidden /></Button>
+      <details className="relative">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center rounded-lg px-4 text-sm font-semibold hover:bg-neutral-200">More</summary>
+        <div className="absolute right-0 top-full z-50 grid w-52 gap-1 rounded-xl border border-line bg-surface p-2 shadow-lg" onClick={event => { if (event.target instanceof Element && event.target.closest("button")) event.currentTarget.closest("details")?.removeAttribute("open"); }}>
+          <Button variant="ghost" size="sm" className="justify-start" onClick={() => onOpen("import")}><Code2 aria-hidden /> Import HTML</Button>
+          <Button variant="ghost" size="sm" className="justify-start" onClick={() => onOpen("saveTemplate")}><Bookmark aria-hidden /> Save as template</Button>
+          <Button variant="ghost" size="sm" className="justify-start" onClick={exportJson}><Download aria-hidden /> Export design</Button>
+        </div>
+      </details>
       <Button variant="ghost" size="sm" onClick={() => onOpen("templates")}><LayoutTemplate aria-hidden /> Templates</Button>
       {/* Figma-style connections: where each link and button goes, dragged to change. */}
       <Button variant={wiring ? "secondary" : "ghost"} size="sm" aria-pressed={wiring} disabled={!editing} title="Show where links and buttons go" onClick={() => wiringStore.set(!wiring)}>

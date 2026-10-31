@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Icon } from "@/components/ui/icon";
 import { CapabilityMock } from "@/components/marketing/mockups";
@@ -12,8 +13,18 @@ interface Group {
 
 /** Accessible tablist (arrow keys, roving tabindex) over config-driven groups, with an illustrative panel. */
 export function CapabilityTabs({ groups }: { groups: Group[] }) {
+  const [active, setActive] = useState(groups[0]?.id);
+  useEffect(() => {
+    const selectCapability = (event: Event) => {
+      const title = (event as CustomEvent<string>).detail;
+      const group = groups.find(item => item.items.some(capability => capability.title === title));
+      if (group) setActive(group.id);
+    };
+    window.addEventListener("veloce:select-capability", selectCapability);
+    return () => window.removeEventListener("veloce:select-capability", selectCapability);
+  }, [groups]);
   return (
-    <Tabs defaultValue={groups[0]?.id} className="flex flex-col gap-6">
+    <Tabs value={active} onValueChange={setActive} className="flex flex-col gap-6">
       <TabsList aria-label="Capability groups" className="grid h-auto w-full grid-cols-3 gap-1 rounded-[28px] border border-line bg-surface p-1.5 shadow-sm group-data-[orientation=horizontal]/tabs:h-auto sm:flex sm:w-fit sm:max-w-full sm:flex-wrap sm:justify-start sm:rounded-full">
         {groups.map((g) => (
           <TabsTrigger

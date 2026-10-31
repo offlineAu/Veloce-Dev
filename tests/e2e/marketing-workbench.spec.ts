@@ -1,24 +1,8 @@
 import { expect, test } from "@playwright/test";
 
-test("services can be explored by need without losing the catalogue or inquiry action", async ({ page }) => {
-  await page.goto("/");
-  const services = page.locator("[data-services-explorer]");
-  await expect(services.getByRole("heading", { level: 3 })).toHaveCount(10); // chooser + nine services
-  await services.getByRole("button", { name: /Run the day-to-day/ }).click();
-  await expect(services.getByRole("heading", { name: "Internal business systems" })).toBeVisible();
-  await expect(services.getByRole("heading", { name: "Business websites" })).toHaveCount(0);
-  await services.getByRole("button", { name: "Internal business systems", exact: true }).click();
-  await services.getByRole("button", { name: "Ask about Internal business systems" }).click();
-  await expect(page.getByRole("dialog", { name: "Ask about Internal business systems" })).toBeVisible();
-  await page.keyboard.press("Escape");
-  await services.getByRole("button", { name: /Improve what exists/ }).click();
-  await expect(services.getByRole("heading", { level: 3 })).toHaveCount(3);
-  await services.getByRole("button", { name: /Explore all services/ }).click();
-  await expect(services.getByRole("heading", { level: 3 })).toHaveCount(10);
-});
-
 test("the delivery stages expose all six steps and keep keyboard navigation usable", async ({ page }) => {
   await page.goto("/");
+  await page.locator("#approach summary").click();
   const workbench = page.locator("[data-approach-workbench]");
   const think = workbench.getByRole("tab", { name: "Think it." });
   await think.focus();
@@ -42,6 +26,7 @@ test("the delivery stages expose all six steps and keep keyboard navigation usab
 
 test("changing the first scope changes the working example and a new workflow resets its choices", async ({ page }) => {
   await page.goto("/");
+  await page.locator("#approach summary").click();
   const workbench = page.locator("[data-approach-workbench]");
   await workbench.getByRole("button", { name: "Automated reminders", exact: true }).click();
   await workbench.getByRole("button", { name: "See a working example" }).click();
@@ -62,6 +47,7 @@ test("changing the first scope changes the working example and a new workflow re
 test("reduced motion keeps the whole interactive journey available without horizontal overflow", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
+  await page.locator("#approach summary").click();
   const workbench = page.locator("[data-approach-workbench]");
   await workbench.getByRole("button", { name: "See a working example" }).click();
   await workbench.getByRole("button", { name: "09:00", exact: true }).click();

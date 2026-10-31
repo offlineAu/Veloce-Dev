@@ -61,6 +61,11 @@ export function SearchPalette({ entries, className, variant = "compact", keyboar
       } else if (entry.href?.startsWith("#")) {
         const target = document.getElementById(entry.href.slice(1));
         if (!target) return;
+        if (entry.href === "#capabilities") {
+          const disclosure = target.querySelector<HTMLDetailsElement>("details");
+          if (disclosure) disclosure.open = true;
+          window.dispatchEvent(new CustomEvent("veloce:select-capability", { detail: entry.label }));
+        }
         const href = `${location.pathname}${location.search}${entry.href}`;
         if (location.hash !== entry.href) router.push(href);
         else target.scrollIntoView({ behavior: prefersReducedMotion() ? "instant" : "smooth" });

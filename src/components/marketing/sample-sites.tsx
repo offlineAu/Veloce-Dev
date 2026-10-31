@@ -31,6 +31,11 @@ const useWide = () =>
 
 export function SampleSites({ samples, initialIndex = 0, refToken }: { samples: ShowcaseSample[]; initialIndex?: number; refToken?: string }) {
   const [active, setActive] = React.useState(initialIndex);
+  React.useEffect(() => {
+    if (new URLSearchParams(window.location.search).has("sample") && window.location.hash === "#services") {
+      document.getElementById("examples")?.scrollIntoView();
+    }
+  }, []);
   // Announce the sample only when the visitor changed it, not on every auto-advance.
   const [announce, setAnnounce] = React.useState(false);
   const wide = useWide();
@@ -40,10 +45,10 @@ export function SampleSites({ samples, initialIndex = 0, refToken }: { samples: 
   return (
     <div className="mt-10 grid items-center gap-8 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
       <div className="flex flex-col gap-4" aria-live={announce ? "polite" : "off"}>
-        <span className="w-fit rounded border border-line bg-neutral-100 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-muted">
-          {copy.label} {active + 1} / {samples.length}
-        </span>
-        <h3 className="text-2xl font-bold uppercase tracking-wide text-ink">{sample.title}</h3>
+        <p className="text-[14px] font-medium text-muted">
+          {copy.label} {active + 1} of {samples.length}
+        </p>
+        <h3 className="text-[28px] font-semibold leading-tight tracking-[-0.02em] text-ink">{sample.title}</h3>
         <p className="text-[15px] leading-relaxed text-muted">{sample.description}</p>
         {sample.pages.length > 1 ? (
           <p className="text-[13px] text-muted">{sample.pages.map((p) => p.title).join(" · ")}</p>
@@ -60,11 +65,13 @@ export function SampleSites({ samples, initialIndex = 0, refToken }: { samples: 
               <Link href={withReferral(`/build?template=${encodeURIComponent(sample.startSlug)}`, refToken)}>{copy.startCta}</Link>
             </Button>
           ) : null}
-          <OpenInquiryButton size="sm" variant="ghost">{copy.inquiryCta}</OpenInquiryButton>
         </div>
-        <a href="#all-services" className="w-fit text-[14px] font-semibold text-accent-700 underline-offset-4 hover:underline">
-          {copy.exploreCta}
-        </a>
+        <div className="flex flex-wrap items-center gap-x-6 pt-1">
+          <OpenInquiryButton variant="ghost" className="h-auto min-h-11 px-0 text-[14px] font-medium text-accent-700 underline-offset-4 hover:bg-transparent hover:underline">{copy.inquiryCta}</OpenInquiryButton>
+          <a href="#all-services" className="inline-flex min-h-11 items-center text-[14px] font-medium text-accent-700 underline-offset-4 hover:underline">
+            {copy.exploreCta}
+          </a>
+        </div>
       </div>
 
       <div className="relative isolate overflow-hidden rounded-xl bg-inverse">
@@ -78,15 +85,16 @@ export function SampleSites({ samples, initialIndex = 0, refToken }: { samples: 
           }}
           loop
           autoPlay={5000}
-          slideSize={wide ? 360 : 230}
+          slideSize={wide ? 470 : 260}
           slideAspect="16/10"
           rotationStep={24}
-          verticalStep={wide ? 110 : 80}
-          className="h-[360px] rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink sm:h-[460px]"
+          inactiveScale={0.8}
+          verticalStep={wide ? 128 : 84}
+          className="h-[380px] rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink sm:h-[500px]"
           trackClassName="top-[45%]"
           viewportClassName="[--fade:linear-gradient(to_bottom,black_80%,transparent)] [mask-image:var(--fade)]"
           imageClassName="rounded-none object-top shadow-none"
-          labelClassName="text-xs font-bold uppercase tracking-[0.14em] text-white"
+          labelClassName="text-sm font-semibold text-white"
           wrapSlide={(slide, item, index, isActive) => {
             const s = samples[index]!;
             const inner = s.pages[1] ?? s.pages[0]!;

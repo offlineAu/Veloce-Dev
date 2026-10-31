@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { analyticsConfig } from "@/server/analytics/config";
 import type { Metadata, Viewport } from "next";
-import { JetBrains_Mono, Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
+import { JetBrains_Mono, Inter, Manrope } from "next/font/google";
 import { env } from "@/config/env";
 import { brand } from "@/content/site";
 import { ThemeScope } from "@/components/site/theme-scope";
@@ -12,11 +12,11 @@ import { Providers } from "@/components/providers";
 import { ScrollProgress } from "@/components/motion/scroll-progress";
 import "./globals.css";
 
-const heading = Space_Grotesk({ subsets: ["latin"], variable: "--font-space-grotesk", display: "swap" });
-const body = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta", display: "swap" });
+const heading = Manrope({ subsets: ["latin"], variable: "--font-space-grotesk", display: "swap" });
+const body = Inter({ subsets: ["latin"], variable: "--font-jakarta", display: "swap" });
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains", display: "swap" });
 
-export const viewport: Viewport = { themeColor: "#f6f4ee", width: "device-width", initialScale: 1 };
+export const viewport: Viewport = { themeColor: "#f7f6f2", width: "device-width", initialScale: 1 };
 
 export function generateMetadata(): Metadata {
   const e = env();

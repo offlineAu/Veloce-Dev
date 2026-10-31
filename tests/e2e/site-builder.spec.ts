@@ -85,6 +85,7 @@ test.describe("site builder", () => {
 
   test("imported HTML is sandboxed: scripts never reach the editor", async ({ page }) => {
     await openBlank(page);
+    await page.getByText((page.viewportSize()?.width ?? 0) < 1024 ? "Tools" : "More", { exact: true }).click();
     await page.getByRole("button", { name: "Import HTML" }).click();
     await page.getByRole("dialog").getByLabel("HTML").fill(
       `<h3 id="imported">Imported block</h3><img src="x" onerror="parent.parent.__pwned=1"><script>parent.parent.__pwned=1</script>`,
@@ -102,7 +103,7 @@ test.describe("site builder", () => {
     await page.getByRole("button", { name: "Send design" }).click();
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByRole("heading", { name: "Send us your design" })).toBeVisible();
-    await expect(dialog).toContainText("Your design (1 page, 5 sections) will be attached.");
+    await expect(dialog).toContainText("Your design (1 page, 5 sections) will be uploaded with your inquiry.");
     await dialog.getByLabel(/^Name/).fill("Builder Person");
     await dialog.getByLabel(/^Email/).fill(email);
     await dialog.getByLabel(/What are you looking to build/).fill("A site like this design");

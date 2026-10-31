@@ -1,10 +1,10 @@
 /*
  * Homepage intro, driven by data-boot-phase on .wrapper.
- * Gate: the backdrop glows up, the laptop rises and powers on, the labels and enter buttons follow (CSS only, so it
- * plays before hydration). Playing: the sample sites step through the laptop screen with the percentage (--p, the film
- * position, set by the client), and the backdrop glow takes the colours of the frame on screen.
+ * Loading: the backdrop glows up, the laptop rises and powers on and the labels follow (CSS only, so it plays as
+ * soon as the markup arrives). Playing: the sample sites step through the laptop screen with the percentage (--p, the film
+ * position, set by the intro engine, boot-intro.ts), and the backdrop glow takes the colours of the frame on screen.
  * Exit: the labels slide apart, the screen (now showing the hero's photo) zooms to full bleed (--zoom, measured by the
- * client) and the overlay dissolves into the hero.
+ * engine) and the overlay dissolves into the hero.
  */
 .wrapper {
   --screen-w: min(560px, 80vw);
@@ -85,13 +85,12 @@
   .layout {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
-    grid-template-rows: 1fr auto auto 1fr;
+    grid-template-rows: 1fr auto 1fr;
     gap: 0;
   }
   .layout > .label:first-child { grid-area: 2 / 1; justify-self: end; margin-right: 3.5rem; }
   .device { grid-area: 2 / 2; }
   .layout > .label:nth-child(3) { grid-area: 2 / 3; justify-self: start; margin-left: 3.5rem; }
-  .gate { grid-area: 3 / 2; margin-top: 2.75rem; }
   .layout > .label { margin-bottom: calc(var(--screen-w) * 0.035 + 2.5rem); } /* level with the screen, not the base */
 }
 
@@ -214,47 +213,6 @@
   transition: opacity 0.3s ease;
 }
 
-/* ---- Gate ---- */
-.gate {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.875rem;
-  animation: fade-in 0.8s var(--o3) 1.2s both;
-  transition: opacity 300ms ease, visibility 0s 300ms;
-}
-.gate button {
-  cursor: pointer;
-  color: inherit;
-  letter-spacing: 0.04em;
-  text-transform: inherit;
-}
-.gate button:focus-visible { outline: none; text-decoration: underline; text-underline-offset: 6px; }
-.enter {
-  padding: 0.5rem 0.75rem;
-  font-size: 0.9375rem;
-  animation: pulse 1.8s ease-in-out 2s infinite;
-  transition: letter-spacing 0.4s var(--o3);
-}
-.enter:hover { letter-spacing: 0.14em; }
-@keyframes pulse {
-  50% { opacity: 0.45; }
-}
-.silent {
-  font-size: 0.6875rem;
-  opacity: 0.55;
-  transition: opacity 0.2s ease;
-}
-.silent:hover { opacity: 1; }
-.touch { display: none; }
-@media (pointer: coarse) {
-  .pointer { display: none; }
-  .touch { display: inline; }
-}
-.wrapper:not([data-boot-phase="gate"]) .gate { opacity: 0; visibility: hidden; pointer-events: none; }
-
 /* ---- Exit ---- */
 .wrapper[data-boot-phase="exit"] { opacity: 0; pointer-events: none; transition: opacity 0.7s ease 0.95s; }
 .wrapper[data-boot-phase="exit"] .device { transform: var(--zoom); transition: transform 1.2s var(--io4); }
@@ -263,6 +221,3 @@
 .wrapper[data-boot-phase="exit"] .label { overflow: visible; }
 .wrapper[data-boot-phase="exit"] .layout > .label:first-child { transform: translateX(-100vw); }
 .wrapper[data-boot-phase="exit"] .layout > .label:nth-child(3) { transform: translateX(100vw); }
-
-/* No hydration in time: the pre-paint failsafe fades the overlay rather than cutting it. */
-:global(:root[data-intro="timeout"]) .wrapper { opacity: 0; pointer-events: none; }

@@ -97,7 +97,8 @@ test("www redirects permanently while preserving the path and query", async ({ r
 test("verified referrals survive navigation while invalid tokens are discarded", async ({ page }) => {
   await resetFixtures();
   await page.goto(`/?ref=${TOKENS.hidden}`);
-  const serviceLink = page.locator(`a[href="/services/business-websites?ref=${TOKENS.hidden}"]`).first();
+  // The services book keeps its chapter links hidden until a chapter is open; the footer's is always there.
+  const serviceLink = page.locator(`a[href="/services/business-websites?ref=${TOKENS.hidden}"]`).filter({ visible: true }).first();
   await serviceLink.click();
   await expect(page).toHaveURL(new RegExp(`/services/business-websites\\?ref=${TOKENS.hidden}$`));
   await expect(page.getByRole("link", { name: "Get to know Veloce" })).toHaveAttribute("href", `/about?ref=${TOKENS.hidden}`);
@@ -128,8 +129,10 @@ test("service content and navigation are available without JavaScript", async ({
 test("navigation stays usable after scrolling on content pages", async ({ page }) => {
   await page.goto("/services/business-websites");
   await page.evaluate(() => window.scrollTo(0, 800));
-  if ((page.viewportSize()?.width ?? 0) < 768) {
-    await page.getByRole("button", { name: "Open menu" }).click();
+  // Below the header's breakpoint (tablets included) the links live in the menu.
+  const menu = page.getByRole("button", { name: "Open menu" });
+  if (await menu.isVisible()) {
+    await menu.click();
     await page.getByRole("navigation", { name: "Mobile", exact: true }).getByRole("link", { name: "About", exact: true }).click();
   } else {
     await page.locator("header").getByRole("link", { name: "About", exact: true }).click();

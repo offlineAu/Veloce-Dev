@@ -9,11 +9,11 @@ import { cn } from "@/lib/utils";
  * Sizes keep the 44px+ touch targets used across the site.
  */
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full font-semibold tracking-tight transition-[color,background-color,border-color,box-shadow,transform] duration-200 outline-none disabled:pointer-events-none disabled:opacity-60 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-[10px] font-semibold tracking-tight transition-[color,background-color,border-color,box-shadow,transform] duration-200 outline-none disabled:pointer-events-none disabled:opacity-60 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground shadow-sm hover:-translate-y-0.5 hover:bg-accent-hover hover:shadow-md active:translate-y-0 motion-reduce:hover:translate-y-0",
+        default: "bg-accent-700 text-bg shadow-sm hover:-translate-y-0.5 hover:opacity-90 hover:shadow-md active:translate-y-0 motion-reduce:hover:translate-y-0",
         dark: "bg-inverse text-on-inverse shadow-sm hover:-translate-y-0.5 hover:bg-inverse/90 hover:shadow-md active:translate-y-0 motion-reduce:hover:translate-y-0",
         destructive: "bg-destructive text-on-danger hover:bg-destructive/90",
         outline: "border border-ink/20 bg-surface/70 text-foreground hover:border-ink/40 hover:bg-surface active:bg-neutral-100",

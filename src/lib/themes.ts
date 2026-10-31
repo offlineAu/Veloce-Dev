@@ -1,144 +1,85 @@
-/**
- * Colour palettes. The base tokens in globals.css ("organic") are only a fallback; the site always applies one of
- * the palettes below, same token names, and every pairing is contrast-checked in tests/unit/contrast.test.ts.
- *
- * - pistachio (DEFAULT): the editorial redesign. Warm ivory canvas #f6f4ee, obsidian ink #111612, pistachio lime
- *     #d9f5ab accent (dark text on it), olive accent text, cool blue-grey secondary tones.
- * - periwinkle: the owner's Color Hunt palette https://colorhunt.co/palette/9fa1ffb5baffaee2ffd9f9df
- *     #9FA1FF periwinkle (accent / buttons), #B5BAFF lavender, #AEE2FF sky, #D9F9DF mint.
- *   The page, text and secondary-blue tones (bg, ink, muted, line, neutrals, accent-700/800, sage-700/800, danger)
- *   are DERIVED from that family to keep text readable, and need owner sign-off.
- * - ember: dark, from https://colorhunt.co/palette/362222171010423f3e2b2b2b
- *     #171010 page, #362222 surface, #2B2B2B card, #423F3E line / chips. Text, accent and secondary tones are derived.
- *
- * A visitor's choice is kept in this browser (localStorage "veloce-theme") and applied before first paint; with no
- * choice the site default below is used. Change DEFAULT_THEME to change the default for everyone.
- */
-export const pistachioTheme = {
-  "--color-bg": "#f6f4ee",
+/** Semantic color tokens for Veloce's light and dark themes, applied before first paint. */
+export const lightTheme = {
+  "--color-bg": "#f7f6f2",
   "--color-surface": "#ffffff",
-  "--color-ink": "#111612",
-  "--color-muted": "#4f5650",
-  "--color-line": "#e5e2d6",
-  "--color-neutral-100": "#faf9f5",
-  "--color-neutral-200": "#efede5",
-  "--color-neutral-300": "#e2dfd3",
-  "--color-neutral-700": "#596059",
-  "--color-accent": "#d9f5ab",
-  "--color-accent-100": "#eefad6",
-  "--color-accent-200": "#e3f6c2",
-  "--color-accent-300": "#c8ea94",
-  "--color-accent-600": "#d9f5ab",
-  "--color-accent-hover": "#c8ea94",
-  "--color-accent-700": "#3f5a1e",
-  "--color-accent-800": "#2c4013",
-  "--color-sage": "#55707f",
-  "--color-sage-100": "#e8eef1",
-  "--color-sage-200": "#dbe5eb",
-  "--color-sage-300": "#c3d2db",
-  "--color-sage-700": "#3d5563",
-  "--color-sage-800": "#2a3d48",
+  "--color-ink": "#202725",
+  "--color-muted": "#505b58",
+  "--color-line": "#dedfd7",
+  "--color-neutral-100": "#f3f3ef",
+  "--color-neutral-200": "#e9ebe5",
+  "--color-neutral-300": "#daddd5",
+  "--color-neutral-700": "#505b58",
+  "--color-accent": "#a8c5d0",
+  "--color-accent-100": "#e7eff2",
+  "--color-accent-200": "#d9e7eb",
+  "--color-accent-300": "#bdd4dc",
+  "--color-accent-600": "#a8c5d0",
+  "--color-accent-hover": "#bdd4dc",
+  "--color-accent-700": "#385d6d",
+  "--color-accent-800": "#294753",
+  "--color-sage": "#526a5e",
+  "--color-sage-100": "#e8eee5",
+  "--color-sage-200": "#dbe6da",
+  "--color-sage-300": "#c5d6c5",
+  "--color-sage-700": "#41594c",
+  "--color-sage-800": "#30483c",
   "--color-danger": "#a1271b",
-  "--color-on-accent": "#111612",
+  "--color-on-accent": "#202725",
   "--color-on-sage": "#ffffff",
   "--color-on-danger": "#ffffff",
-  "--color-inverse": "#111612",
-  "--color-on-inverse": "#f6f4ee",
+  "--color-inverse": "#171d1b",
+  "--color-on-inverse": "#f7f6f2",
+  "--color-chart-third": "#8b563f",
 } as const;
 
-export const periwinkleTheme = {
-  "--color-bg": "#f7f7ff",
-  "--color-surface": "#ffffff",
-  "--color-ink": "#1b1d4d",
-  "--color-muted": "#44476f",
-  "--color-line": "#d6d8ff",
-  "--color-neutral-100": "#eef0ff",
-  "--color-neutral-200": "#e1e4ff",
-  "--color-neutral-300": "#d1d5ff",
-  "--color-neutral-700": "#565a85",
-  "--color-accent": "#9fa1ff",
-  "--color-accent-100": "#eceeff",
-  "--color-accent-200": "#dcdfff",
-  "--color-accent-300": "#b5baff",
-  "--color-accent-600": "#9fa1ff",
-  "--color-accent-hover": "#8e90f7",
-  "--color-accent-700": "#4448c9",
-  "--color-accent-800": "#2f3296",
-  "--color-sage": "#3f87c0",
-  "--color-sage-100": "#eefcf1",
-  "--color-sage-200": "#d9f9df",
-  "--color-sage-300": "#aee2ff",
-  "--color-sage-700": "#25608f",
-  "--color-sage-800": "#1a4668",
-  "--color-danger": "#b3261e",
-  "--color-on-accent": "#1b1d4d",
-  "--color-on-sage": "#ffffff",
-  "--color-on-danger": "#ffffff",
-  "--color-inverse": "#1b1d4d",
-  "--color-on-inverse": "#f7f7ff",
+export const darkTheme = {
+  "--color-bg": "#171d1b",
+  "--color-surface": "#222b27",
+  "--color-ink": "#f2f4ef",
+  "--color-muted": "#c1cac2",
+  "--color-line": "#46534c",
+  "--color-neutral-100": "#27302b",
+  "--color-neutral-200": "#303b34",
+  "--color-neutral-300": "#435047",
+  "--color-neutral-700": "#c1cac2",
+  "--color-accent": "#a8c5d0",
+  "--color-accent-100": "#2e4145",
+  "--color-accent-200": "#354b50",
+  "--color-accent-300": "#56737a",
+  "--color-accent-600": "#a8c5d0",
+  "--color-accent-hover": "#c2dbe2",
+  "--color-accent-700": "#bcd4dd",
+  "--color-accent-800": "#d8e8ed",
+  "--color-sage": "#9db8a4",
+  "--color-sage-100": "#303d34",
+  "--color-sage-200": "#3b4d3f",
+  "--color-sage-300": "#708a76",
+  "--color-sage-700": "#c2d9c5",
+  "--color-sage-800": "#d8ead9",
+  "--color-danger": "#ffaaa0",
+  "--color-on-accent": "#171d1b",
+  "--color-on-sage": "#171d1b",
+  "--color-on-danger": "#171d1b",
+  "--color-inverse": "#0f1513",
+  "--color-on-inverse": "#f2f4ef",
+  "--color-chart-third": "#e3b09a",
 } as const;
 
-export const emberTheme = {
-  "--color-bg": "#171010",
-  "--color-surface": "#362222",
-  "--color-ink": "#f3eae6",
-  "--color-muted": "#bdb1ab",
-  "--color-line": "#423f3e",
-  "--color-neutral-100": "#2b2b2b",
-  "--color-neutral-200": "#423f3e",
-  "--color-neutral-300": "#55504e",
-  "--color-neutral-700": "#a89d97",
-  "--color-accent": "#e8afa1",
-  "--color-accent-100": "#4a2e2d",
-  "--color-accent-200": "#5e3a38",
-  "--color-accent-300": "#c98e82",
-  "--color-accent-600": "#e8afa1",
-  "--color-accent-hover": "#f0c3b7",
-  "--color-accent-700": "#f0c3b7",
-  "--color-accent-800": "#f7d9d0",
-  "--color-sage": "#9c928d",
-  "--color-sage-100": "#332e2d",
-  "--color-sage-200": "#413a39",
-  "--color-sage-300": "#a39893",
-  "--color-sage-700": "#cfc4be",
-  "--color-sage-800": "#e3dad5",
-  "--color-danger": "#ff9f90",
-  "--color-on-accent": "#171010",
-  "--color-on-sage": "#171010",
-  "--color-on-danger": "#171010",
-  "--color-inverse": "#0e0909",
-  "--color-on-inverse": "#f3eae6",
-} as const;
-
-export type ThemeName = "pistachio" | "periwinkle" | "ember";
-export const THEME_NAMES: ThemeName[] = ["pistachio", "periwinkle", "ember"];
-export const DEFAULT_THEME: ThemeName = "pistachio";
-export const themes: Record<ThemeName, Record<string, string>> = { pistachio: pistachioTheme, periwinkle: periwinkleTheme, ember: emberTheme };
+// Compatibility exports for integrations that imported the earlier palette names.
+export const pistachioTheme = lightTheme;
+export const periwinkleTheme = lightTheme;
+export const emberTheme = darkTheme;
+export type ThemeName = "light" | "dark";
+export const THEME_NAMES: ThemeName[] = ["light", "dark"];
+export const DEFAULT_THEME: ThemeName = "light";
+export const themes: Record<ThemeName, Record<string, string>> = { light: lightTheme, dark: darkTheme };
 export const isThemeName = (t: unknown): t is ThemeName => typeof t === "string" && (THEME_NAMES as string[]).includes(t);
 export const THEME_STORAGE_KEY = "veloce-theme";
 export const MOTION_STORAGE_KEY = "veloce-motion";
-/** sessionStorage flag: PerfMonitor saw slow frames on this device, so this visit stays in lite mode. */
 export const PERF_STORAGE_KEY = "veloce-perf";
-
 export const themeMeta: Record<ThemeName, { label: string; description: string; swatches: string[]; dark: boolean }> = {
-  pistachio: {
-    label: "Pistachio",
-    description: "Warm and editorial. Ivory and obsidian with a fresh lime accent.",
-    swatches: ["#f6f4ee", "#d9f5ab", "#dbe5eb", "#111612"],
-    dark: false,
-  },
-  periwinkle: {
-    label: "Periwinkle",
-    description: "Light and airy. Soft blues and lavender with mint.",
-    swatches: ["#9fa1ff", "#b5baff", "#aee2ff", "#d9f9df"],
-    dark: false,
-  },
-  ember: {
-    label: "Ember",
-    description: "Dark and warm. Deep browns with a rose accent.",
-    swatches: ["#171010", "#362222", "#423f3e", "#e8afa1"],
-    dark: true,
-  },
+  light: { label: "Light", description: "Warm, clear surfaces with muted blue accents.", swatches: ["#f7f6f2", "#ffffff", "#a8c5d0", "#202725"], dark: false },
+  dark: { label: "Dark", description: "Quiet charcoal surfaces with soft blue accents.", swatches: ["#171d1b", "#222b27", "#a8c5d0", "#f2f4ef"], dark: true },
 };
 
 const vars = (t: Record<string, string>) => Object.entries(t).map(([k, v]) => `${k}:${v}`).join(";");
@@ -153,4 +94,4 @@ export const allThemesCss = (): string =>
  * Runs before first paint: applies a saved choice, so there is no flash of the wrong palette, and flags low-power devices
  * (data-perf="lite": 4 GB or less memory, 2 or fewer cores, or Data Saver, or slow frames seen earlier this visit) so heavy decoration can be dropped.
  */
-export const themeInitScript = `try{var d=document.documentElement,t=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});if(${JSON.stringify(THEME_NAMES)}.indexOf(t)>-1)d.dataset.theme=t;var m=localStorage.getItem(${JSON.stringify(MOTION_STORAGE_KEY)});if(m==="full"||m==="reduced")d.dataset.motion=m}catch(e){}try{var n=navigator,c=n.connection;if((n.deviceMemory&&n.deviceMemory<=4)||(c&&c.saveData)||(n.hardwareConcurrency&&n.hardwareConcurrency<=2))document.documentElement.dataset.perf="lite"}catch(e){}try{if(sessionStorage.getItem(${JSON.stringify(PERF_STORAGE_KEY)})==="lite")document.documentElement.dataset.perf="lite"}catch(e){}`;
+export const themeInitScript = `try{var d=document.documentElement,t=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});if(t==="ember")t="dark";else if(t==="pistachio"||t==="periwinkle")t="light";if(${JSON.stringify(THEME_NAMES)}.indexOf(t)>-1){d.dataset.theme=t;try{localStorage.setItem(${JSON.stringify(THEME_STORAGE_KEY)},t)}catch(e){}}var m=localStorage.getItem(${JSON.stringify(MOTION_STORAGE_KEY)});if(m==="full"||m==="reduced")d.dataset.motion=m}catch(e){}try{var n=navigator,c=n.connection;if((n.deviceMemory&&n.deviceMemory<=4)||(c&&c.saveData)||(n.hardwareConcurrency&&n.hardwareConcurrency<=2))document.documentElement.dataset.perf="lite"}catch(e){}try{if(sessionStorage.getItem(${JSON.stringify(PERF_STORAGE_KEY)})==="lite")document.documentElement.dataset.perf="lite"}catch(e){}`;

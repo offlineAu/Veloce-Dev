@@ -1,3 +1,3 @@
 export const BOOT_STORAGE_KEY = "veloce-booted";
-/** If the intro has not taken over by now (no hydration), the pre-paint script fades it out and releases the hero. */
-export const INTRO_FAILSAFE_MS = 12_000;
+/** Crawlers, Lighthouse and headless browsers: they skip the intro, and the homepage renders for them in one pass. */
+export const AUTOMATED_AGENT_PATTERN = "bot|crawl|spider|slurp|lighthouse|headless|preview|externalhit";

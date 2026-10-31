@@ -4,9 +4,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
-// shadcn Input/Textarea with the site's pill styling layered on top.
+// Shared controls use the same quiet surfaces and corner radius as the rest of the interface.
 const control =
-  "h-auto min-h-12 w-full rounded-full border-2 border-line bg-neutral-100 px-4 text-[15px] text-ink shadow-none placeholder:text-neutral-700 md:text-[15px] aria-[invalid=true]:border-danger";
+  "h-auto min-h-12 w-full rounded-[10px] border border-line bg-neutral-100 px-4 text-[15px] text-ink shadow-none placeholder:text-neutral-700 md:text-[15px] aria-[invalid=true]:border-danger";
 
 export interface FieldShellProps {
   id: string;
@@ -68,7 +68,7 @@ export const TextArea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTML
     return (
       <Textarea
         ref={ref}
-        className={cn(control, "min-h-24 rounded-[22px] py-3", className)}
+        className={cn(control, "min-h-24 py-3", className)}
         {...p}
       />
     );

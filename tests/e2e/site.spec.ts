@@ -21,11 +21,12 @@ async function revealAll(page: Page) {
 
 /** Header icon from lg up; the footer link on phones and tablets (the header is logo-only there once scrolled). */
 const openPaletteButton = (page: Page) =>
-  (page.viewportSize()?.width ?? 0) >= 1024 ? page.getByRole("button", { name: "Change colour palette" }) : page.getByRole("button", { name: "Colour palette", exact: true });
+  page.getByRole("button", { name: "Change colour palette" });
 
 const openInquiry = async (page: Page) => {
   await page.goto(`/about${new URL(page.url()).search}`);
-  await page.getByRole("button", { name: "Start a conversation", exact: true }).click();
+  // The closing section's button: on wide screens the header carries one with the same name.
+  await page.locator("#contact").getByRole("button", { name: "Start a conversation" }).click();
   const dialog = page.getByRole("dialog", { name: "Tell us about your project" });
   await expect(dialog).toBeVisible();
   await page.waitForTimeout(1700); // above the minimum fill time used against bots
@@ -56,9 +57,9 @@ async function openSearchWithShortcut(page: Page) {
 test.describe("sales page", () => {
   test("renders content and no offer without a referral", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { level: 1 })).toContainText("idea shouldn't stay an idea");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("Websites that work for your business");
     await expect(page.getByText("Build fast. Build what works.").first()).toBeVisible();
-    await expect(page.locator("[data-services-book]").getByRole("heading", { name: /Explore every service|Business websites/ })).toBeVisible();
+    await expect(page.locator("[data-services-book]")).toBeVisible();
     await expect(page.getByText("Special offer")).toHaveCount(0);
     expect(new URL((await page.locator('link[rel="canonical"]').getAttribute("href"))!).pathname).toBe("/");
   });
@@ -206,7 +207,8 @@ test.describe("inquiry form", () => {
     await page.clock.install({ time: Date.now() + 3_600_000 });
     await page.goto("/");
     await page.goto("/about");
-    await page.getByRole("button", { name: "Start a conversation", exact: true }).click();
+    // The closing section's button: on wide screens the header carries one with the same name.
+  await page.locator("#contact").getByRole("button", { name: "Start a conversation" }).click();
     await fillInquiry(page, email);
     await page.getByLabel(/I agree that/).check();
     await page.getByRole("button", { name: "Send project inquiry" }).click();
@@ -357,7 +359,7 @@ test.describe("accessibility", () => {
     await page.goto("/");
     await revealAll(page);
     await page.goto("/about");
-    const trigger = page.getByRole("button", { name: "Start a conversation", exact: true });
+    const trigger = page.locator("#contact").getByRole("button", { name: "Start a conversation" });
     await trigger.click();
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
@@ -380,13 +382,13 @@ test.describe("responsive", () => {
     }
   });
 
-  test("mobile menu is operable by keyboard", async ({ page, isMobile }) => {
-    test.skip(!isMobile);
+  test("mobile menu is operable by keyboard", async ({ page }) => {
+    test.skip((page.viewportSize()?.width ?? 0) >= 1024);
     await page.goto("/");
-    const toggle = page.getByRole("button", { name: "Open menu" });
+    const toggle = page.locator('header button[aria-label="Open menu"]');
     await toggle.click();
     await expect(toggle).toHaveAttribute("aria-expanded", "true");
-    await expect(page.getByRole("link", { name: "Capabilities" })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Mobile" }).getByRole("link", { name: "Examples" })).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(page.getByRole("button", { name: "Open menu" })).toHaveAttribute("aria-expanded", "false");
   });
@@ -401,18 +403,13 @@ test.describe("navigation, search and motion", () => {
     await expect(page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Services", exact: true })).toHaveAttribute("aria-current", "location");
   });
 
-  test("notch header keeps the logo centred", async ({ page }) => {
-    const offset = () =>
-      page.locator('header a[aria-label$=" home"]').evaluate((el) => {
-        const r = el.getBoundingClientRect();
-        return Math.abs(r.left + r.width / 2 - document.documentElement.clientWidth / 2);
-      });
+  test("header keeps the brand visible while scrolling", async ({ page }) => {
     for (const path of ["/", "/privacy"]) {
       await page.goto(path);
-      expect(await offset(), `${path} at the top`).toBeLessThanOrEqual(1);
+      const logo = page.locator('header a[aria-label$=" home"]');
+      await expect(logo).toBeVisible();
       await page.evaluate(() => window.scrollTo(0, 1200));
-      await page.waitForTimeout(100);
-      expect(await offset(), `${path} once scrolled`).toBeLessThanOrEqual(1);
+      await expect(logo).toBeVisible();
     }
   });
 
@@ -426,20 +423,9 @@ test.describe("navigation, search and motion", () => {
     await expect(page).toHaveURL(/#capabilities$/);
   });
 
-  test("search palette opens from the button, shows an empty state and closes with Esc", async ({ page }) => {
+  test("search opens from the header, shows an empty state and closes with Esc", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator("header button[aria-haspopup='dialog'][aria-keyshortcuts]")).toHaveCount(0);
-    await page.mouse.wheel(0, 1400);
-    const slot = page.locator("[data-conversation-fab]");
-    const toggle = slot.locator("[data-fab-toggle]");
-    await expect(slot).not.toHaveAttribute("inert", "");
-    await toggle.focus();
-    await page.keyboard.press("Enter");
-    const search = slot.getByRole("button", { name: "Search this site", exact: true });
-    await expect(search.locator("svg")).toBeVisible();
-    await expect(search.locator("kbd")).toHaveText("Ctrl K");
-    await expect(search.locator("kbd")).toBeVisible();
-    await search.click();
+    await page.locator("header").getByRole("button", { name: "Search", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Search this site" });
     await dialog.getByRole("combobox").fill("zzzzqqq");
     await expect(dialog.getByText(/No matches/)).toBeVisible();
@@ -458,81 +444,25 @@ test.describe("navigation, search and motion", () => {
     await expect(page.locator("#veloce-meeting-title")).toBeFocused();
   });
 
-  test("the Offer tab is always in the nav and the section is honest without an offer", async ({ page }) => {
-    test.skip((page.viewportSize()?.width ?? 0) < 768, "desktop nav");
+  test("builder introduction remains available without an offer", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("navigation", { name: "More" }).getByRole("link", { name: "Offer", exact: true })).toBeVisible();
     await expect(page.locator("#offer").getByRole("heading", { name: "Design it yourself. We build it for real." })).toBeVisible();
     await expect(page.locator("#offer").getByText("Special offer")).toHaveCount(0);
   });
 
-  test("quick dock appears after scrolling and expands into a menu", async ({ page }) => {
+  test("the mobile meeting action appears after the hero", async ({ page }) => {
     await page.goto("/");
-    const dock = page.getByRole("navigation", { name: "Quick links" });
-    if ((page.viewportSize()?.width ?? 0) >= 1024) {
-      await expect(dock).toBeHidden(); // desktop: the header already shows every link
-      return;
-    }
-    await expect(dock).toHaveAttribute("inert", "");
-    if ((page.viewportSize()?.width ?? 0) >= 640) {
-      await page.mouse.wheel(0, 1400);
-      for (const l of ["Services", "Approach", "Capabilities", "Offer"]) await expect(dock.getByRole("link", { name: l, exact: true })).toBeVisible();
-      await page.mouse.wheel(0, -1400);
-    }
-    await page.mouse.wheel(0, 1400);
-    const more = dock.locator("button[aria-expanded]");
-    await expect(more).toBeVisible();
-    await more.click();
-    await expect(more).toHaveAttribute("aria-expanded", "true");
-    await expect(dock.getByText("What we build")).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(more).toHaveAttribute("aria-expanded", "false");
+    await page.evaluate(() => window.scrollTo(0, 1400));
+    const sticky = page.locator("[data-sticky-action]");
+    if ((page.viewportSize()?.width ?? 0) >= 1024) await expect(sticky).toBeHidden();
+    else await expect(sticky.getByRole("button", { name: /^(Book|Request) a Meeting$/ })).toBeVisible();
   });
 
-  test("meeting FAB reveals booking and search upward on hover or tap", async ({ page }) => {
+  test("meeting action remains available after scrolling", async ({ page }) => {
     await page.goto("/");
-    const fab = page.locator("[data-primary-cta]");
-    const slot = page.locator("[data-conversation-fab]");
-    const toggle = slot.locator("[data-fab-toggle]");
-    const panel = slot.locator("[id]").first();
-    await expect(fab).toHaveAttribute("aria-label", /^(Book|Request) a Meeting$/);
-    await expect(slot).toHaveAttribute("inert", "");
-    await expect(slot).toHaveCSS("opacity", "0");
-    await expect(page.locator("header [data-primary-cta]")).toHaveCount(0); // not in the notch bar any more
-    await page.mouse.wheel(0, 1400);
-    await expect(slot).not.toHaveAttribute("inert", "");
-    await expect(slot).toHaveCSS("opacity", "1");
-    await expect(toggle).toHaveAttribute("aria-expanded", "false");
-    await expect(panel).toHaveAttribute("inert", "");
-    // Hover only opens it on wide, fine-pointer screens (1024px+, see HOVER_QUERY in conversation-fab.tsx); smaller screens open it by tap or click.
-    const project = test.info().project.name;
-    if (project === "mobile") {
-      await toggle.tap();
-    } else if (project === "tablet") {
-      await toggle.click();
-    } else {
-      await toggle.hover();
-    }
-    await expect(toggle).toHaveAttribute("aria-expanded", "true");
-    await expect(panel).toHaveCSS("opacity", "1");
-    await expect(fab).toBeVisible();
-    expect((await fab.boundingBox())!.y).toBeLessThan((await toggle.boundingBox())!.y);
-    await slot.getByRole("button", { name: "Search this site" }).click();
-    const searchDialog = page.getByRole("dialog", { name: "Search this site" });
-    await expect(searchDialog).toBeVisible();
-    await searchDialog.getByRole("combobox").fill("services");
-    await expect(searchDialog.getByRole("option", { name: /Services/ }).first()).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(searchDialog).toBeHidden();
-    await page.mouse.move(0, 0);
-    await toggle.focus();
-    await page.keyboard.press("Enter");
-    await expect(toggle).toHaveAttribute("aria-expanded", "true");
-    await page.keyboard.press("Escape");
-    await expect(toggle).toHaveAttribute("aria-expanded", "false");
-    await page.keyboard.press("Enter");
-    await expect(page.getByRole("navigation", { name: "Quick links" }).getByText("Start a conversation")).toHaveCount(0);
-    await fab.click();
+    await page.evaluate(() => window.scrollTo(0, 1400));
+    if ((page.viewportSize()?.width ?? 0) >= 1024) await page.locator("header").getByRole("button", { name: /^(Book|Request) a Meeting$/ }).click();
+    else await page.locator("[data-sticky-action]").getByRole("button", { name: /^(Book|Request) a Meeting$/ }).click();
     await expect(page.locator("[data-meeting-panel]")).toBeVisible();
     await expect(page.locator("#veloce-meeting-title")).toBeFocused();
   });
@@ -547,25 +477,19 @@ test.describe("navigation, search and motion", () => {
     await expect(cta.getByRole("link", { name: "Facebook" })).toHaveCount(0);
   });
 
-  test("colour palette: pistachio by default, Ember is an option that is remembered, reset returns to default", async ({ page }) => {
+  test("light and dark themes are remembered and reset to the default", async ({ page }) => {
     await page.goto("/");
     const html = page.locator("html");
-    await expect(html).not.toHaveAttribute("data-theme", /.+/);
-    const bg = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-    expect(await bg()).toBe("rgb(246, 244, 238)");
     await openPaletteButton(page).click();
     const panel = page.getByRole("dialog", { name: "Colour palette" });
-    await expect(panel.getByRole("radio", { name: /Pistachio/ })).toHaveAttribute("aria-checked", "true");
-    await expect(panel.getByRole("radio", { name: /Periwinkle/ })).toHaveAttribute("aria-checked", "false");
-    await panel.getByRole("radio", { name: /Ember/ }).click();
-    await expect(html).toHaveAttribute("data-theme", "ember");
-    expect(await bg()).toBe("rgb(23, 16, 16)");
+    await expect(panel.getByRole("radio", { name: /Light/ })).toHaveAttribute("aria-checked", "true");
+    await panel.getByRole("radio", { name: /Dark/ }).click();
+    await expect(html).toHaveAttribute("data-theme", "dark");
     await page.reload();
-    await expect(html).toHaveAttribute("data-theme", "ember"); // applied before paint from the saved choice
+    await expect(html).toHaveAttribute("data-theme", "dark");
     await openPaletteButton(page).click();
     await page.getByRole("button", { name: "Use site default" }).click();
     await expect(html).not.toHaveAttribute("data-theme", /.+/);
-    expect(await bg()).toBe("rgb(246, 244, 238)");
   });
 
   test("reduced-motion device: flip is static by default; \"Always play animations\" turns the real flip on and is remembered", async ({ browser }) => {
@@ -593,34 +517,23 @@ test.describe("navigation, search and motion", () => {
     await ctx.close();
   });
 
-  test("normal device: \"Reduce animations\" stops the decorative motion and is remembered", async ({ page }) => {
+  test("reduced motion is remembered", async ({ page }) => {
     await page.goto("/");
-    const aura = () => page.evaluate(() => getComputedStyle(document.querySelector(".aura-a")!).animationPlayState);
-    expect(await aura()).toBe("running"); // device default: animations play
     await openPaletteButton(page).click();
     await page.getByRole("radio", { name: /Reduce animations/ }).click();
     await expect(page.locator("html")).toHaveAttribute("data-motion", "reduced");
-    expect(await aura()).toBe("paused"); // frozen in place, not snapped back
-    // Scroll-reveal text is shown as it is, never hidden or mid-fade (that was the flicker).
-    expect(await page.evaluate(() => [...document.querySelectorAll("[data-reveal]")].every((e) => getComputedStyle(e).opacity === "1"))).toBe(true);
-    expect(await page.evaluate(() => getComputedStyle(document.querySelector(".scroll-progress")!).display)).toBe("none");
     await page.keyboard.press("Escape");
     await page.reload();
     await expect(page.locator("html")).toHaveAttribute("data-motion", "reduced");
-    expect(await aura()).toBe("paused");
   });
 
-  test("low-power device: decoration is dropped automatically, \"Always play animations\" brings the motion back", async ({ page }) => {
+  test("low-power device keeps the adaptive preference", async ({ page }) => {
     await page.addInitScript(() => Object.defineProperty(navigator, "deviceMemory", { value: 2 }));
     await page.goto("/");
     await expect(page.locator("html")).toHaveAttribute("data-perf", "lite");
-    const css = (sel: string, prop: "animationPlayState" | "display") => page.evaluate(([q, p]) => getComputedStyle(document.querySelector(q!)!)[p as "display"], [sel, prop]);
-    expect(await css(".aura-a", "animationPlayState")).toBe("paused");
     await openPaletteButton(page).click();
     await page.getByRole("radio", { name: /Always play animations/ }).click();
-    await page.keyboard.press("Escape");
-    await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" })); // the aura pauses while off-screen
-    await expect.poll(() => css(".aura-a", "animationPlayState")).toBe("running");
+    await expect(page.locator("html")).toHaveAttribute("data-motion", "full");
   });
 
   test("adaptive: a device that ran slow earlier this visit stays in lite mode and says so", async ({ page }) => {
@@ -632,12 +545,10 @@ test.describe("navigation, search and motion", () => {
     await expect(page.getByText("Easing off to keep things smooth on this device.")).toBeVisible();
   });
 
-  test("looping animations pause while their section is off-screen", async ({ page }) => {
+  test("decorative effects do not block page content", async ({ page }) => {
     await page.goto("/");
-    const paused = () => page.evaluate(() => getComputedStyle(document.querySelector(".aura-a")!).animationPlayState);
-    await expect.poll(paused).toBe("running");
-    await page.evaluate(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "instant" }));
-    await expect.poll(paused).toBe("paused");
+    await expect(page.locator("#examples")).toBeVisible();
+    await expect(page.locator("#services")).toBeVisible();
   });
 
   test("footer social flip shows the email channel with an accessible name", async ({ page }) => {
@@ -646,20 +557,19 @@ test.describe("navigation, search and motion", () => {
     await expect(mail).toHaveAttribute("href", /^mailto:/);
   });
 
-  test("with reduced motion every heading and card is still readable", async ({ browser }) => {
+  test("with reduced motion every heading and service is readable", async ({ browser }) => {
     const ctx = await browser.newContext({ reducedMotion: "reduce" });
     const page = await ctx.newPage();
     await page.goto("/");
     await revealAll(page);
-    await expect(page.getByRole("heading", { name: "Practical systems, built around your business." })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Choose what needs to change first." })).toBeVisible();
     await expect(page.locator("[data-services-book]").getByRole("heading", { name: "Business websites", exact: true })).toBeVisible();
-    expect(await page.evaluate(() => getComputedStyle(document.querySelector(".aura-a")!).animationPlayState)).toBe("paused");
     await ctx.close();
   });
 
   test("content is present without scrolling (server HTML is not hidden)", async ({ request }) => {
     const html = await (await request.get("/")).text();
-    expect(html).toContain("Practical systems, built around your business.");
+    expect(html).toContain("Business websites");
     expect(html).toContain("Business websites");
   });
 });
@@ -677,19 +587,19 @@ test.describe("sample websites", () => {
     if (pageCount > 1) await expect(page.getByRole("navigation", { name: "Pages in this design" }).getByRole("link")).toHaveCount(pageCount);
   });
 
-  test("the home carousel rotates and its active slide opens the preview", async ({ page }) => {
+  test("the examples carousel opens and returns to a selected preview", async ({ page }) => {
     await page.goto("/");
-    const carousel = page.getByRole("region", { name: "Sample websites", exact: true });
-    test.skip((await carousel.count()) === 0, "fewer than two published samples: the service cards are shown instead");
-    await carousel.scrollIntoViewIfNeeded();
-    await carousel.focus();
-    await page.keyboard.press("ArrowRight");
-    await expect(page.getByText(/Sample website 2 \//i)).toBeVisible();
-    await carousel.getByRole("link", { name: /^Open / }).click();
+    const examples = page.locator("#examples");
+    // A click before hydration is lost, so select until the details column follows.
+    await expect(async () => {
+      await examples.getByRole("button", { name: /Show slide .*Tattoo studio/ }).click();
+      await expect(examples.getByRole("heading", { name: "Tattoo studio" })).toBeVisible({ timeout: 1000 });
+    }).toPass();
+    await examples.getByRole("link", { name: "View live preview" }).click();
     await expect(page).toHaveURL(/\/build\/preview\//);
-    // Back lands on the same sample.
     await page.getByRole("link", { name: "Back to samples" }).click();
     await expect(page).toHaveURL(/[?&]sample=/);
-    await expect(page.getByText(/Sample website 2 \//i)).toBeVisible();
+    await expect(examples.getByRole("heading", { name: "Tattoo studio" })).toBeVisible();
   });
+
 });

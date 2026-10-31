@@ -15,6 +15,7 @@ test('sample choices never book and meeting entry restores the example', async (
   const external: string[] = [];
   page.on('request', r => { if (/cal\.com/.test(r.url())) external.push(r.url()); });
   await page.goto('/');
+  await page.locator('#approach summary').click();
   const workbench = page.locator('[data-approach-workbench]');
   await workbench.getByRole('button', { name: 'See a working example' }).click();
   await workbench.getByRole('button', { name: '11:30', exact: true }).click();
@@ -77,20 +78,17 @@ test('landing meeting actions share a panel and return focus without loading Cal
     await expect(hero).toBeFocused();
   }
 
-  await page.evaluate(() => window.scrollTo(0, 1400));
-  const floating = page.locator('[data-conversation-fab]');
-  await expect(floating).not.toHaveAttribute('inert', '');
-  const toggle = floating.getByRole('button', { name: 'Open meeting and search', exact: true });
-  await toggle.focus();
-  await page.keyboard.press('Enter');
-  const primary = page.locator('[data-primary-cta]');
-  await expect(primary).toHaveAttribute('aria-label', label);
-  await primary.click();
-  await expect(page.locator('#veloce-meeting-title')).toBeFocused();
-  await panel.getByRole('button', { name: 'Return to page' }).click();
-  await expect(hero).toBeFocused();
+  // A single sticky meeting action is available below the hero on smaller screens.
+  if ((page.viewportSize()?.width ?? 0) < 1024) {
+    await page.evaluate(() => window.scrollTo(0, 1400));
+    const sticky = page.locator('[data-sticky-action]');
+    await expect(sticky).toBeVisible();
+    await sticky.getByRole('button', { name: MEETING_BUTTON }).click();
+    await expect(page.locator('#veloce-meeting-title')).toBeFocused();
+    await panel.getByRole('button', { name: 'Return to page' }).click();
+  }
 
-  // Search can activate the primary button even while its floating container is inert.
+  // Search can activate the primary meeting button.
   await page.keyboard.press('Control+k');
   const search = page.getByRole('dialog', { name: 'Search this site' });
   await search.getByRole('combobox').fill(label);
@@ -126,7 +124,8 @@ for (const status of ['CONFIRMED', 'REQUESTED'] as const) {
     test.skip(!fixtureServer, 'Run against the explicit Cal fixture server');
     await page.route('https://app.cal.com/embed/embed.js', route => route.fulfill({ contentType: 'application/javascript', body: readFileSync('tests/fixtures/cal-embed.js', 'utf8') }));
     await page.goto(`/?ref=${TOKENS.active}`);
-    const workbench = page.locator('[data-approach-workbench]');
+    await page.locator('#approach summary').click();
+  const workbench = page.locator('[data-approach-workbench]');
     await page.locator('[data-hero-cta]').click();
     const panel = page.locator('[data-meeting-panel]');
     await expect(panel.getByRole('button', { name: 'Choose a real meeting time' })).toBeDisabled();
